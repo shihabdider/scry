@@ -29,7 +29,17 @@ export function buildVisibleRows({ corpusResults = [], typedUrlCandidate = null,
 }
 
 export function rowOpenUrl(row) {
-  throw new Error('not implemented: rowOpenUrl')
+  if (row?.kind === 'result') {
+    const url = row.result?.url
+    return typeof url === 'string' && url ? url : null
+  }
+
+  if (row?.kind === 'open-typed-url') {
+    const url = row.candidate?.normalizedUrl
+    return typeof url === 'string' && url ? url : null
+  }
+
+  return null
 }
 
 export function rowSelectionLearningKey(row) {
