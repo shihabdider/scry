@@ -445,6 +445,114 @@ test('ensureSelectedVisible preserves legacy selected result pagination without 
   assert.equal(app.pageIndex, 0)
 })
 
+test('moveSelection wraps through the full visible row union when a typed URL row is pinned', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const firstResult = searchResult('visible-move-first')
+  const secondResult = searchResult('visible-move-second')
+  app.results = [firstResult, secondResult]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results, typedUrlCandidate })
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  app.selectedIndex = 2
+  app.moveSelection(1)
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[0])
+
+  app.moveSelection(-1)
+  assert.equal(app.selectedIndex, 2)
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[2])
+  assert.equal(renderCalls, 2)
+})
+
+test('moveSelection keeps a moved real visible row on screen when a typed URL row shifts indexes', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 13 }, (_, index) => searchResult(`moved-visible-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+  app.pageIndex = 0
+  app.selectedIndex = 6
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  app.moveSelection(1)
+
+  assert.equal(app.selectedIndex, 7)
+  assert.equal(app.pageIndex, 1)
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[7])
+  assert.equal(renderCalls, 1)
+})
+
+test('moveSelection can select the only synthetic visible row without real results', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  app.results = []
+  app.visibleRows = buildVisibleRows({ corpusResults: [], typedUrlCandidate })
+  app.selectedIndex = 0
+  app.pageIndex = 42
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  app.moveSelection(1)
+
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[0])
+  assert.equal(renderCalls, 1)
+})
+
+test('moveSelection preserves legacy result wrapping when visible rows are not populated yet', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const firstResult = searchResult('legacy-move-first')
+  const secondResult = searchResult('legacy-move-second')
+  app.results = [firstResult, secondResult]
+  app.visibleRows = []
+  app.selectedIndex = 1
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  app.moveSelection(1)
+
+  assert.equal(app.selectedIndex, 0)
+  assert.deepEqual(app.selectedVisibleRow(), {
+    kind: 'result',
+    key: 'result:https://example.com/legacy-move-first',
+    result: firstResult,
+    copied: false,
+  })
+  assert.equal(renderCalls, 1)
+})
+
 // Compatibility: callers can use selectedVisibleRow before updateVisibleRows is wired in.
 test('selectedVisibleRow wraps legacy result state when visible rows are not populated yet', () => {
   const document = createScryDocument()

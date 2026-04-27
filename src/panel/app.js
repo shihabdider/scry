@@ -355,8 +355,12 @@ export class ScryPanelApp {
   }
 
   moveSelection(delta) {
-    if (!this.results.length) return
-    this.selectedIndex = (this.selectedIndex + delta + this.results.length) % this.results.length
+    const rowCount = Array.isArray(this.visibleRows) && this.visibleRows.length > 0
+      ? this.visibleRows.length
+      : this.results.length
+
+    if (!rowCount) return
+    this.selectedIndex = (this.selectedIndex + delta + rowCount) % rowCount
     this.ensureSelectedVisible()
     this.renderResults()
   }
