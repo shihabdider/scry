@@ -105,6 +105,8 @@ Dependency tree:
 - 2026-04-27T18:29:21Z — user selected full all-open batch but requested dependency-tree organization.
 - 2026-04-27T18:29:21Z — configured HtDP mode autonomous and transparent true in AGENTS.md.
 - 2026-04-27T18:29:21Z — user confirmed side panel is completely deprecated; keep popup architecture and treat side-panel keep-open as stale/superseded.
+- 2026-04-27T18:37:36Z — Phase 1 stubber completed 50 wishes across 5 layers and flagged three existing test assertions whose oracles must change for sessions permission and non-closing result-mode Escape.
+- 2026-04-27T18:40:00Z — user accepted flagged oracle changes: add `sessions` permission expectation and replace result-mode second-Escape close/blur assertions with non-closing actionable behavior.
 
 ### Look Back
 

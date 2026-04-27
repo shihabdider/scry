@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { formatAge, highlightText } from '../src/core/format.js'
+import { normalizeExactPhrase } from '../src/core/query.js'
 import { recordSelection } from '../src/core/selection-learning.js'
 import { buildHistoryIndex, searchHistory } from '../src/core/search.js'
 import { middleTruncate } from '../src/core/url.js'
@@ -11,6 +12,38 @@ const now = Date.parse('2026-04-27T00:00:00Z')
 function indexOf(entries) {
   return buildHistoryIndex(entries, { now })
 }
+
+test('exact phrase normalization collapses whitespace and preserves the raw quoted text', () => {
+  assert.deepEqual(normalizeExactPhrase('  pull \n\t requests  '), {
+    rawText: '  pull \n\t requests  ',
+    matchText: 'pull requests',
+    caseSensitive: false,
+  })
+})
+
+test('exact phrase normalization preserves URL punctuation for phrase matching', () => {
+  assert.deepEqual(normalizeExactPhrase('github.com/mskilab-org/repo?tab=pull_requests'), {
+    rawText: 'github.com/mskilab-org/repo?tab=pull_requests',
+    matchText: 'github.com/mskilab-org/repo?tab=pull_requests',
+    caseSensitive: false,
+  })
+})
+
+test('exact phrase normalization enables case-sensitive matching when raw text contains uppercase', () => {
+  assert.deepEqual(normalizeExactPhrase('MSKILAB-org/repo'), {
+    rawText: 'MSKILAB-org/repo',
+    matchText: 'MSKILAB-org/repo',
+    caseSensitive: true,
+  })
+})
+
+test('exact phrase normalization treats empty quoted phrases as case-insensitive empty text', () => {
+  assert.deepEqual(normalizeExactPhrase('   '), {
+    rawText: '   ',
+    matchText: '',
+    caseSensitive: false,
+  })
+})
 
 test('conservative URL normalization deduplicates fragments and tracking parameters while preserving meaningful query strings', () => {
   const index = indexOf([

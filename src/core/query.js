@@ -47,7 +47,12 @@ export function parseExactPhrases(query) {
 }
 
 export function normalizeExactPhrase(rawText) {
-  throw new Error('not implemented: normalizeExactPhrase')
+  const text = String(rawText ?? '')
+  return {
+    rawText: text,
+    matchText: text.replace(/\s+/g, ' ').trim(),
+    caseSensitive: text !== text.toLowerCase(),
+  }
 }
 
 export function queryKey(tokens) {
