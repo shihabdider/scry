@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Scry",
+  "version": "0.1.0",
+  "description": "History-first URL recall for Chrome.",
+  "minimum_chrome_version": "116",
+  "permissions": ["history", "sidePanel", "storage", "tabs"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Scry"
+  },
+  "side_panel": {
+    "default_path": "side-panel.html"
+  },
+  "commands": {
+    "toggle-scry": {
+      "suggested_key": {
+        "default": "Ctrl+K",
+        "mac": "Command+K"
+      },
+      "description": "Toggle Scry"
+    }
+  }
+}

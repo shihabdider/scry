@@ -1,0 +1,167 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #fff;
+  color: #111;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #fff;
+}
+
+.scry {
+  padding: 12px 10px 10px;
+}
+
+.scry-header {
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+}
+
+.brand-line {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+h1 {
+  color: #0000cc;
+  font-size: 22px;
+  font-weight: normal;
+  line-height: 1;
+  margin: 0;
+}
+
+.status {
+  color: #666;
+  font-size: 11px;
+}
+
+.search-label {
+  color: #222;
+  display: block;
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.search-input {
+  border: 1px solid #999;
+  border-radius: 0;
+  box-shadow: inset 1px 1px 2px rgb(0 0 0 / 12%);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.25;
+  outline: none;
+  padding: 5px 6px;
+  width: 100%;
+}
+
+.search-input:focus {
+  border-color: #0000cc;
+}
+
+.message {
+  color: #555;
+  font-size: 12px;
+  padding: 10px 2px 4px;
+}
+
+.results {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.result {
+  border-bottom: 1px solid #eee;
+  margin: 0;
+}
+
+.result-button {
+  appearance: none;
+  background: #fff;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  padding: 5px 4px 6px;
+  text-align: left;
+  width: 100%;
+}
+
+.result.selected .result-button,
+.result-button:focus {
+  background: #ffffcc;
+  outline: 1px solid #cccc66;
+  outline-offset: -1px;
+}
+
+.result-url,
+.result-title,
+.result-meta {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.result-url {
+  color: #008000;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.result-title {
+  color: #0000cc;
+  font-size: 13px;
+  line-height: 1.25;
+  margin-top: 1px;
+}
+
+.result-meta {
+  color: #666;
+  font-size: 11px;
+  line-height: 1.3;
+  margin-top: 1px;
+}
+
+b {
+  font-weight: bold;
+}
+
+.deep-search {
+  padding: 9px 2px 0;
+}
+
+.deep-search-button {
+  background: #eee;
+  border: 1px solid #999;
+  border-radius: 0;
+  color: #0000cc;
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  padding: 4px 7px;
+  text-align: left;
+}
+
+.deep-search-button:hover,
+.deep-search-button:focus {
+  background: #ffffcc;
+}
+
+.footer-hints {
+  border-top: 1px solid #eee;
+  color: #777;
+  font-size: 11px;
+  line-height: 1.35;
+  margin-top: 10px;
+  padding: 7px 2px 0;
+}

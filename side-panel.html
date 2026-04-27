@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scry</title>
+    <link rel="stylesheet" href="src/panel/styles.css" />
+  </head>
+  <body>
+    <main class="scry" aria-label="Scry history search">
+      <header class="scry-header">
+        <div class="brand-line">
+          <h1>Scry</h1>
+          <span id="status" class="status" role="status">Loading history…</span>
+        </div>
+        <label class="search-label" for="search-input">Search browser history</label>
+        <input id="search-input" class="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="git*skilift*issues*13" />
+      </header>
+
+      <section id="message" class="message" hidden></section>
+      <ol id="results" class="results" aria-label="History results"></ol>
+
+      <section class="deep-search">
+        <button id="deep-search-button" class="deep-search-button" type="button" hidden>Deep search all history</button>
+      </section>
+
+      <footer class="footer-hints">Enter open · ⌘/Ctrl+Enter new tab · ↑↓ or Ctrl+N/P move · ⌘/Ctrl+K toggle</footer>
+    </main>
+    <script type="module" src="src/panel/main.js"></script>
+  </body>
+</html>
