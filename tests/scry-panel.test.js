@@ -376,6 +376,75 @@ test('clampPageIndex normalizes invalid numeric page indexes consistently with p
   assert.equal(app.pageStart(), 0)
 })
 
+test('ensureSelectedVisible leaves the always-visible typed URL row on the current page', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 13 }, (_, index) => searchResult(`typed-pinned-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+  app.pageIndex = 1
+  app.selectedIndex = 0
+
+  app.ensureSelectedVisible()
+
+  assert.equal(app.pageIndex, 1)
+})
+
+test('ensureSelectedVisible maps selected visible real rows to paginated corpus rows when a typed URL row is pinned', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 13 }, (_, index) => searchResult(`visible-real-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+
+  // Visible index 6 is the sixth real row because index 0 is the pinned typed URL row.
+  app.pageIndex = 0
+  app.selectedIndex = 6
+  app.ensureSelectedVisible()
+  assert.equal(app.pageIndex, 0)
+
+  // The same visible row should force page 0 when the current page is later.
+  app.pageIndex = 1
+  app.ensureSelectedVisible()
+  assert.equal(app.pageIndex, 0)
+
+  // Visible index 7 is the first real row on page 2.
+  app.pageIndex = 0
+  app.selectedIndex = 7
+  app.ensureSelectedVisible()
+  assert.equal(app.pageIndex, 1)
+})
+
+test('ensureSelectedVisible preserves legacy selected result pagination without a typed URL row', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const corpusResults = Array.from({ length: 13 }, (_, index) => searchResult(`legacy-visible-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults })
+
+  app.pageIndex = 0
+  app.selectedIndex = 6
+  app.ensureSelectedVisible()
+  assert.equal(app.pageIndex, 1)
+
+  app.selectedIndex = 5
+  app.ensureSelectedVisible()
+  assert.equal(app.pageIndex, 0)
+})
+
 // Compatibility: callers can use selectedVisibleRow before updateVisibleRows is wired in.
 test('selectedVisibleRow wraps legacy result state when visible rows are not populated yet', () => {
   const document = createScryDocument()

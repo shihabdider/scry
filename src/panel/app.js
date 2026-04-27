@@ -326,11 +326,30 @@ export class ScryPanelApp {
 
   ensureSelectedVisible() {
     this.clampPageIndex()
-    if (!this.results.length) return
+
+    let selectedResultIndex = this.selectedIndex
+    const visibleRows = Array.isArray(this.visibleRows) && this.visibleRows.length > 0
+      ? this.visibleRows
+      : null
+
+    if (visibleRows?.some((row) => row?.kind === 'open-typed-url')) {
+      const selectedRow = visibleRows[this.selectedIndex] ?? null
+      if (selectedRow?.kind === 'open-typed-url') return
+      if (selectedRow?.kind !== 'result') return
+
+      selectedResultIndex = -1
+      for (let index = 0; index <= this.selectedIndex; index++) {
+        if (visibleRows[index]?.kind === 'result') selectedResultIndex++
+      }
+    }
+
+    if (!Number.isInteger(selectedResultIndex) || selectedResultIndex < 0) return
+    if (!this.results.length && !visibleRows?.some((row) => row?.kind === 'result')) return
+
     const start = this.pageStart()
     const end = start + RESULTS_PER_PAGE
-    if (this.selectedIndex < start || this.selectedIndex >= end) {
-      this.pageIndex = Math.floor(this.selectedIndex / RESULTS_PER_PAGE)
+    if (selectedResultIndex < start || selectedResultIndex >= end) {
+      this.pageIndex = Math.floor(selectedResultIndex / RESULTS_PER_PAGE)
       this.clampPageIndex()
     }
   }

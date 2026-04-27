@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 1
-updated: 2026-04-27T20:32:09.395Z
+updated: 2026-04-27T20:35:10.164Z
 
 ## Wishes
 
@@ -45,7 +45,7 @@ updated: 2026-04-27T20:32:09.395Z
 | pageCount | src/panel/app.js | 1 | pass | 188.3s |
 | pageStart | src/panel/app.js | 1 | pass | 104.5s |
 | clampPageIndex | src/panel/app.js | 1 | pass | 129.8s |
-| ensureSelectedVisible | src/panel/app.js | 1 | pending | - |
+| ensureSelectedVisible | src/panel/app.js | 1 | pass | 172.7s |
 | moveSelection | src/panel/app.js | 1 | pending | - |
 | movePage | src/panel/app.js | 1 | pending | - |
 | focusSelectedResult | src/panel/app.js | 1 | pending | - |
@@ -176,3 +176,6 @@ updated: 2026-04-27T20:32:09.395Z
 - 16:29:58 clampPageIndex: running
 - 16:32:08 clampPageIndex: pass (129.8s, $0.6205)
 - 16:32:09 implementer_post verification for clampPageIndex: pass
+- 16:32:16 ensureSelectedVisible: running
+- 16:35:08 ensureSelectedVisible: pass (172.7s, $0.7921)
+- 16:35:10 implementer_post verification for ensureSelectedVisible: pass
