@@ -5,7 +5,7 @@ import { formatAge, highlightText } from '../src/core/format.js'
 import { normalizeExactPhrase } from '../src/core/query.js'
 import { recordSelection } from '../src/core/selection-learning.js'
 import { __testing, buildHistoryIndex, collectExactPhraseEvidence, compareQuoteEvidence, searchHistory } from '../src/core/search.js'
-import { middleTruncate } from '../src/core/url.js'
+import { createTypedUrlCandidate, middleTruncate } from '../src/core/url.js'
 
 const now = Date.parse('2026-04-27T00:00:00Z')
 
@@ -266,6 +266,46 @@ test('conservative URL normalization deduplicates fragments and tracking paramet
   const queryEntry = index.entries.find((entry) => entry.displayUrl.includes('filter=mine'))
   assert.equal(queryEntry.visitCount, 8)
   assert.equal(queryEntry.title, 'Latest meaningful query copy')
+})
+
+test('typed URL candidate accepts schemeless domains and adds https for navigation', () => {
+  assert.deepEqual(createTypedUrlCandidate('github.com/mskilab-org/repo/pulls'), {
+    displayInput: 'github.com/mskilab-org/repo/pulls',
+    normalizedUrl: 'https://github.com/mskilab-org/repo/pulls',
+    key: 'https://github.com/mskilab-org/repo/pulls',
+  })
+})
+
+test('typed URL candidate accepts http and https URLs while displaying without protocol or fragment', () => {
+  assert.deepEqual(createTypedUrlCandidate('https://github.com/mskilab-org/repo/pulls#discussion'), {
+    displayInput: 'github.com/mskilab-org/repo/pulls',
+    normalizedUrl: 'https://github.com/mskilab-org/repo/pulls',
+    key: 'https://github.com/mskilab-org/repo/pulls',
+  })
+  assert.deepEqual(createTypedUrlCandidate('http://Example.com:80/docs?tab=readme#top'), {
+    displayInput: 'example.com/docs?tab=readme',
+    normalizedUrl: 'http://example.com/docs?tab=readme',
+    key: 'http://example.com/docs?tab=readme',
+  })
+})
+
+test('typed URL candidate accepts localhost and IP hosts with optional port, path, and query', () => {
+  assert.deepEqual(createTypedUrlCandidate('localhost:3000/foo?tab=one'), {
+    displayInput: 'localhost:3000/foo?tab=one',
+    normalizedUrl: 'https://localhost:3000/foo?tab=one',
+    key: 'https://localhost:3000/foo?tab=one',
+  })
+  assert.deepEqual(createTypedUrlCandidate('127.0.0.1:5173/test'), {
+    displayInput: '127.0.0.1:5173/test',
+    normalizedUrl: 'https://127.0.0.1:5173/test',
+    key: 'https://127.0.0.1:5173/test',
+  })
+})
+
+test('typed URL candidate rejects search text, slash-only shorthand, unsupported schemes, and empty input', () => {
+  for (const input of ['', '   ', 'github scry issues', 'github/mskilab-org/repo', 'repo/issues', 'arbitrary text with spaces', 'ftp://example.com/file']) {
+    assert.equal(createTypedUrlCandidate(input), null)
+  }
 })
 
 test('empty query returns frecent defaults rather than pure recency or pure frequency', () => {

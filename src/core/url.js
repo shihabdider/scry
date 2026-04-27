@@ -65,7 +65,75 @@ export function normalizeHistoryUrl(rawUrl) {
 }
 
 export function createTypedUrlCandidate(input) {
-  throw new Error('not implemented: createTypedUrlCandidate')
+  const text = String(input ?? '').trim()
+  if (!text || /\s/.test(text)) return null
+
+  const hasExplicitScheme = /^[a-z][a-z\d+.-]*:\/\//i.test(text)
+  let parsed
+
+  if (hasExplicitScheme) {
+    if (!/^https?:\/\//i.test(text)) return null
+    try {
+      parsed = new URL(text)
+    } catch {
+      return null
+    }
+    if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !parsed.hostname) return null
+  } else {
+    const schemelessHost = extractSchemelessHost(text)
+    if (!schemelessHost || !isSchemelessHostLike(schemelessHost)) return null
+
+    try {
+      parsed = new URL(`https://${text}`)
+    } catch {
+      return null
+    }
+  }
+
+  parsed.protocol = parsed.protocol.toLowerCase()
+  parsed.hostname = parsed.hostname.toLowerCase()
+  parsed.hash = ''
+
+  const normalizedUrl = parsed.toString()
+  return {
+    displayInput: toDisplayUrl(parsed),
+    normalizedUrl,
+    key: normalizedUrl,
+  }
+
+  function extractSchemelessHost(urlText) {
+    const authority = urlText.split(/[/?#]/, 1)[0]
+    if (authority.startsWith('[')) {
+      const bracketEnd = authority.indexOf(']')
+      return bracketEnd === -1 ? '' : authority.slice(0, bracketEnd + 1)
+    }
+    return authority.split(':', 1)[0]
+  }
+
+  function isSchemelessHostLike(hostname) {
+    const host = hostname.toLowerCase()
+    return host === 'localhost' || isIpv4Address(host) || isBracketedIpv6Address(host) || isDomainName(host)
+  }
+
+  function isIpv4Address(hostname) {
+    const parts = hostname.split('.')
+    return parts.length === 4 && parts.every((part) => /^(0|[1-9]\d{0,2})$/.test(part) && Number(part) <= 255)
+  }
+
+  function isBracketedIpv6Address(hostname) {
+    return hostname.startsWith('[') && hostname.endsWith(']') && hostname.includes(':')
+  }
+
+  function isDomainName(hostname) {
+    if (!hostname.includes('.')) return false
+
+    const labels = hostname.split('.')
+    const validLabel = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
+    if (!labels.every((label) => label.length > 0 && label.length <= 63 && validLabel.test(label))) return false
+
+    const tld = labels.at(-1)
+    return /^[a-z]{2,}$/.test(tld) || /^xn--[a-z0-9-]{2,}$/.test(tld)
+  }
 }
 
 export function toDisplayUrl(urlLike) {

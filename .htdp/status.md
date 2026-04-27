@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 4
-updated: 2026-04-27T18:54:47.422Z
+updated: 2026-04-27T18:59:54.499Z
 
 ## Wishes
 
@@ -12,7 +12,7 @@ updated: 2026-04-27T18:54:47.422Z
 | collectExactPhraseEvidence | src/core/search.js | 4 | pass | 220.4s |
 | compareQuoteEvidence | src/core/search.js | 4 | pass | 136.4s |
 | toResult | src/core/search.js | 4 | pass | 210.0s |
-| createTypedUrlCandidate | src/core/url.js | 4 | pending | - |
+| createTypedUrlCandidate | src/core/url.js | 4 | pass | 300.2s |
 | rowOpenUrl | src/core/rows.js | 4 | pending | - |
 | rowSelectionLearningKey | src/core/rows.js | 4 | pending | - |
 | rowEditableText | src/core/rows.js | 4 | pending | - |
@@ -75,3 +75,6 @@ updated: 2026-04-27T18:54:47.422Z
 - 14:51:16 toResult: running
 - 14:54:46 toResult: pass (210.0s, $0.8193)
 - 14:54:47 implementer_post verification for toResult: pass
+- 14:54:53 createTypedUrlCandidate: running
+- 14:59:53 createTypedUrlCandidate: pass (300.2s, $1.4456)
+- 14:59:54 implementer_post verification for createTypedUrlCandidate: pass
