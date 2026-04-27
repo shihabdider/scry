@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { buildVisibleRows } from '../src/core/rows.js'
+import { buildHistoryIndex } from '../src/core/search.js'
 import { ScryPanelApp } from '../src/panel/app.js'
 import { SELECTION_STORAGE_KEY } from '../src/platform/selection-store.js'
 import { createScryDocument, dispatchInput, dispatchKeydown } from './helpers/fake-dom.js'
@@ -222,6 +223,116 @@ test('selectedVisibleRow wraps legacy result state when visible rows are not pop
     result: secondResult,
     copied: false,
   })
+})
+
+test('updateResults searches the active cached mode index and rebuilds visible rows without changing mode or query', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  const recentIndex = buildHistoryIndex([historyEntry(1)], { now })
+  const closedIndex = buildHistoryIndex([
+    {
+      url: 'https://closed.example/match',
+      title: 'Closed tab match',
+      visitCount: 1,
+      lastVisitTime: now,
+    },
+  ], { now })
+  app.modeCache = {
+    recent: { mode: 'recent', status: 'ready', index: recentIndex, error: null, loadedAt: now },
+    deep: { mode: 'deep', status: 'idle', index: null, error: null, loadedAt: null },
+    closed: { mode: 'closed', status: 'ready', index: closedIndex, error: null, loadedAt: now },
+  }
+  app.searchMode = 'closed'
+  app.deep = false
+  app.index = recentIndex
+  input.value = 'closed match'
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  app.updateResults()
+
+  assert.equal(app.searchMode, 'closed')
+  assert.equal(app.deep, false)
+  assert.equal(input.value, 'closed match')
+  assert.equal(app.index, closedIndex)
+  assert.equal(app.results.length, 1)
+  assert.equal(app.results[0].url, 'https://closed.example/match')
+  assert.equal(app.visibleRows.length, 1)
+  assert.equal(app.visibleRows[0].kind, 'result')
+  assert.equal(app.visibleRows[0].result, app.results[0])
+  assert.equal(renderCalls, 1)
+})
+
+test('updateResults safely renders an active mode with no index and keeps URL-like input as a typed row', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  const staleIndex = buildHistoryIndex([
+    {
+      url: 'https://typed.example/path',
+      title: 'Stale recent typed URL',
+      visitCount: 5,
+      lastVisitTime: now,
+    },
+  ], { now })
+  app.modeCache = {
+    recent: { mode: 'recent', status: 'ready', index: staleIndex, error: null, loadedAt: now },
+    deep: { mode: 'deep', status: 'idle', index: null, error: null, loadedAt: null },
+    closed: { mode: 'closed', status: 'error', index: null, error: new Error('sessions unavailable'), loadedAt: null },
+  }
+  app.searchMode = 'closed'
+  app.index = staleIndex
+  app.results = [searchResult('stale')]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  input.value = 'typed.example/path#fragment'
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  app.updateResults()
+
+  assert.equal(app.searchMode, 'closed')
+  assert.equal(input.value, 'typed.example/path#fragment')
+  assert.equal(app.index, null)
+  assert.deepEqual(app.results, [])
+  assert.equal(app.visibleRows.length, 1)
+  assert.equal(app.visibleRows[0].kind, 'open-typed-url')
+  assert.deepEqual(app.visibleRows[0].candidate, {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  })
+  assert.equal(renderCalls, 1)
+})
+
+test('updateResults preserves legacy recent search behavior when only the current index exists', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  app.index = buildHistoryIndex([historyEntry(1), historyEntry(2)], { now })
+  app.modeCache = null
+  input.value = 'issue 2'
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  app.updateResults()
+
+  assert.equal(app.searchMode, 'recent')
+  assert.equal(input.value, 'issue 2')
+  assert.equal(app.results[0].url, 'https://github.com/shihabdider/scry/issues/2')
+  assert.equal(app.visibleRows.length, app.results.length)
+  assert.equal(app.visibleRows[0].kind, 'result')
+  assert.equal(app.visibleRows[0].result, app.results[0])
+  assert.equal(renderCalls, 1)
 })
 
 test('selectedVisibleRow returns null when no visible row is selected', () => {

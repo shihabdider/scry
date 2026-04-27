@@ -282,13 +282,25 @@ export class ScryPanelApp {
   }
 
   updateResults() {
-    if (!this.index) return
-    this.results = searchHistory(this.index, this.input.value, {
-      now: this.clock(),
-      limit: SEARCH_LIMIT,
-      selections: this.selectionData,
-    })
-    if (this.selectedIndex >= this.results.length) this.selectedIndex = Math.max(0, this.results.length - 1)
+    let currentIndex = this.index
+    if (this.modeCache) {
+      const activeModeState = this.modeCache[this.searchMode] ?? null
+      currentIndex = activeModeState?.status === 'ready' ? activeModeState.index : null
+    }
+
+    this.index = currentIndex ?? null
+    this.results = currentIndex
+      ? searchHistory(currentIndex, this.input.value, {
+        now: this.clock(),
+        limit: SEARCH_LIMIT,
+        selections: this.selectionData,
+      })
+      : []
+
+    this.updateVisibleRows()
+    const rowCount = this.visibleRows.length
+    if (this.selectedIndex >= rowCount) this.selectedIndex = Math.max(0, rowCount - 1)
+    if (this.selectedIndex < 0) this.selectedIndex = 0
     this.ensureSelectedVisible()
     this.renderResults()
   }
