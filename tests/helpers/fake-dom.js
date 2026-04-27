@@ -92,6 +92,7 @@ export class FakeElement {
 
   closest(selector) {
     if (selector === '[data-result-index]' && this.dataset.resultIndex != null) return this
+    if (selector === '[data-visible-row-index]' && this.dataset.visibleRowIndex != null) return this
     return this.parentNode?.closest?.(selector) ?? null
   }
 
@@ -205,5 +206,8 @@ function matches(element, selector) {
   const resultIndex = selector.match(/^\[data-result-index="?(\d+)"?\]$/)
   if (resultIndex) return element.dataset.resultIndex === resultIndex[1]
   if (selector === '[data-result-index]') return element.dataset.resultIndex != null
+  const visibleRowIndex = selector.match(/^\[data-visible-row-index="?(\d+)"?\]$/)
+  if (visibleRowIndex) return element.dataset.visibleRowIndex === visibleRowIndex[1]
+  if (selector === '[data-visible-row-index]') return element.dataset.visibleRowIndex != null
   return false
 }

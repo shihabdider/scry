@@ -454,11 +454,22 @@ export class ScryPanelApp {
   }
 
   focusSelectedResult() {
-    const selected = this.resultsList.querySelector(`[data-result-index="${this.selectedIndex}"]`)
-    if (selected) {
-      selected.focus()
-      return
+    const selectedRow = this.selectedVisibleRow()
+    if (selectedRow && Number.isInteger(this.selectedIndex)) {
+      const selectors = [
+        `[data-visible-row-index="${this.selectedIndex}"]`,
+        `[data-result-index="${this.selectedIndex}"]`,
+      ]
+
+      for (const selector of selectors) {
+        const selected = this.resultsList.querySelector(selector)
+        if (selected) {
+          selected.focus()
+          return
+        }
+      }
     }
+
     this.resultsList.focus?.()
   }
 

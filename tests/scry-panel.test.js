@@ -85,6 +85,18 @@ function createClipboardNavigator(writes) {
   }
 }
 
+function appendFocusableRow(resultsList, dataset = {}) {
+  const item = resultsList.ownerDocument.createElement('li')
+  const button = resultsList.ownerDocument.createElement('button')
+  button.type = 'button'
+  for (const [key, value] of Object.entries(dataset)) {
+    button.dataset[key] = String(value)
+  }
+  item.append(button)
+  resultsList.append(item)
+  return button
+}
+
 test('updateVisibleRows pins a typed URL candidate above corpus results and selection follows visible row order', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
@@ -1756,6 +1768,79 @@ test('focusSearch is safe when cursor placement is unavailable', () => {
   assert.doesNotThrow(() => app.focusSearch())
   assert.equal(app.focusMode, 'search')
   assert.equal(document.activeElement, input)
+})
+
+test('focusSelectedResult focuses a selected real row by visible row index', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const result = searchResult('visited')
+  app.visibleRows = buildVisibleRows({ corpusResults: [result], typedUrlCandidate })
+  app.selectedIndex = 1
+
+  const resultsList = document.querySelector('#results')
+  appendFocusableRow(resultsList, { resultIndex: 0 })
+  const selectedButton = appendFocusableRow(resultsList, { resultIndex: 1 })
+
+  app.focusSelectedResult()
+
+  assert.equal(document.activeElement, selectedButton)
+})
+
+test('focusSelectedResult focuses a selected synthetic typed URL row by equivalent visible row index', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  app.visibleRows = buildVisibleRows({ corpusResults: [searchResult('visited')], typedUrlCandidate })
+  app.selectedIndex = 0
+
+  const resultsList = document.querySelector('#results')
+  const selectedButton = appendFocusableRow(resultsList, { visibleRowIndex: 0 })
+  appendFocusableRow(resultsList, { visibleRowIndex: 1 })
+
+  app.focusSelectedResult()
+
+  assert.equal(document.activeElement, selectedButton)
+})
+
+test('focusSelectedResult falls back to the results list when the selected row button is absent', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.visibleRows = buildVisibleRows({ corpusResults: [searchResult('visited')] })
+  app.selectedIndex = 0
+
+  const resultsList = document.querySelector('#results')
+
+  app.focusSelectedResult()
+
+  assert.equal(document.activeElement, resultsList)
+})
+
+test('focusSelectedResult falls back to the results list for a stale selected index', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.visibleRows = []
+  app.results = []
+  app.selectedIndex = 0
+
+  const resultsList = document.querySelector('#results')
+  appendFocusableRow(resultsList, { resultIndex: 0 })
+
+  app.focusSelectedResult()
+
+  assert.equal(document.activeElement, resultsList)
 })
 
 test('typing i in search input is not intercepted as a mode shortcut', () => {
