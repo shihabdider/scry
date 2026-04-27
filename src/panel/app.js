@@ -123,7 +123,8 @@ export class ScryPanelApp {
   }
 
   resetSelectionForModeSwitch() {
-    throw new Error('not implemented: resetSelectionForModeSwitch')
+    this.selectedIndex = 0
+    this.pageIndex = 0
   }
 
   renderModeIndicator() {

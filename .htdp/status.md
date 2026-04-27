@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 4
-updated: 2026-04-27T19:20:03.856Z
+updated: 2026-04-27T19:21:50.241Z
 
 ## Wishes
 
@@ -23,7 +23,7 @@ updated: 2026-04-27T19:20:03.856Z
 | fetchRecentlyClosed | src/platform/sessions-provider.js | 4 | pass | 92.6s |
 | flattenClosedSessions | src/platform/sessions-provider.js | 4 | pass | 84.9s |
 | writeClipboardText | src/platform/clipboard.js | 4 | pass | 106.6s |
-| resetSelectionForModeSwitch | src/panel/app.js | 4 | pending | - |
+| resetSelectionForModeSwitch | src/panel/app.js | 4 | pass | 98.5s |
 | focusSearch | src/panel/app.js | 4 | pending | - |
 | docs/action-popup-alignment.md | docs/action-popup-alignment.md | 4 | pending | - |
 | parseExactPhrases | src/core/query.js | 3 | pending | - |
@@ -108,3 +108,6 @@ updated: 2026-04-27T19:20:03.856Z
 - 15:18:15 writeClipboardText: running
 - 15:20:02 writeClipboardText: pass (106.6s, $0.5390)
 - 15:20:03 implementer_post verification for writeClipboardText: pass
+- 15:20:10 resetSelectionForModeSwitch: running
+- 15:21:48 resetSelectionForModeSwitch: pass (98.5s, $0.4343)
+- 15:21:50 implementer_post verification for resetSelectionForModeSwitch: pass

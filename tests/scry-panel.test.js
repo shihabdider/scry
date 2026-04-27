@@ -56,6 +56,40 @@ function historyEntry(index) {
   }
 }
 
+test('mode switch reset returns selection and pagination to the top while keeping the query', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+
+  input.value = 'github issue'
+  app.selectedIndex = 5
+  app.pageIndex = 2
+
+  app.resetSelectionForModeSwitch()
+
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
+  assert.equal(input.value, 'github issue')
+})
+
+test('mode switch reset is harmless when already at the top with an empty query', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+
+  input.value = ''
+  app.selectedIndex = 0
+  app.pageIndex = 0
+
+  app.resetSelectionForModeSwitch()
+
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
+  assert.equal(input.value, '')
+})
+
 test('command palette keeps trying to focus search while Chrome is finishing popup open', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2)])
