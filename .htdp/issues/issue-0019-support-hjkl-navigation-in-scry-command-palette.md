@@ -1,4 +1,71 @@
 ---
+id: issue-0019
+status: done
+type: feature
+mode: AFK
+source_prd: null
+depends_on:   - issue-0018
+remote:
+  github: null
+legacy:
+  ous_id: "0016"
+  ous_path: ".ous/issues/0016-support-hjkl-navigation-in-scry-command-palette.md"
+  ous_state: "done"
+  ous_category: "enhancement"
+  ous_parent: "null"
+  ous_tags: ["popup", "keyboard", "navigation", "qa"]
+---
+
+# Support hjkl navigation in Scry command palette
+
+## What to build
+
+Scry should support Vim-style hjkl navigation for browsing command-palette results after Escape moves focus from query entry into result/navigation mode.
+
+## Acceptance examples
+
+- [x] In result/navigation mode, j moves forward/down through results.
+- [x] In result/navigation mode, k moves backward/up through results.
+- [x] In result/navigation mode, h/l have defined navigation behavior, such as previous/next result page if pagination exists.
+- [x] Enter opens the selected result from result/navigation mode.
+- [x] h/j/k/l do not hijack normal text entry while the search input is focused.
+
+## Data definition impact
+
+Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+
+## HtDP entry note
+
+Migrated from OUS #0016 at `.ous/issues/0016-support-hjkl-navigation-in-scry-command-palette.md`. Original state was `done` and category was `enhancement`.
+
+Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+
+## Verification
+
+For code changes derived from this issue, run:
+
+```bash
+npm test
+npm run check
+```
+
+Also verify any original manual or behavioral acceptance criteria preserved below.
+
+## Blocked by
+
+- issue-0018 (migrated from OUS #0015)
+
+## HtDP iterations
+
+- None yet.
+
+## Out of scope
+
+Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+
+## Migrated OUS frontmatter
+
+```yaml
 id: "0016"
 title: "Support hjkl navigation in Scry command palette"
 category: enhancement
@@ -8,7 +75,9 @@ updated: "2026-04-27T04:59:05Z"
 parent: null
 depends_on: ["#0015 (.ous/issues/0015-define-scry-command-palette-focus-lifecycle-with-escape.md)"]
 tags: ["popup", "keyboard", "navigation", "qa"]
----
+```
+
+## Migrated OUS content
 
 ## Summary
 

@@ -1,4 +1,70 @@
 ---
+id: issue-0015
+status: done
+type: bug
+mode: AFK
+source_prd: null
+depends_on: []
+remote:
+  github: null
+legacy:
+  ous_id: "0012"
+  ous_path: ".ous/issues/0012-make-scry-open-shortcut-always-focus-search.md"
+  ous_state: "done"
+  ous_category: "bug"
+  ous_parent: "#0002 (.ous/issues/0002-bootstrap-mv3-side-panel-shell-with-cmd-ctrl-k-toggle.md)"
+  ous_tags: ["chrome-extension", "popup", "shortcut", "qa"]
+---
+
+# Make Scry open shortcut always focus search
+
+## What to build
+
+Scry's open shortcut should open a focused command palette search box. Chrome's side-panel focus model prevents the original side-panel version from focusing search reliably, so Scry is moving the Command+K flow to the extension action popup.
+
+## Acceptance examples
+
+- [x] Command+K opens Scry from a normal page.
+- [x] Command+K opens Scry from New Tab.
+- [x] Command+K opens the Scry popup with focus in the recall search input.
+- [x] Scry no longer depends on Chrome Side Panel focus for the Command+K flow.
+
+## Data definition impact
+
+Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+
+## HtDP entry note
+
+Migrated from OUS #0012 at `.ous/issues/0012-make-scry-open-shortcut-always-focus-search.md`. Original state was `done` and category was `bug`. Original parent: #0002 (.ous/issues/0002-bootstrap-mv3-side-panel-shell-with-cmd-ctrl-k-toggle.md) (migrated as issue-0005).
+
+Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+
+## Verification
+
+For code changes derived from this issue, run:
+
+```bash
+npm test
+npm run check
+```
+
+Also verify any original manual or behavioral acceptance criteria preserved below.
+
+## Blocked by
+
+- None - can start immediately.
+
+## HtDP iterations
+
+- None yet.
+
+## Out of scope
+
+Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+
+## Migrated OUS frontmatter
+
+```yaml
 id: "0012"
 title: "Make Scry open shortcut always focus search"
 category: bug
@@ -8,7 +74,9 @@ updated: "2026-04-27T05:15:54Z"
 parent: "#0002 (.ous/issues/0002-bootstrap-mv3-side-panel-shell-with-cmd-ctrl-k-toggle.md)"
 depends_on: []
 tags: ["chrome-extension", "popup", "shortcut", "qa"]
----
+```
+
+## Migrated OUS content
 
 ## Summary
 

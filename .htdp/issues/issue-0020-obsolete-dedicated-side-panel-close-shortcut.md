@@ -1,4 +1,67 @@
 ---
+id: issue-0020
+status: wontfix
+type: feature
+mode: AFK
+source_prd: null
+depends_on: []
+remote:
+  github: null
+legacy:
+  ous_id: "0017"
+  ous_path: ".ous/issues/0017-obsolete-dedicated-side-panel-close-shortcut.md"
+  ous_state: "wontfix"
+  ous_category: "enhancement"
+  ous_parent: "null"
+  ous_tags: ["side-panel", "keyboard", "shortcut", "qa"]
+---
+
+# Add dedicated shortcut to close Scry side panel
+
+## What to build
+
+Closed as obsolete: Scry no longer uses the Chrome Side Panel for the Command+K flow, so a dedicated side-panel close shortcut is no longer needed.
+
+## Acceptance examples
+
+- [x] Close this issue as obsolete because Scry no longer uses the Chrome Side Panel for the Command+K flow.
+
+## Data definition impact
+
+Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+
+## HtDP entry note
+
+Migrated from OUS #0017 at `.ous/issues/0017-obsolete-dedicated-side-panel-close-shortcut.md`. Original state was `wontfix` and category was `enhancement`.
+
+Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+
+## Verification
+
+For code changes derived from this issue, run:
+
+```bash
+npm test
+npm run check
+```
+
+Also verify any original manual or behavioral acceptance criteria preserved below.
+
+## Blocked by
+
+- None - can start immediately.
+
+## HtDP iterations
+
+- None yet.
+
+## Out of scope
+
+Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+
+## Migrated OUS frontmatter
+
+```yaml
 id: "0017"
 title: "Add dedicated shortcut to close Scry side panel"
 category: enhancement
@@ -8,7 +71,9 @@ updated: "2026-04-27T15:52:29Z"
 parent: null
 depends_on: []
 tags: ["side-panel", "keyboard", "shortcut", "qa"]
----
+```
+
+## Migrated OUS content
 
 ## Summary
 

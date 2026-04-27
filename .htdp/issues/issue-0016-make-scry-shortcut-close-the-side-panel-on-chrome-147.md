@@ -1,4 +1,67 @@
 ---
+id: issue-0016
+status: wontfix
+type: bug
+mode: AFK
+source_prd: null
+depends_on: []
+remote:
+  github: null
+legacy:
+  ous_id: "0013"
+  ous_path: ".ous/issues/0013-make-scry-shortcut-close-the-side-panel-on-chrome-147.md"
+  ous_state: "wontfix"
+  ous_category: "bug"
+  ous_parent: "#0002 (.ous/issues/0002-bootstrap-mv3-side-panel-shell-with-cmd-ctrl-k-toggle.md)"
+  ous_tags: ["chrome-extension", "side-panel", "shortcut", "qa"]
+---
+
+# Make Scry shortcut close the side panel on Chrome 147
+
+## What to build
+
+Closed as obsolete after QA clarified that Command+K should not be the close path; dedicated close behavior is tracked in #0017.
+
+## Acceptance examples
+
+- [x] Close the obsolete toggle-close issue in favor of #0017.
+
+## Data definition impact
+
+Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+
+## HtDP entry note
+
+Migrated from OUS #0013 at `.ous/issues/0013-make-scry-shortcut-close-the-side-panel-on-chrome-147.md`. Original state was `wontfix` and category was `bug`. Original parent: #0002 (.ous/issues/0002-bootstrap-mv3-side-panel-shell-with-cmd-ctrl-k-toggle.md) (migrated as issue-0005).
+
+Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+
+## Verification
+
+For code changes derived from this issue, run:
+
+```bash
+npm test
+npm run check
+```
+
+Also verify any original manual or behavioral acceptance criteria preserved below.
+
+## Blocked by
+
+- None - can start immediately.
+
+## HtDP iterations
+
+- None yet.
+
+## Out of scope
+
+Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+
+## Migrated OUS frontmatter
+
+```yaml
 id: "0013"
 title: "Make Scry shortcut close the side panel on Chrome 147"
 category: bug
@@ -8,7 +71,9 @@ updated: "2026-04-27T04:17:34Z"
 parent: "#0002 (.ous/issues/0002-bootstrap-mv3-side-panel-shell-with-cmd-ctrl-k-toggle.md)"
 depends_on: []
 tags: ["chrome-extension", "side-panel", "shortcut", "qa"]
----
+```
+
+## Migrated OUS content
 
 ## Summary
 

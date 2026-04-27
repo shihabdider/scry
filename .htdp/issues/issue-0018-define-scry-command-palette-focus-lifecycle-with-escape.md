@@ -1,4 +1,72 @@
 ---
+id: issue-0018
+status: done
+type: bug
+mode: AFK
+source_prd: null
+depends_on: []
+remote:
+  github: null
+legacy:
+  ous_id: "0015"
+  ous_path: ".ous/issues/0015-define-scry-command-palette-focus-lifecycle-with-escape.md"
+  ous_state: "done"
+  ous_category: "bug"
+  ous_parent: "null"
+  ous_tags: ["popup", "keyboard", "focus", "qa"]
+---
+
+# Define Scry command-palette focus lifecycle with Escape
+
+## What to build
+
+Scry needs a predictable focus lifecycle: open into search, Escape into result navigation, and Escape again out of the command palette.
+
+## Acceptance examples
+
+- [x] Opening or refocusing Scry places focus in the search input.
+- [x] Pressing Escape while the search input is focused moves to result/navigation mode without closing the command palette.
+- [x] Pressing Escape again from result/navigation mode closes or leaves the command palette.
+- [x] Opening a selected result closes the command palette.
+- [x] Command+K opens with focus in the search input.
+- [x] Search typing remains unchanged while the search input is focused.
+
+## Data definition impact
+
+Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+
+## HtDP entry note
+
+Migrated from OUS #0015 at `.ous/issues/0015-define-scry-command-palette-focus-lifecycle-with-escape.md`. Original state was `done` and category was `bug`.
+
+Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+
+## Verification
+
+For code changes derived from this issue, run:
+
+```bash
+npm test
+npm run check
+```
+
+Also verify any original manual or behavioral acceptance criteria preserved below.
+
+## Blocked by
+
+- None - can start immediately.
+
+## HtDP iterations
+
+- None yet.
+
+## Out of scope
+
+Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+
+## Migrated OUS frontmatter
+
+```yaml
 id: "0015"
 title: "Define Scry command-palette focus lifecycle with Escape"
 category: bug
@@ -8,7 +76,9 @@ updated: "2026-04-27T04:59:05Z"
 parent: null
 depends_on: []
 tags: ["popup", "keyboard", "focus", "qa"]
----
+```
+
+## Migrated OUS content
 
 ## Summary
 

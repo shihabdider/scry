@@ -1,4 +1,69 @@
 ---
+id: issue-0017
+status: done
+type: bug
+mode: AFK
+source_prd: null
+depends_on: []
+remote:
+  github: null
+legacy:
+  ous_id: "0014"
+  ous_path: ".ous/issues/0014-keep-scry-results-within-the-command-palette-viewport.md"
+  ous_state: "done"
+  ous_category: "bug"
+  ous_parent: "null"
+  ous_tags: ["popup", "results", "pagination", "qa"]
+---
+
+# Keep Scry results within the command-palette viewport
+
+## What to build
+
+Scry's command-palette contents should fit within the visible popup height; result browsing should use pagination to reach additional matches.
+
+## Acceptance examples
+
+- [x] The command palette fits within the visible Chrome popup height without whole-popup vertical overflow for a normal result page.
+- [x] Users can reach additional matching history results through pagination or equivalent page controls.
+- [x] Search input, status, and footer/navigation controls remain visible and usable while moving between result pages.
+
+## Data definition impact
+
+Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+
+## HtDP entry note
+
+Migrated from OUS #0014 at `.ous/issues/0014-keep-scry-results-within-the-command-palette-viewport.md`. Original state was `done` and category was `bug`.
+
+Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+
+## Verification
+
+For code changes derived from this issue, run:
+
+```bash
+npm test
+npm run check
+```
+
+Also verify any original manual or behavioral acceptance criteria preserved below.
+
+## Blocked by
+
+- None - can start immediately.
+
+## HtDP iterations
+
+- None yet.
+
+## Out of scope
+
+Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+
+## Migrated OUS frontmatter
+
+```yaml
 id: "0014"
 title: "Keep Scry results within the command-palette viewport"
 category: bug
@@ -8,7 +73,9 @@ updated: "2026-04-27T04:59:05Z"
 parent: null
 depends_on: []
 tags: ["popup", "results", "pagination", "qa"]
----
+```
+
+## Migrated OUS content
 
 ## Summary
 

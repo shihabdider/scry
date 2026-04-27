@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "targets": [
+    {
+      "label": "scry",
+      "path": ".",
+      "verifiers": {
+        "compile": null,
+        "test": {
+          "argv": ["npm", "test"],
+          "scope": "project",
+          "input": "none"
+        },
+        "check": {
+          "argv": ["npm", "run", "check"],
+          "scope": "project",
+          "input": "none"
+        },
+        "lint": {
+          "check": null,
+          "fix": null
+        }
+      },
+      "hooks": {
+        "stubber_post": [],
+        "implementer_post": [
+          { "verifier": "test" },
+          { "verifier": "check" }
+        ],
+        "layer_post": [
+          { "verifier": "test" },
+          { "verifier": "check" }
+        ],
+        "abstractor_post": [
+          { "verifier": "test" },
+          { "verifier": "check" }
+        ],
+        "final_preverify": [
+          { "verifier": "test" },
+          { "verifier": "check" }
+        ]
+      }
+    }
+  ]
+}

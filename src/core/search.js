@@ -21,6 +21,53 @@ const TIER = {
   exact: 4,
 }
 
+/**
+ * @typedef {object} HistoryIndex
+ * @property {number} builtAt Millisecond timestamp when this in-memory index was built.
+ * @property {object[]} entries Normalized URL entries with precomputed searchable segments.
+ */
+
+/**
+ * @typedef {object} SearchResult
+ * @property {string} key Normalized URL key.
+ * @property {string} url Full normalized navigable URL.
+ * @property {string} displayUrl Truncated display URL.
+ * @property {string} title Result title.
+ * @property {number} visitCount Visit count aggregate.
+ * @property {string} visitsLabel Human-readable visit count.
+ * @property {number} lastVisitTime Last visit timestamp.
+ * @property {string} lastVisitedLabel Human-readable recency label.
+ * @property {string} urlHtml Highlighted display URL HTML.
+ * @property {string} titleHtml Highlighted title HTML.
+ * @property {object} debug Internal ranking explanation.
+ */
+
+/**
+ * @typedef {object} ExactPhraseEvidence
+ * @property {import('./query.js').ExactPhrase} phrase Phrase that matched.
+ * @property {'displayUrl'|'title'} field Field containing the phrase match.
+ * @property {number} position Character offset of the normalized phrase match.
+ */
+
+/**
+ * @typedef {object} QuoteMatchResult
+ * @property {boolean} matched True only when every exact phrase has evidence.
+ * @property {ExactPhraseEvidence[]} evidence Match evidence, one item per phrase.
+ * @property {number[]} qualityTuple URL-over-title and earlier-position ranking tuple.
+ */
+
+export function collectExactPhraseEvidence(entry, exactPhrases) {
+  throw new Error('not implemented: collectExactPhraseEvidence')
+}
+
+export function compareQuoteEvidence(a, b) {
+  throw new Error('not implemented: compareQuoteEvidence')
+}
+
+export function searchParsedHistory(index, parsedQuery, { now = Date.now(), limit = DEFAULT_LIMIT, selections } = {}) {
+  throw new Error('not implemented: searchParsedHistory')
+}
+
 function isOrderedAbbreviation(token, value) {
   if (token.length < 2 || token.length > 4) return false
   if (value.includes(token)) return false

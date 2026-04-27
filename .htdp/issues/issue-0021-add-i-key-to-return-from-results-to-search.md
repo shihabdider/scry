@@ -1,4 +1,70 @@
 ---
+id: issue-0021
+status: ready-for-agent
+type: feature
+mode: AFK
+source_prd: null
+depends_on:   - issue-0018
+remote:
+  github: null
+legacy:
+  ous_id: "0018"
+  ous_path: ".ous/issues/0018-add-i-key-to-return-from-results-to-search.md"
+  ous_state: "ready-for-agent"
+  ous_category: "enhancement"
+  ous_parent: "null"
+  ous_tags: ["popup", "keyboard", "focus", "qa"]
+---
+
+# Add i key to return from results to search
+
+## What to build
+
+Scry needs a keyboard shortcut to return from result/navigation mode back to the search input without closing and reopening the command palette.
+
+## Acceptance examples
+
+- [ ] Pressing `i` in result/navigation mode focuses the search input.
+- [ ] The current query text is preserved when returning to search input.
+- [ ] Pressing `i` while the search input is focused inserts text normally.
+- [ ] The footer hint mentions `i` as the way back to search.
+
+## Data definition impact
+
+Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+
+## HtDP entry note
+
+Migrated from OUS #0018 at `.ous/issues/0018-add-i-key-to-return-from-results-to-search.md`. Original state was `ready-for-agent` and category was `enhancement`.
+
+Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+
+## Verification
+
+For code changes derived from this issue, run:
+
+```bash
+npm test
+npm run check
+```
+
+Also verify any original manual or behavioral acceptance criteria preserved below.
+
+## Blocked by
+
+- issue-0018 (migrated from OUS #0015)
+
+## HtDP iterations
+
+- None yet.
+
+## Out of scope
+
+Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+
+## Migrated OUS frontmatter
+
+```yaml
 id: "0018"
 title: "Add i key to return from results to search"
 category: enhancement
@@ -8,7 +74,9 @@ updated: "2026-04-27T05:15:54Z"
 parent: null
 depends_on: ["#0015 (.ous/issues/0015-define-scry-command-palette-focus-lifecycle-with-escape.md)"]
 tags: ["popup", "keyboard", "focus", "qa"]
----
+```
+
+## Migrated OUS content
 
 ## Summary
 

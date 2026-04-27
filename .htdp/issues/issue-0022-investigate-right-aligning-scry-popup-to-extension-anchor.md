@@ -1,4 +1,69 @@
 ---
+id: issue-0022
+status: needs-triage
+type: feature
+mode: HITL
+source_prd: null
+depends_on: []
+remote:
+  github: null
+legacy:
+  ous_id: "0019"
+  ous_path: ".ous/issues/0019-investigate-right-aligning-scry-popup-to-extension-anchor.md"
+  ous_state: "needs-triage"
+  ous_category: "enhancement"
+  ous_parent: "null"
+  ous_tags: ["popup", "layout", "chrome-extension", "qa"]
+---
+
+# Investigate right-aligning Scry popup to extension anchor
+
+## What to build
+
+Scry's popup should align to the right side of its extension anchor if Chrome allows that positioning.
+
+## Acceptance examples
+
+- [ ] Confirm whether Chrome exposes any supported way to control action popup alignment.
+- [ ] If supported, Scry opens right-aligned to the extension anchor.
+- [ ] If unsupported, document the Chrome limitation and any viable workaround.
+
+## Data definition impact
+
+Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+
+## HtDP entry note
+
+Migrated from OUS #0019 at `.ous/issues/0019-investigate-right-aligning-scry-popup-to-extension-anchor.md`. Original state was `needs-triage` and category was `enhancement`.
+
+Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+
+## Verification
+
+For code changes derived from this issue, run:
+
+```bash
+npm test
+npm run check
+```
+
+Also verify any original manual or behavioral acceptance criteria preserved below.
+
+## Blocked by
+
+- None - can start immediately.
+
+## HtDP iterations
+
+- None yet.
+
+## Out of scope
+
+Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+
+## Migrated OUS frontmatter
+
+```yaml
 id: "0019"
 title: "Investigate right-aligning Scry popup to extension anchor"
 category: enhancement
@@ -8,7 +73,9 @@ updated: "2026-04-27T05:15:54Z"
 parent: null
 depends_on: []
 tags: ["popup", "layout", "chrome-extension", "qa"]
----
+```
+
+## Migrated OUS content
 
 ## Summary
 

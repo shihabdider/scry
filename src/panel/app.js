@@ -22,6 +22,10 @@ export class ScryPanelApp {
     this.selectedIndex = 0
     this.pageIndex = 0
     this.focusMode = 'search'
+    this.searchMode = 'recent'
+    this.modeCache = null
+    this.visibleRows = []
+    this.copiedFeedback = null
     this.focusRequestId = 0
     this.selectionData = undefined
 
@@ -108,6 +112,38 @@ export class ScryPanelApp {
       this.setStatus('History unavailable')
       this.showMessage('Could not load browser history. Check extension permissions.')
     }
+  }
+
+  async switchSearchMode(mode) {
+    throw new Error('not implemented: switchSearchMode')
+  }
+
+  async ensureSearchModeReady(mode) {
+    throw new Error('not implemented: ensureSearchModeReady')
+  }
+
+  resetSelectionForModeSwitch() {
+    throw new Error('not implemented: resetSelectionForModeSwitch')
+  }
+
+  renderModeIndicator() {
+    throw new Error('not implemented: renderModeIndicator')
+  }
+
+  updateVisibleRows() {
+    throw new Error('not implemented: updateVisibleRows')
+  }
+
+  selectedVisibleRow() {
+    throw new Error('not implemented: selectedVisibleRow')
+  }
+
+  async copySelectedRow() {
+    throw new Error('not implemented: copySelectedRow')
+  }
+
+  changeSelectedRowToSearch() {
+    throw new Error('not implemented: changeSelectedRowToSearch')
   }
 
   updateResults() {

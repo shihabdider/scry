@@ -1,4 +1,70 @@
 ---
+id: issue-0005
+status: done
+type: feature
+mode: AFK
+source_prd: null
+depends_on: []
+remote:
+  github: null
+legacy:
+  ous_id: "0002"
+  ous_path: ".ous/issues/0002-bootstrap-mv3-side-panel-shell-with-cmd-ctrl-k-toggle.md"
+  ous_state: "done"
+  ous_category: "enhancement"
+  ous_parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
+  ous_tags: ["chrome-extension", "scry", "vertical-slice"]
+---
+
+# Bootstrap MV3 popup command palette with Cmd/Ctrl+K
+
+## What to build
+
+Bootstrap the Chrome MV3 extension with a popup command palette entrypoint and Cmd/Ctrl+K action shortcut. The slice should be loadable as an unpacked extension, open from normal pages and New Tab, and focus the search UI whenever Scry opens.
+
+## Acceptance examples
+
+- [x] The extension can be loaded unpacked as an MV3 Chrome extension.
+- [x] The popup command palette opens from a normal page and New Tab.
+- [x] Cmd/Ctrl+K opens the command palette through Chrome's action shortcut.
+- [x] The search input receives focus when the command palette opens.
+
+## Data definition impact
+
+Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+
+## HtDP entry note
+
+Migrated from OUS #0002 at `.ous/issues/0002-bootstrap-mv3-side-panel-shell-with-cmd-ctrl-k-toggle.md`. Original state was `done` and category was `enhancement`. Original parent: #0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md) (migrated as issue-0004).
+
+Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+
+## Verification
+
+For code changes derived from this issue, run:
+
+```bash
+npm test
+npm run check
+```
+
+Also verify any original manual or behavioral acceptance criteria preserved below.
+
+## Blocked by
+
+- None - can start immediately.
+
+## HtDP iterations
+
+- None yet.
+
+## Out of scope
+
+Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+
+## Migrated OUS frontmatter
+
+```yaml
 id: "0002"
 title: "Bootstrap MV3 popup command palette with Cmd/Ctrl+K"
 category: enhancement
@@ -8,7 +74,9 @@ updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: []
 tags: ["chrome-extension", "scry", "vertical-slice"]
----
+```
+
+## Migrated OUS content
 
 ## Summary
 Bootstrap the Chrome MV3 extension with a popup command palette entrypoint and Cmd/Ctrl+K action shortcut. The slice should be loadable as an unpacked extension, open from normal pages and New Tab, and focus the search UI whenever Scry opens.

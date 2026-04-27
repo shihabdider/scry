@@ -13,6 +13,13 @@ const TRACKING_PARAMS = new Set([
   'spm',
 ])
 
+/**
+ * @typedef {object} TypedUrlCandidate
+ * @property {string} displayInput User-editable URL-like text shown in the search box/action row.
+ * @property {string} normalizedUrl Full navigable URL opened/copied by the synthetic action row.
+ * @property {string} key Stable normalized URL key; typed rows do not use it for selection learning.
+ */
+
 function isTrackingParam(name) {
   const lower = name.toLowerCase()
   return lower.startsWith('utm_') || TRACKING_PARAMS.has(lower)
@@ -55,6 +62,10 @@ export function normalizeHistoryUrl(rawUrl) {
     url: parsed.toString(),
     displayUrl: toDisplayUrl(parsed),
   }
+}
+
+export function createTypedUrlCandidate(input) {
+  throw new Error('not implemented: createTypedUrlCandidate')
 }
 
 export function toDisplayUrl(urlLike) {

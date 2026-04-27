@@ -1,4 +1,94 @@
 ---
+id: issue-0004
+status: ready-for-agent
+type: prd
+mode: AFK
+source_prd: null
+depends_on: []
+remote:
+  github: null
+legacy:
+  ous_id: "0001"
+  ous_path: ".ous/issues/0001-build-scry-history-first-url-recall-extension.md"
+  ous_state: "ready-for-agent"
+  ous_category: "prd"
+  ous_parent: "null"
+  ous_tags: ["chrome-extension", "manifest-v3", "history-search", "prd"]
+---
+
+# Build Scry history-first URL recall extension
+
+## What to build
+
+Build Scry, a Manifest V3 Chrome extension that provides a keyboard-first, history-only URL recall experience in the Chrome side panel. Scry should help the user reopen exact previously visited pages by matching remembered URL fragments with high precision, showing confidence metadata, and learning from explicit selections without becoming a general command palette.
+
+## Acceptance examples
+
+- [x] Cmd/Ctrl+K opens the Scry command palette from a normal page.
+- [x] Cmd/Ctrl+K opens the Scry command palette from Chrome New Tab.
+- [x] The Scry command palette can be dismissed through Escape, normal popup dismissal, or opening a selected result.
+- [x] The search input is focused when the command palette opens.
+- [x] The default index loads recent bounded history on first open and stays in memory while the command palette is open.
+- [x] Empty query shows frecency-ranked history results.
+- [x] Query tokens are split on spaces, asterisks, slashes, periods, dashes, underscores, and similar separators.
+- [x] A query shaped like git*skilift*issues*13 can find a matching visited GitHub issue URL.
+- [x] A query shaped like gh*issu can match github and issues through constrained abbreviation/prefix behavior.
+- [x] Similar URL targets such as skilift and skitools are ranked according to exact/prefix URL evidence rather than loose fuzzy similarity.
+- [x] For a query containing numeric token 13, a URL segment exactly equal to 13 outranks a URL segment beginning with 13 but continuing with more digits.
+- [x] URL host/path evidence outranks title-only evidence.
+- [x] Query-string evidence is searchable but lower priority than host/path evidence.
+- [x] Result rows show URL first, title second, visit count, and human-readable last visited age.
+- [x] Long URLs are truncated in the middle while preserving useful beginning and end.
+- [x] Matched fragments are highlighted with simple bold styling.
+- [x] The UI has a sparse old-Google-inspired visual style with no favicons and no card layout.
+- [x] Arrow keys and Ctrl+N/Ctrl+P move the selected result.
+- [x] Enter opens the selected result in the current tab.
+- [x] Cmd/Ctrl+Enter opens the selected result in a new tab.
+- [x] Selecting a result records local selection-learning data.
+- [x] Selection learning can improve repeated close candidates without overriding better exact/prefix URL matches.
+- [ ] Deep Search can be triggered explicitly as the correct search mode when default search is insufficient.
+- [x] No web search fallback is shown or executed.
+- [x] No bookmarks, tabs, or command results appear in v1 search results.
+- [x] No external network calls are made by the extension.
+- [x] Ranking functions expose internal debug explanations for development without rendering them in normal UI.
+- [x] Core URL normalization, tokenization, matching, ranking, frecency, selection-learning, age formatting, truncation, and highlighting behavior is covered by automated tests.
+
+## Data definition impact
+
+Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+
+## HtDP entry note
+
+Migrated from OUS #0001 at `.ous/issues/0001-build-scry-history-first-url-recall-extension.md`. Original state was `ready-for-agent` and category was `prd`.
+
+Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+
+## Verification
+
+For code changes derived from this issue, run:
+
+```bash
+npm test
+npm run check
+```
+
+Also verify any original manual or behavioral acceptance criteria preserved below.
+
+## Blocked by
+
+- None - can start immediately.
+
+## HtDP iterations
+
+- None yet.
+
+## Out of scope
+
+Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+
+## Migrated OUS frontmatter
+
+```yaml
 id: "0001"
 title: "Build Scry history-first URL recall extension"
 category: prd
@@ -8,7 +98,9 @@ updated: "2026-04-27T15:52:29Z"
 parent: null
 depends_on: []
 tags: ["chrome-extension", "manifest-v3", "history-search", "prd"]
----
+```
+
+## Migrated OUS content
 
 ## Summary
 
