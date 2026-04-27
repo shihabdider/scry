@@ -314,7 +314,9 @@ export class ScryPanelApp {
   }
 
   pageStart() {
-    return this.pageIndex * RESULTS_PER_PAGE
+    const rawPageIndex = Number.isFinite(this.pageIndex) ? Math.trunc(this.pageIndex) : 0
+    const pageIndex = Math.min(Math.max(0, rawPageIndex), this.pageCount() - 1)
+    return pageIndex * RESULTS_PER_PAGE
   }
 
   clampPageIndex() {

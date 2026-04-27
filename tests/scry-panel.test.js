@@ -238,6 +238,64 @@ test('pageCount computes multiple pages from visible real result rows', () => {
   assert.equal(app.pageCount(), 2)
 })
 
+test('pageStart ignores a pinned typed URL row when computing the real result page offset', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 7 }, (_, index) => searchResult(`page-start-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+
+  app.pageIndex = 0
+  assert.equal(app.pageStart(), 0)
+
+  app.pageIndex = 1
+  assert.equal(app.pageStart(), 6)
+})
+
+test('pageStart falls back to legacy real result indexing when visible rows are not populated yet', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.results = Array.from({ length: 7 }, (_, index) => searchResult(`legacy-start-${index + 1}`))
+  app.visibleRows = []
+
+  app.pageIndex = 0
+  assert.equal(app.pageStart(), 0)
+
+  app.pageIndex = 1
+  assert.equal(app.pageStart(), 6)
+})
+
+test('pageStart clamps invalid page indexes to real result page bounds', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 7 }, (_, index) => searchResult(`bounded-start-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+
+  app.pageIndex = -1
+  assert.equal(app.pageStart(), 0)
+
+  app.pageIndex = 99
+  assert.equal(app.pageStart(), 6)
+
+  app.results = []
+  app.visibleRows = buildVisibleRows({ corpusResults: [], typedUrlCandidate })
+  assert.equal(app.pageStart(), 0)
+})
+
 test('pageCount falls back to legacy results and keeps a one-page minimum', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
