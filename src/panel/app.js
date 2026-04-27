@@ -1,5 +1,5 @@
 import { parseQuery } from '../core/query.js'
-import { buildVisibleRows, rowEditableText, rowOpenUrl } from '../core/rows.js'
+import { buildVisibleRows, rowEditableText, rowOpenUrl, rowSelectionLearningKey } from '../core/rows.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
@@ -412,19 +412,23 @@ export class ScryPanelApp {
   }
 
   async openSelected({ newTab }) {
-    const result = this.results[this.selectedIndex]
-    if (!result) return
+    const row = this.selectedVisibleRow()
+    const url = rowOpenUrl(row)
+    if (!url) return
 
-    await openUrl(result.url, { chromeApi: this.chromeApi, newTab })
+    await openUrl(url, { chromeApi: this.chromeApi, newTab })
 
-    this.selectionData = recordSelection(this.selectionData, {
-      query: this.input.value,
-      tokens: parseQuery(this.input.value).tokens,
-      urlKey: result.key,
-      selectedAt: this.clock(),
-    })
-    await saveSelectionData(this.selectionData, { chromeApi: this.chromeApi })
-    this.updateResults()
+    const urlKey = rowSelectionLearningKey(row)
+    if (urlKey) {
+      this.selectionData = recordSelection(this.selectionData, {
+        query: parseQuery(this.input.value),
+        urlKey,
+        selectedAt: this.clock(),
+      })
+      await saveSelectionData(this.selectionData, { chromeApi: this.chromeApi })
+      this.updateResults()
+    }
+
     this.leavePanelFocus()
   }
 

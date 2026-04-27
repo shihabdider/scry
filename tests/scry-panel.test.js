@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import { buildVisibleRows } from '../src/core/rows.js'
 import { ScryPanelApp } from '../src/panel/app.js'
+import { SELECTION_STORAGE_KEY } from '../src/platform/selection-store.js'
 import { createScryDocument, dispatchInput, dispatchKeydown } from './helpers/fake-dom.js'
 
 const now = Date.parse('2026-04-27T00:00:00Z')
@@ -384,6 +385,135 @@ test('copySelectedRow is a no-op when no selected row has a copyable URL', async
   assert.equal(app.copiedFeedback, null)
   assert.equal(scheduledTimers.length, 0)
   assert.equal(renderCalls, 0)
+})
+
+test('openSelected opens the selected synthetic typed URL row without recording selection learning', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const selectionWrites = []
+  chromeApi.storage.local.set = async (value) => {
+    selectionWrites.push(value)
+  }
+  const windowApi = {
+    closeCalls: 0,
+    close() {
+      this.closeCalls++
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi })
+  const existingSelectionData = {
+    version: 1,
+    aggregates: {
+      docs: {
+        'https://example.com/visited': {
+          count: 1,
+          lastSelectedAt: now - 1,
+          selectedAt: [now - 1],
+        },
+      },
+    },
+  }
+  app.selectionData = existingSelectionData
+  app.input.value = 'typed.example/path#fragment'
+  app.results = [searchResult('visited')]
+  app.updateVisibleRows()
+  app.selectedIndex = 0
+  let updateCalls = 0
+  app.updateResults = () => {
+    updateCalls++
+  }
+
+  await app.openSelected({ newTab: false })
+
+  assert.deepEqual(chromeApi.tabs.updated, [
+    { id: 101, change: { url: 'https://typed.example/path' } },
+  ])
+  assert.deepEqual(chromeApi.tabs.opened, [])
+  assert.equal(app.selectionData, existingSelectionData)
+  assert.deepEqual(selectionWrites, [])
+  assert.equal(updateCalls, 0)
+  assert.equal(windowApi.closeCalls, 1)
+})
+
+test('openSelected opens a real visible row in a new tab and records parsed unquoted selection learning', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const selectionWrites = []
+  chromeApi.storage.local.set = async (value) => {
+    selectionWrites.push(value)
+  }
+  const windowApi = {
+    closeCalls: 0,
+    close() {
+      this.closeCalls++
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi })
+  const docsResult = searchResult('docs')
+  app.input.value = 'docs "Exact Phrase" install'
+  app.results = [docsResult]
+  app.visibleRows = buildVisibleRows({
+    corpusResults: app.results,
+    typedUrlCandidate: {
+      displayInput: 'typed.example/path',
+      normalizedUrl: 'https://typed.example/path',
+      key: 'https://typed.example/path',
+    },
+  })
+  app.selectedIndex = 1
+  let updateCalls = 0
+  app.updateResults = () => {
+    updateCalls++
+  }
+
+  await app.openSelected({ newTab: true })
+
+  const expectedSelectionData = {
+    version: 1,
+    aggregates: {
+      'docs install': {
+        [docsResult.key]: {
+          count: 1,
+          lastSelectedAt: now,
+          selectedAt: [now],
+        },
+      },
+    },
+  }
+  assert.deepEqual(chromeApi.tabs.opened, [
+    { url: 'https://example.com/docs?tab=readme', active: true },
+  ])
+  assert.deepEqual(chromeApi.tabs.updated, [])
+  assert.deepEqual(app.selectionData, expectedSelectionData)
+  assert.deepEqual(selectionWrites, [{ [SELECTION_STORAGE_KEY]: expectedSelectionData }])
+  assert.equal(updateCalls, 1)
+  assert.equal(windowApi.closeCalls, 1)
+})
+
+test('openSelected is a no-op when no visible row is selected', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const selectionWrites = []
+  chromeApi.storage.local.set = async (value) => {
+    selectionWrites.push(value)
+  }
+  const windowApi = {
+    closeCalls: 0,
+    close() {
+      this.closeCalls++
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi })
+  app.results = []
+  app.visibleRows = []
+  app.selectedIndex = 0
+
+  await app.openSelected({ newTab: true })
+
+  assert.deepEqual(chromeApi.tabs.opened, [])
+  assert.deepEqual(chromeApi.tabs.updated, [])
+  assert.deepEqual(selectionWrites, [])
+  assert.equal(windowApi.closeCalls, 0)
 })
 
 test('changeSelectedRowToSearch edits the search box to the selected real result display URL and refreshes immediately', () => {
