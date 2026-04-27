@@ -2,9 +2,9 @@
 id: "0010"
 title: "Add local selection learning with safe ranking boosts"
 category: enhancement
-state: ready-for-human
+state: done
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T01:58:00Z"
+updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: ["#0007"]
 tags: ["chrome-extension", "scry", "vertical-slice"]
@@ -29,10 +29,10 @@ Record explicit Scry selections in local storage and use them as safe ranking bo
 
 ## Acceptance Criteria
 
-- [ ] Selecting a result stores local selection-learning data.
-- [ ] Repeated selections can boost close candidates.
-- [ ] Learning cannot override clearly stronger exact/prefix URL matches.
-- [ ] No full history index is persisted.
+- [x] Selecting a result stores local selection-learning data.
+- [x] Repeated selections can boost close candidates.
+- [x] Learning cannot override clearly stronger exact/prefix URL matches.
+- [x] No full history index is persisted.
 
 ## Activity
 
@@ -47,3 +47,7 @@ Created implementation slice issue.
 > *Implementation pass completed.*
 
 Implemented this slice in the greenfield Scry extension. Automated tests and syntax checks pass; Chrome manual side-panel smoke testing remains for human verification.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current implementation. Scry records selections to local Scry-specific aggregates, applies bounded boosts to close candidates, prevents learning from overriding clearly stronger URL evidence, and does not persist a full history index. Marked done.

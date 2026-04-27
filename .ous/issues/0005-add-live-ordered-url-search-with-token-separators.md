@@ -2,9 +2,9 @@
 id: "0005"
 title: "Add live ordered URL search with token separators"
 category: enhancement
-state: ready-for-human
+state: done
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T01:58:00Z"
+updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: ["#0004"]
 tags: ["chrome-extension", "scry", "vertical-slice"]
@@ -29,10 +29,10 @@ Add live search over the in-memory history index. Queries should split on natura
 
 ## Acceptance Criteria
 
-- [ ] Queries split on spaces, asterisks, slashes, periods, dashes, underscores, and similar separators.
-- [ ] Ordered URL host/path matches outrank unordered or title-only evidence.
-- [ ] A query like git*skilift*issues*13 finds a matching visited GitHub issue URL.
-- [ ] Filtering updates live from the in-memory index.
+- [x] Queries split on spaces, asterisks, slashes, periods, dashes, underscores, and similar separators.
+- [x] Ordered URL host/path matches outrank unordered or title-only evidence.
+- [x] A query like git*skilift*issues*13 finds a matching visited GitHub issue URL.
+- [x] Filtering updates live from the in-memory index.
 
 ## Activity
 
@@ -47,3 +47,7 @@ Created implementation slice issue.
 > *Implementation pass completed.*
 
 Implemented this slice in the greenfield Scry extension. Automated tests and syntax checks pass; Chrome manual side-panel smoke testing remains for human verification.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current implementation. Query tokenization handles natural separators, filtering updates live from the in-memory index, and ordered URL host/path evidence drives ranking for remembered URL fragments. Marked done.

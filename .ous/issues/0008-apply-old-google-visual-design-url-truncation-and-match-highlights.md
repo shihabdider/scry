@@ -2,9 +2,9 @@
 id: "0008"
 title: "Apply old-Google visual design URL truncation and match highlights"
 category: enhancement
-state: ready-for-human
+state: done
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T01:58:00Z"
+updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: ["#0006", "#0007"]
 tags: ["chrome-extension", "scry", "vertical-slice"]
@@ -29,10 +29,10 @@ Apply the old-school Google-inspired visual design across the side panel. Rows s
 
 ## Acceptance Criteria
 
-- [ ] The side panel uses sparse old-Google-inspired styling.
-- [ ] Rows are dense, URL-first, and do not use favicons or cards.
-- [ ] Long URLs are middle-truncated while preserving beginning and end.
-- [ ] Matched fragments render as simple bold text.
+- [x] The command palette uses sparse old-Google-inspired styling.
+- [x] Rows are dense, URL-first, and do not use favicons or cards.
+- [x] Long URLs are middle-truncated while preserving beginning and end.
+- [x] Matched fragments render as simple bold text.
 
 ## Activity
 
@@ -47,3 +47,7 @@ Created implementation slice issue.
 > *Implementation pass completed.*
 
 Implemented this slice in the greenfield Scry extension. Automated tests and syntax checks pass; Chrome manual side-panel smoke testing remains for human verification.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current popup UI. The command palette uses sparse old-Google-inspired styling, URL-first dense rows, no favicons/cards, middle truncation, and simple bold highlights. Marked done.

@@ -4,7 +4,7 @@ title: "Add dedicated shortcut to close Scry side panel"
 category: enhancement
 state: wontfix
 created: "2026-04-27T04:17:34Z"
-updated: "2026-04-27T04:59:05Z"
+updated: "2026-04-27T15:52:29Z"
 parent: null
 depends_on: []
 tags: ["side-panel", "keyboard", "shortcut", "qa"]
@@ -46,10 +46,7 @@ This pairs with #0012: Command+K should become an open/refocus shortcut, not a c
 
 ## Acceptance Criteria
 
-- [x] Scry exposes a dedicated close command in Chrome's extension shortcut settings.
-- [x] The close command closes the Scry side panel when it is open.
-- [x] The open/refocus shortcut does not close the side panel.
-- [x] The README and side-panel hints distinguish the open/refocus shortcut from the close shortcut.
+- [x] Close this issue as obsolete because Scry no longer uses the Chrome Side Panel for the Command+K flow.
 
 ## Activity
 
@@ -66,3 +63,7 @@ Implemented separate open/refocus and close commands. Command+K opens/refocuses 
 ### 2026-04-27T04:59:05Z — AI
 
 Obsoleted by the popup command palette pivot. The popup closes through normal browser popup behavior, Escape, or after opening a selected result; no separate close command is needed.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current popup implementation. Corrected this issue record so it no longer claims that a dedicated side-panel close shortcut exists; the issue remains wontfix/obsolete because Scry no longer uses the Chrome Side Panel for the Command+K flow.

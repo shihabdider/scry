@@ -2,9 +2,9 @@
 id: "0002"
 title: "Bootstrap MV3 popup command palette with Cmd/Ctrl+K"
 category: enhancement
-state: ready-for-human
+state: done
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T04:59:05Z"
+updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: []
 tags: ["chrome-extension", "scry", "vertical-slice"]
@@ -55,3 +55,7 @@ Updated shortcut semantics after QA: the primary shortcut is now open/refocus on
 ### 2026-04-27T04:59:05Z — AI
 
 Pivoted the entrypoint from Chrome Side Panel to an action popup command palette because Chrome does not let extensions force focus into a side panel opened by shortcut. Automated manifest tests now assert the popup command palette contract.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current popup command-palette implementation against this issue. The MV3 popup entrypoint, Command/Ctrl+K action shortcut, normal-page/New-Tab open path, and search focus behavior are implemented and covered by automated contract/panel tests. Marked done.

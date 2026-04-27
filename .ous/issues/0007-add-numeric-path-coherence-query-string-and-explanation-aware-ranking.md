@@ -2,9 +2,9 @@
 id: "0007"
 title: "Add numeric path-coherence query-string and explanation-aware ranking"
 category: enhancement
-state: ready-for-human
+state: done
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T01:58:00Z"
+updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: ["#0005"]
 tags: ["chrome-extension", "scry", "vertical-slice"]
@@ -29,10 +29,10 @@ Improve ranking for high-risk URL recall cases: numeric issue IDs, adjacent path
 
 ## Acceptance Criteria
 
-- [ ] Exact numeric segment matches outrank numeric-prefix matches.
-- [ ] issues 13 matching adjacent URL path segments outranks weaker scattered matches.
-- [ ] Query-string tokens are searchable but lower priority than host/path tokens.
-- [ ] Ranking results include internal debug explanations hidden from normal UI.
+- [x] Exact numeric segment matches outrank numeric-prefix matches.
+- [x] issues 13 matching adjacent URL path segments outranks weaker scattered matches.
+- [x] Query-string tokens are searchable but lower priority than host/path tokens.
+- [x] Ranking results include internal debug explanations hidden from normal UI.
 
 ## Activity
 
@@ -47,3 +47,7 @@ Created implementation slice issue.
 > *Implementation pass completed.*
 
 Implemented this slice in the greenfield Scry extension. Automated tests and syntax checks pass; Chrome manual side-panel smoke testing remains for human verification.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current implementation. Numeric exact-vs-prefix ranking, adjacent path coherence, low-priority query-string evidence, and hidden debug explanations are implemented and covered by core tests. Marked done.

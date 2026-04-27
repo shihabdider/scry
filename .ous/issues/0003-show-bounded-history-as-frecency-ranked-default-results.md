@@ -2,9 +2,9 @@
 id: "0003"
 title: "Show bounded history as frecency-ranked default results"
 category: enhancement
-state: ready-for-human
+state: done
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T01:58:00Z"
+updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: ["#0002"]
 tags: ["chrome-extension", "scry", "vertical-slice"]
@@ -29,9 +29,9 @@ Show useful default history results in the side panel before the user types. The
 
 ## Acceptance Criteria
 
-- [ ] Default bounded history is fetched on first side-panel open.
-- [ ] Normalized duplicate URLs are aggregated with visit count and latest visit time.
-- [ ] Empty query shows frecency-ranked URL-first results with title, visit count, and last visited age.
+- [x] Default bounded history is fetched on first command-palette open.
+- [x] Normalized duplicate URLs are aggregated with visit count and latest visit time.
+- [x] Empty query shows frecency-ranked URL-first results with title, visit count, and last visited age.
 
 ## Activity
 
@@ -46,3 +46,7 @@ Created implementation slice issue.
 > *Implementation pass completed.*
 
 Implemented this slice in the greenfield Scry extension. Automated tests and syntax checks pass; Chrome manual side-panel smoke testing remains for human verification.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current implementation. Scry fetches bounded recent history on popup open, normalizes and deduplicates URLs, aggregates visit metadata, and renders empty-query frecency defaults as URL-first rows with title, visits, and age. Marked done.

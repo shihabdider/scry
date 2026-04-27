@@ -2,9 +2,9 @@
 id: "0011"
 title: "Harden privacy source isolation and finish acceptance coverage"
 category: enhancement
-state: ready-for-human
+state: ready-for-agent
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T01:58:00Z"
+updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: ["#0002", "#0003", "#0004", "#0005", "#0006", "#0007", "#0008", "#0009", "#0010"]
 tags: ["chrome-extension", "scry", "vertical-slice"]
@@ -29,9 +29,9 @@ Harden the v1 product boundaries and acceptance coverage: no network calls, no b
 
 ## Acceptance Criteria
 
-- [ ] The extension does not perform external network calls.
-- [ ] Search results include only browser history in v1.
-- [ ] No user-visible options page, bookmarks, tabs, commands, or web search fallback are present.
+- [x] The extension does not perform external network calls.
+- [x] Search results include only browser history in v1.
+- [x] No user-visible options page, bookmarks, tabs, commands, or web search fallback are present.
 - [ ] Automated tests cover the core acceptance behaviors from the PRD.
 
 ## Activity
@@ -47,3 +47,7 @@ Created implementation slice issue.
 > *Implementation pass completed.*
 
 Implemented this slice in the greenfield Scry extension. Automated tests and syntax checks pass; Chrome manual side-panel smoke testing remains for human verification.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current implementation. Privacy/source isolation is in place: no external network calls, no host permissions/content scripts/options page, and v1 results are browser-history only. Full acceptance coverage remains open until the corrected Deep Search mode is implemented and tested.

@@ -4,7 +4,7 @@ title: "Build Scry history-first URL recall extension"
 category: prd
 state: ready-for-agent
 created: "2026-04-27T01:24:08Z"
-updated: "2026-04-27T01:24:08Z"
+updated: "2026-04-27T15:52:29Z"
 parent: null
 depends_on: []
 tags: ["chrome-extension", "manifest-v3", "history-search", "prd"]
@@ -219,34 +219,34 @@ Chrome Side Panel close and open event APIs are version-dependent. The target be
 
 ## Acceptance Criteria
 
-- [ ] Cmd/Ctrl+K opens the Scry side panel from a normal page.
-- [ ] Cmd/Ctrl+K opens the Scry side panel from Chrome New Tab.
-- [ ] Cmd/Ctrl+K closes the Scry side panel when the required Chrome Side Panel close API is available.
-- [ ] The search input is focused when the side panel opens.
-- [ ] The default index loads recent bounded history on first open and stays in memory while the side panel is open.
-- [ ] Empty query shows frecency-ranked history results.
-- [ ] Query tokens are split on spaces, asterisks, slashes, periods, dashes, underscores, and similar separators.
-- [ ] A query shaped like git*skilift*issues*13 can find a matching visited GitHub issue URL.
-- [ ] A query shaped like gh*issu can match github and issues through constrained abbreviation/prefix behavior.
-- [ ] Similar URL targets such as skilift and skitools are ranked according to exact/prefix URL evidence rather than loose fuzzy similarity.
-- [ ] For a query containing numeric token 13, a URL segment exactly equal to 13 outranks a URL segment beginning with 13 but continuing with more digits.
-- [ ] URL host/path evidence outranks title-only evidence.
-- [ ] Query-string evidence is searchable but lower priority than host/path evidence.
-- [ ] Result rows show URL first, title second, visit count, and human-readable last visited age.
-- [ ] Long URLs are truncated in the middle while preserving useful beginning and end.
-- [ ] Matched fragments are highlighted with simple bold styling.
-- [ ] The UI has a sparse old-Google-inspired visual style with no favicons and no card layout.
-- [ ] Arrow keys and Ctrl+N/Ctrl+P move the selected result.
-- [ ] Enter opens the selected result in the current tab.
-- [ ] Cmd/Ctrl+Enter opens the selected result in a new tab.
-- [ ] Selecting a result records local selection-learning data.
-- [ ] Selection learning can improve repeated close candidates without overriding better exact/prefix URL matches.
-- [ ] Deep Search can be triggered explicitly when default search is insufficient.
-- [ ] No web search fallback is shown or executed.
-- [ ] No bookmarks, tabs, or command results appear in v1 search results.
-- [ ] No external network calls are made by the extension.
-- [ ] Ranking functions expose internal debug explanations for development without rendering them in normal UI.
-- [ ] Core URL normalization, tokenization, matching, ranking, frecency, selection-learning, age formatting, truncation, and highlighting behavior is covered by automated tests.
+- [x] Cmd/Ctrl+K opens the Scry command palette from a normal page.
+- [x] Cmd/Ctrl+K opens the Scry command palette from Chrome New Tab.
+- [x] The Scry command palette can be dismissed through Escape, normal popup dismissal, or opening a selected result.
+- [x] The search input is focused when the command palette opens.
+- [x] The default index loads recent bounded history on first open and stays in memory while the command palette is open.
+- [x] Empty query shows frecency-ranked history results.
+- [x] Query tokens are split on spaces, asterisks, slashes, periods, dashes, underscores, and similar separators.
+- [x] A query shaped like git*skilift*issues*13 can find a matching visited GitHub issue URL.
+- [x] A query shaped like gh*issu can match github and issues through constrained abbreviation/prefix behavior.
+- [x] Similar URL targets such as skilift and skitools are ranked according to exact/prefix URL evidence rather than loose fuzzy similarity.
+- [x] For a query containing numeric token 13, a URL segment exactly equal to 13 outranks a URL segment beginning with 13 but continuing with more digits.
+- [x] URL host/path evidence outranks title-only evidence.
+- [x] Query-string evidence is searchable but lower priority than host/path evidence.
+- [x] Result rows show URL first, title second, visit count, and human-readable last visited age.
+- [x] Long URLs are truncated in the middle while preserving useful beginning and end.
+- [x] Matched fragments are highlighted with simple bold styling.
+- [x] The UI has a sparse old-Google-inspired visual style with no favicons and no card layout.
+- [x] Arrow keys and Ctrl+N/Ctrl+P move the selected result.
+- [x] Enter opens the selected result in the current tab.
+- [x] Cmd/Ctrl+Enter opens the selected result in a new tab.
+- [x] Selecting a result records local selection-learning data.
+- [x] Selection learning can improve repeated close candidates without overriding better exact/prefix URL matches.
+- [ ] Deep Search can be triggered explicitly as the correct search mode when default search is insufficient.
+- [x] No web search fallback is shown or executed.
+- [x] No bookmarks, tabs, or command results appear in v1 search results.
+- [x] No external network calls are made by the extension.
+- [x] Ranking functions expose internal debug explanations for development without rendering them in normal UI.
+- [x] Core URL normalization, tokenization, matching, ranking, frecency, selection-learning, age formatting, truncation, and highlighting behavior is covered by automated tests.
 
 ## Activity
 
@@ -255,3 +255,7 @@ Chrome Side Panel close and open event APIs are version-dependent. The target be
 > *This was generated by AI from the Scry design grilling session.*
 
 Created the initial PRD for the history-first Scry Chrome extension. The current repository is empty, so the PRD also captures the proposed module boundaries and testing strategy for a greenfield implementation.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the umbrella PRD against the current popup command-palette implementation. Updated acceptance checks to reflect the accepted popup pivot and the implemented history-search, ranking, display, selection-learning, and privacy behavior. Deep Search remains open because the current zero-results-only button is not the desired search-mode model; follow-up #0020 tracks the correction.

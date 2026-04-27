@@ -2,9 +2,9 @@
 id: "0004"
 title: "Open selected history results from the side panel"
 category: enhancement
-state: ready-for-human
+state: needs-triage
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T01:58:00Z"
+updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: ["#0003"]
 tags: ["chrome-extension", "scry", "vertical-slice"]
@@ -29,9 +29,9 @@ Make displayed history results actionable end-to-end. Keyboard navigation should
 
 ## Acceptance Criteria
 
-- [ ] Arrow keys and Ctrl+N/Ctrl+P move the selected result.
-- [ ] Enter opens the selected result in the current tab.
-- [ ] Cmd/Ctrl+Enter opens the selected result in a new tab.
+- [x] Arrow keys and Ctrl+N/Ctrl+P move the selected result.
+- [x] Enter opens the selected result in the current tab.
+- [x] Cmd/Ctrl+Enter opens the selected result in a new tab.
 - [ ] The side panel remains open after navigation.
 
 ## Activity
@@ -47,3 +47,7 @@ Created implementation slice issue.
 > *Implementation pass completed.*
 
 Implemented this slice in the greenfield Scry extension. Automated tests and syntax checks pass; Chrome manual side-panel smoke testing remains for human verification.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current popup implementation. Keyboard selection plus current-tab and new-tab opening are implemented, but the old side-panel stay-open criterion is stale after the accepted popup pivot because opening a selected result now closes the command palette. Left this issue needs-triage instead of done.

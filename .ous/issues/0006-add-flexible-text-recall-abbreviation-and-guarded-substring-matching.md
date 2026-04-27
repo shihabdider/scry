@@ -2,9 +2,9 @@
 id: "0006"
 title: "Add flexible text recall abbreviation and guarded substring matching"
 category: enhancement
-state: ready-for-human
+state: done
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T01:58:00Z"
+updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: ["#0005"]
 tags: ["chrome-extension", "scry", "vertical-slice"]
@@ -29,9 +29,9 @@ Extend search so constrained ordered abbreviations and guarded substrings work w
 
 ## Acceptance Criteria
 
-- [ ] gh*issu can match github/.../issues through constrained abbreviation and prefix behavior.
-- [ ] Exact URL segment matches outrank prefix matches, which outrank abbreviation matches, which outrank substring matches.
-- [ ] Substring matching is guarded by token length so tiny tokens do not match broadly.
+- [x] gh*issu can match github/.../issues through constrained abbreviation and prefix behavior.
+- [x] Exact URL segment matches outrank prefix matches, which outrank abbreviation matches, which outrank substring matches.
+- [x] Substring matching is guarded by token length so tiny tokens do not match broadly.
 
 ## Activity
 
@@ -46,3 +46,7 @@ Created implementation slice issue.
 > *Implementation pass completed.*
 
 Implemented this slice in the greenfield Scry extension. Automated tests and syntax checks pass; Chrome manual side-panel smoke testing remains for human verification.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current implementation. Constrained abbreviation matching, prefix/substring tiers, and guarded substring behavior are implemented and covered by core tests. Marked done.

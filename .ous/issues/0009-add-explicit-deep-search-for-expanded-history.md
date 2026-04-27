@@ -2,9 +2,9 @@
 id: "0009"
 title: "Add explicit Deep Search for expanded history"
 category: enhancement
-state: ready-for-human
+state: ready-for-agent
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T01:58:00Z"
+updated: "2026-04-27T15:52:29Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: ["#0005"]
 tags: ["chrome-extension", "scry", "vertical-slice"]
@@ -30,8 +30,8 @@ Add a user-triggered Deep Search path that expands the in-memory index beyond th
 ## Acceptance Criteria
 
 - [ ] A Deep Search action is available when default search is insufficient.
-- [ ] Deep Search expands the in-memory history corpus for the current session.
-- [ ] Live filtering works against the expanded corpus after Deep Search loads.
+- [x] Deep Search expands the in-memory history corpus for the current session.
+- [x] Live filtering works against the expanded corpus after Deep Search loads.
 
 ## Activity
 
@@ -46,3 +46,7 @@ Created implementation slice issue.
 > *Implementation pass completed.*
 
 Implemented this slice in the greenfield Scry extension. Automated tests and syntax checks pass; Chrome manual side-panel smoke testing remains for human verification.
+
+### 2026-04-27T15:52:29Z — AI
+
+Audited the current implementation and user feedback. The low-level deep history load and live filtering against the expanded in-memory corpus exist, but the visible Deep Search affordance is incorrect because it only appears as a zero-results fallback. Follow-up #0020 tracks making Deep Search an explicit search mode.
