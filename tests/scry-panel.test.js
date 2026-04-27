@@ -682,6 +682,141 @@ test('ensureSearchModeReady stores mode-local errors without breaking other mode
   assert.equal(app.index, app.modeCache.recent.index)
 })
 
+test('switchSearchMode preserves query, resets top, lazy-loads the target mode, and refreshes results', async () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  document.body.append(modeIndicator)
+  const input = document.querySelector('#search-input')
+  input.value = 'issue 2'
+  const historyCalls = []
+  const chromeApi = {
+    history: {
+      async search(query) {
+        historyCalls.push(query)
+        return query.startTime === 0 ? [historyEntry(2)] : [historyEntry(1)]
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.results = [searchResult('stale')]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 4
+  app.pageIndex = 2
+
+  await app.switchSearchMode('deep')
+
+  assert.equal(input.value, 'issue 2')
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
+  assert.equal(app.searchMode, 'deep')
+  assert.equal(app.deep, true)
+  assert.deepEqual(historyCalls, [{ text: '', startTime: 0, maxResults: 100_000 }])
+  assert.equal(app.modeCache.deep.status, 'ready')
+  assert.equal(app.results.length, 1)
+  assert.equal(app.results[0].url, 'https://github.com/shihabdider/scry/issues/2')
+  assert.equal(app.visibleRows.length, 1)
+  assert.equal(app.visibleRows[0].kind, 'result')
+  assert.equal(app.visibleRows[0].result, app.results[0])
+  assert.equal(modeIndicator.dataset.mode, 'deep')
+  assert.equal(modeIndicator.dataset.status, 'ready')
+  assert.equal(document.querySelector('#status').textContent, '1 deep history URL')
+})
+
+test('switchSearchMode reuses a ready mode index and keeps a typed URL row selected', async () => {
+  const document = createScryDocument()
+  const input = document.querySelector('#search-input')
+  input.value = 'typed.example/path'
+  let sessionsCalls = 0
+  const chromeApi = {
+    history: {
+      async search() {
+        assert.fail('ready closed mode must be reused without querying history')
+      },
+    },
+    sessions: {
+      async getRecentlyClosed() {
+        sessionsCalls++
+        return []
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.ensureSearchModeReady('closed')
+  const readyClosedIndex = app.modeCache.closed.index
+  app.searchMode = 'recent'
+  app.index = null
+  app.results = [searchResult('stale')]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 3
+  app.pageIndex = 1
+
+  await app.switchSearchMode('closed')
+
+  assert.equal(sessionsCalls, 1)
+  assert.equal(app.index, readyClosedIndex)
+  assert.equal(input.value, 'typed.example/path')
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
+  assert.equal(app.results.length, 0)
+  assert.equal(app.visibleRows.length, 1)
+  assert.equal(app.visibleRows[0].kind, 'open-typed-url')
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[0])
+})
+
+test('switchSearchMode handles mode-local load errors without breaking other modes', async () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  document.body.append(modeIndicator)
+  const input = document.querySelector('#search-input')
+  input.value = 'typed.example/error'
+  const error = new Error('sessions unavailable')
+  let historyCalls = 0
+  const chromeApi = {
+    history: {
+      async search() {
+        historyCalls++
+        return [historyEntry(1)]
+      },
+    },
+    sessions: {
+      async getRecentlyClosed() {
+        throw error
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  await app.ensureSearchModeReady('recent')
+  app.results = [searchResult('stale')]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 2
+  app.pageIndex = 1
+
+  await assert.doesNotReject(app.switchSearchMode('closed'))
+
+  assert.equal(app.modeCache.closed.status, 'error')
+  assert.equal(app.modeCache.closed.error, error)
+  assert.equal(app.modeCache.recent.status, 'ready')
+  assert.equal(app.index, null)
+  assert.equal(app.results.length, 0)
+  assert.equal(app.visibleRows.length, 1)
+  assert.equal(app.visibleRows[0].kind, 'open-typed-url')
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[0])
+  assert.equal(modeIndicator.dataset.mode, 'closed')
+  assert.equal(modeIndicator.dataset.status, 'error')
+  assert.equal(document.querySelector('#status').textContent, 'Recently closed URLs unavailable')
+
+  await app.switchSearchMode('recent')
+
+  assert.equal(historyCalls, 1)
+  assert.equal(app.modeCache.closed.status, 'error')
+  assert.equal(app.modeCache.closed.error, error)
+  assert.equal(app.modeCache.recent.status, 'ready')
+  assert.equal(app.index, app.modeCache.recent.index)
+})
+
 test('renderModeIndicator renders the active mode label/status in dedicated popup markup', () => {
   const document = createScryDocument()
   const modeIndicator = document.createElement('button')

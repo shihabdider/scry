@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 2
-updated: 2026-04-27T20:05:29.779Z
+updated: 2026-04-27T20:09:20.453Z
 
 ## Wishes
 
@@ -38,7 +38,7 @@ updated: 2026-04-27T20:05:29.779Z
 | updateVisibleRows | src/panel/app.js | 2 | pass | 109.8s |
 | copySelectedRow | src/panel/app.js | 2 | pass | 260.6s |
 | changeSelectedRowToSearch | src/panel/app.js | 2 | pass | 200.8s |
-| switchSearchMode | src/panel/app.js | 2 | pending | - |
+| switchSearchMode | src/panel/app.js | 2 | pass | 223.4s |
 | loadHistory | src/panel/app.js | 2 | pending | - |
 | openSelected | src/panel/app.js | 2 | pending | - |
 | updateResults | src/panel/app.js | 1 | pending | - |
@@ -151,3 +151,6 @@ updated: 2026-04-27T20:05:29.779Z
 - 16:02:07 changeSelectedRowToSearch: running
 - 16:05:28 changeSelectedRowToSearch: pass (200.8s, $0.8007)
 - 16:05:29 implementer_post verification for changeSelectedRowToSearch: pass
+- 16:05:35 switchSearchMode: running
+- 16:09:19 switchSearchMode: pass (223.4s, $1.3449)
+- 16:09:20 implementer_post verification for switchSearchMode: pass

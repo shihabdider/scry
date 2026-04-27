@@ -122,7 +122,22 @@ export class ScryPanelApp {
   }
 
   async switchSearchMode(mode) {
-    throw new Error('not implemented: switchSearchMode')
+    this.resetSelectionForModeSwitch()
+
+    const ready = this.ensureSearchModeReady(mode)
+    this.renderModeIndicator()
+    const state = await ready
+
+    if (state.status === 'ready' && state.index) {
+      this.updateResults()
+    } else {
+      this.results = []
+      this.renderResults()
+    }
+
+    this.updateVisibleRows()
+    this.renderModeIndicator()
+    return state
   }
 
   async ensureSearchModeReady(mode) {
