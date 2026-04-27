@@ -408,13 +408,14 @@ export class ScryPanelApp {
   }
 
   handlePanelKeydown(event) {
-    if (event.target === this.input || this.focusMode !== 'results') return
+    if (this.focusMode !== 'results') return
+    if (event.target === this.input || this.document.activeElement === this.input) return
 
     const key = typeof event.key === 'string' ? event.key.toLowerCase() : ''
 
     if (event.key === 'Escape') {
       event.preventDefault()
-      this.leavePanelFocus()
+      this.focusSelectedResult()
     } else if (key === 'i') {
       event.preventDefault()
       this.focusSearch()
