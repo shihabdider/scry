@@ -99,7 +99,91 @@ export function compareQuoteEvidence(a, b) {
 }
 
 export function searchParsedHistory(index, parsedQuery, { now = Date.now(), limit = DEFAULT_LIMIT, selections } = {}) {
-  throw new Error('not implemented: searchParsedHistory')
+  const tokens = Array.isArray(parsedQuery?.unquotedTokens)
+    ? parsedQuery.unquotedTokens
+    : Array.isArray(parsedQuery?.tokens)
+      ? parsedQuery.tokens
+      : []
+  const exactPhrases = Array.isArray(parsedQuery?.exactPhrases) ? parsedQuery.exactPhrases : []
+  const entries = [...(index?.entries ?? [])]
+
+  if (!exactPhrases.length) {
+    if (!tokens.length) {
+      return entries
+        .map((entry) => ({ entry, score: frecencyScore(entry, now) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit)
+        .map(({ entry, score }) => toResult(entry, { tokens, now, debug: { mode: 'frecency', score } }))
+    }
+
+    return entries
+      .map((entry) => {
+        const rank = rankTupleFor(entry, tokens, selections, now)
+        return rank ? { entry, rank } : null
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        const tuple = compareTuple(a.rank.tuple, b.rank.tuple)
+        if (tuple !== 0) return tuple
+        return a.entry.displayUrl.localeCompare(b.entry.displayUrl)
+      })
+      .slice(0, limit)
+      .map(({ entry, rank }) => toResult(entry, { tokens, now, debug: rank.debug }))
+  }
+
+  const quoteMatches = entries
+    .map((entry) => {
+      const quoteEvidence = collectExactPhraseEvidence(entry, exactPhrases)
+      return quoteEvidence.matched ? { entry, quoteEvidence } : null
+    })
+    .filter(Boolean)
+
+  if (!tokens.length) {
+    return quoteMatches
+      .map(({ entry, quoteEvidence }) => ({
+        entry,
+        quoteEvidence,
+        score: frecencyScore(entry, now),
+      }))
+      .sort((a, b) => {
+        const quote = compareQuoteEvidence(a.quoteEvidence, b.quoteEvidence)
+        if (quote !== 0) return quote
+        const score = b.score - a.score
+        if (score !== 0) return score
+        return a.entry.displayUrl.localeCompare(b.entry.displayUrl)
+      })
+      .slice(0, limit)
+      .map(({ entry, quoteEvidence, score }) =>
+        toResult(entry, {
+          tokens,
+          now,
+          debug: { mode: 'quoted', quoteEvidence, score, frecencyScore: score },
+        }),
+      )
+  }
+
+  return quoteMatches
+    .map(({ entry, quoteEvidence }) => {
+      const rank = rankTupleFor(entry, tokens, selections, now)
+      if (!rank) return null
+      return { entry, quoteEvidence, rank }
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const tuple = compareTuple(a.rank.tuple, b.rank.tuple)
+      if (tuple !== 0) return tuple
+      const quote = compareQuoteEvidence(a.quoteEvidence, b.quoteEvidence)
+      if (quote !== 0) return quote
+      return a.entry.displayUrl.localeCompare(b.entry.displayUrl)
+    })
+    .slice(0, limit)
+    .map(({ entry, quoteEvidence, rank }) =>
+      toResult(entry, {
+        tokens,
+        now,
+        debug: { ...rank.debug, mode: 'mixed', quoteEvidence },
+      }),
+    )
 }
 
 function isOrderedAbbreviation(token, value) {

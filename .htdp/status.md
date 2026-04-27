@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 3
-updated: 2026-04-27T19:33:13.074Z
+updated: 2026-04-27T19:37:36.059Z
 
 ## Wishes
 
@@ -28,7 +28,7 @@ updated: 2026-04-27T19:33:13.074Z
 | docs/action-popup-alignment.md | docs/action-popup-alignment.md | 4 | pending | - |
 | parseExactPhrases | src/core/query.js | 3 | pass | 177.3s |
 | parseQuery | src/core/query.js | 3 | pass | 95.2s |
-| searchParsedHistory | src/core/search.js | 3 | pending | - |
+| searchParsedHistory | src/core/search.js | 3 | pass | 253.1s |
 | buildVisibleRows | src/core/rows.js | 3 | pending | - |
 | selectedVisibleRow | src/panel/app.js | 3 | pending | - |
 | ensureSearchModeReady | src/panel/app.js | 3 | pending | - |
@@ -120,3 +120,6 @@ updated: 2026-04-27T19:33:13.074Z
 - 15:31:36 parseQuery: running
 - 15:33:11 parseQuery: pass (95.2s, $0.4819)
 - 15:33:13 implementer_post verification for parseQuery: pass
+- 15:33:21 searchParsedHistory: running
+- 15:37:34 searchParsedHistory: pass (253.1s, $1.1298)
+- 15:37:36 implementer_post verification for searchParsedHistory: pass

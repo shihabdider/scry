@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { formatAge, highlightText } from '../src/core/format.js'
 import { normalizeExactPhrase, parseExactPhrases, parseQuery } from '../src/core/query.js'
 import { recordSelection } from '../src/core/selection-learning.js'
-import { __testing, buildHistoryIndex, collectExactPhraseEvidence, compareQuoteEvidence, searchHistory } from '../src/core/search.js'
+import { __testing, buildHistoryIndex, collectExactPhraseEvidence, compareQuoteEvidence, searchHistory, searchParsedHistory } from '../src/core/search.js'
 import { createTypedUrlCandidate, middleTruncate } from '../src/core/url.js'
 
 const now = Date.parse('2026-04-27T00:00:00Z')
@@ -355,6 +355,121 @@ test('result conversion remains backward compatible when optional display inputs
   assert.equal(result.urlHtml, entry.displayUrl)
   assert.equal(result.titleHtml, entry.displayUrl)
   assert.deepEqual(result.debug, {})
+})
+
+test('parsed unquoted search preserves existing token ranking behavior', () => {
+  const index = indexOf([
+    {
+      url: 'https://github.com/shihabdider/skilift/issues/13',
+      title: 'Exact issue path',
+      visitCount: 2,
+      lastVisitTime: now - 10_000,
+    },
+    {
+      url: 'https://github.com/shihabdider/skilift/pull/13?filter=issues',
+      title: 'Mentions issues elsewhere',
+      visitCount: 100,
+      lastVisitTime: now,
+    },
+  ])
+
+  assert.deepEqual(
+    searchParsedHistory(index, parseQuery('issues 13'), { now }).map((result) => result.url),
+    searchHistory(index, 'issues 13', { now }).map((result) => result.url),
+  )
+})
+
+test('quote-only parsed search hard-filters entries and ranks URL phrase matches before fresher title matches', () => {
+  const index = indexOf([
+    {
+      url: 'https://example.com/alpha-reference',
+      title: 'Old URL phrase',
+      visitCount: 1,
+      lastVisitTime: now - 30 * 24 * 60 * 60 * 1000,
+    },
+    {
+      url: 'https://example.com/reference',
+      title: 'Alpha reference',
+      visitCount: 100,
+      lastVisitTime: now,
+    },
+    {
+      url: 'https://example.com/no-match',
+      title: 'Different reference',
+      visitCount: 1000,
+      lastVisitTime: now,
+    },
+  ])
+
+  const results = searchParsedHistory(index, parseQuery('"alpha"'), { now })
+
+  assert.deepEqual(
+    results.map((result) => result.url),
+    ['https://example.com/alpha-reference', 'https://example.com/reference'],
+  )
+  assert.equal(results[0].debug.quoteEvidence.evidence[0].field, 'displayUrl')
+  assert.equal(results[1].debug.quoteEvidence.evidence[0].field, 'title')
+  assert.equal(results[0].urlHtml.includes('<b>'), false)
+  assert.equal(results[1].titleHtml.includes('<b>'), false)
+})
+
+test('quote-only parsed search uses frecency after quote quality ties', () => {
+  const index = indexOf([
+    {
+      url: 'https://example.com/alpha-old',
+      title: 'Alpha old',
+      visitCount: 500,
+      lastVisitTime: now - 100 * 24 * 60 * 60 * 1000,
+    },
+    {
+      url: 'https://example.com/alpha-new',
+      title: 'Alpha new',
+      visitCount: 1,
+      lastVisitTime: now - 5 * 60 * 1000,
+    },
+  ])
+
+  const results = searchParsedHistory(index, parseQuery('"alpha"'), { now })
+
+  assert.deepEqual(
+    results.map((result) => result.url),
+    ['https://example.com/alpha-new', 'https://example.com/alpha-old'],
+  )
+  assert.equal(results[0].debug.mode, 'quoted')
+  assert.equal(typeof results[0].debug.frecencyScore, 'number')
+})
+
+test('mixed parsed search filters by exact phrases while unquoted token ranking stays primary', () => {
+  const index = indexOf([
+    {
+      url: 'https://example.com/alpha',
+      title: 'Issues from title only',
+      visitCount: 500,
+      lastVisitTime: now,
+    },
+    {
+      url: 'https://github.com/org/issues/13',
+      title: 'Alpha tracking',
+      visitCount: 1,
+      lastVisitTime: now - 30 * 24 * 60 * 60 * 1000,
+    },
+    {
+      url: 'https://github.com/org/issues/99',
+      title: 'No quoted phrase',
+      visitCount: 1000,
+      lastVisitTime: now,
+    },
+  ])
+
+  const results = searchParsedHistory(index, parseQuery('issues "alpha"'), { now })
+
+  assert.deepEqual(
+    results.map((result) => result.url),
+    ['https://github.com/org/issues/13', 'https://example.com/alpha'],
+  )
+  assert.deepEqual(results[0].debug.tokens, ['issues'])
+  assert.equal(results[0].debug.quoteEvidence.evidence[0].field, 'title')
+  assert.equal(results[1].debug.quoteEvidence.evidence[0].field, 'displayUrl')
 })
 
 test('conservative URL normalization deduplicates fragments and tracking parameters while preserving meaningful query strings', () => {
