@@ -1,8 +1,8 @@
 # Status
 
 phase: 2
-layer: 1
-updated: 2026-04-27T20:57:15.077Z
+layer: 0
+updated: 2026-04-27T21:00:21.829Z
 
 ## Wishes
 
@@ -52,7 +52,7 @@ updated: 2026-04-27T20:57:15.077Z
 | renderPagination | src/panel/app.js | 1 | pass | 149.8s |
 | renderResults | src/panel/app.js | 1 | pass | 275.9s |
 | renderLoading | src/panel/app.js | 1 | pass | 220.6s |
-| start | src/panel/app.js | 0 | pending | - |
+| start | src/panel/app.js | 0 | pass | 177.8s |
 | bindEvents | src/panel/app.js | 0 | pending | - |
 | handlePanelKeydown | src/panel/app.js | 0 | pending | - |
 | manifest.permissions: string[] | manifest.json | 0 | pending | - |
@@ -198,3 +198,6 @@ updated: 2026-04-27T20:57:15.077Z
 - 16:57:12 renderLoading: pass (220.6s, $1.1136)
 - 16:57:13 implementer_post verification for renderLoading: pass
 - 16:57:15 layer 1 verification: pass
+- 16:57:22 start: running
+- 17:00:20 start: pass (177.8s, $0.8960)
+- 17:00:21 implementer_post verification for start: pass

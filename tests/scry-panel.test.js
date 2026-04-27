@@ -1987,6 +1987,131 @@ test('renderModeIndicator falls back to the active mode idle status before cache
   assert.equal(document.querySelector('#status').textContent, 'Recent history not loaded')
 })
 
+test('start initializes recent mode cache and renders the mode indicator before selection storage resolves', async () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  modeIndicator.hidden = true
+  document.body.append(modeIndicator)
+  const input = document.querySelector('#search-input')
+  let resolveSelectionLoad
+  const selectionLoad = new Promise((resolve) => {
+    resolveSelectionLoad = resolve
+  })
+  const historyCalls = []
+  let sessionsCalls = 0
+  const chromeApi = {
+    history: {
+      async search(query) {
+        historyCalls.push(query)
+        return [historyEntry(1)]
+      },
+    },
+    sessions: {
+      async getRecentlyClosed() {
+        sessionsCalls++
+        return []
+      },
+    },
+    storage: {
+      local: {
+        async get(key) {
+          assert.equal(key, SELECTION_STORAGE_KEY)
+          return selectionLoad
+        },
+        async set() {},
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.searchMode = 'closed'
+  app.deep = true
+
+  const started = app.start()
+
+  assert.equal(app.searchMode, 'recent')
+  assert.equal(app.deep, false)
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
+  assert.equal(app.modeCache.recent.status, 'idle')
+  assert.equal(app.modeCache.deep.status, 'idle')
+  assert.equal(app.modeCache.closed.status, 'idle')
+  assert.equal(modeIndicator.hidden, false)
+  assert.equal(modeIndicator.textContent, 'mode: recent')
+  assert.equal(modeIndicator.dataset.mode, 'recent')
+  assert.equal(modeIndicator.dataset.status, 'idle')
+  assert.equal(document.querySelector('#status').textContent, 'Recent history not loaded')
+  assert.deepEqual(historyCalls, [])
+  assert.equal(sessionsCalls, 0)
+
+  resolveSelectionLoad({})
+  await started
+})
+
+test('start loads selection data and only the bounded recent corpus through the mode cache', async () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  document.body.append(modeIndicator)
+  const historyCalls = []
+  let sessionsCalls = 0
+  const storedSelectionData = {
+    version: 1,
+    aggregates: {
+      issue: {
+        'https://github.com/shihabdider/scry/issues/1': {
+          count: 2,
+          lastSelectedAt: now - 1_000,
+          selectedAt: [now - 2_000, now - 1_000],
+        },
+      },
+    },
+  }
+  const chromeApi = {
+    history: {
+      async search(query) {
+        historyCalls.push(query)
+        return [historyEntry(1)]
+      },
+    },
+    sessions: {
+      async getRecentlyClosed() {
+        sessionsCalls++
+        return []
+      },
+    },
+    storage: {
+      local: {
+        async get(key) {
+          assert.equal(key, SELECTION_STORAGE_KEY)
+          return { [SELECTION_STORAGE_KEY]: storedSelectionData }
+        },
+        async set() {},
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.start()
+
+  assert.deepEqual(app.selectionData, storedSelectionData)
+  assert.deepEqual(historyCalls, [
+    { text: '', startTime: now - 90 * 24 * 60 * 60 * 1_000, maxResults: 10_000 },
+  ])
+  assert.equal(sessionsCalls, 0)
+  assert.equal(app.searchMode, 'recent')
+  assert.equal(app.deep, false)
+  assert.equal(app.modeCache.recent.status, 'ready')
+  assert.equal(app.modeCache.deep.status, 'idle')
+  assert.equal(app.modeCache.closed.status, 'idle')
+  assert.equal(app.index, app.modeCache.recent.index)
+  assert.equal(app.results.length, 1)
+  assert.equal(app.visibleRows.length, 1)
+  assert.equal(modeIndicator.dataset.mode, 'recent')
+  assert.equal(modeIndicator.dataset.status, 'ready')
+  assert.equal(document.querySelector('#status').textContent, '1 recent history URL')
+})
+
 test('command palette keeps trying to focus search while Chrome is finishing popup open', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2)])

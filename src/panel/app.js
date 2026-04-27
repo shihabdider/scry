@@ -49,8 +49,12 @@ export class ScryPanelApp {
 
   async start() {
     this.bindEvents()
+    this.searchMode = 'recent'
+    this.deep = false
+    this.modeCache = createModeCache()
+    this.index = null
+    this.renderModeIndicator()
     this.focusSearch()
-    this.setStatus('Loading history…')
     this.selectionData = await loadSelectionData({ chromeApi: this.chromeApi })
     await this.loadHistory({ deep: false })
   }
