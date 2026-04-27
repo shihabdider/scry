@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 4
-updated: 2026-04-27T19:08:21.717Z
+updated: 2026-04-27T19:10:22.870Z
 
 ## Wishes
 
@@ -17,7 +17,7 @@ updated: 2026-04-27T19:08:21.717Z
 | rowSelectionLearningKey | src/core/rows.js | 4 | pass | 81.4s |
 | rowEditableText | src/core/rows.js | 4 | pass | 108.3s |
 | isCopiedFeedbackVisible | src/core/rows.js | 4 | pass | 148.2s |
-| createModeCache | src/core/search-modes.js | 4 | pending | - |
+| createModeCache | src/core/search-modes.js | 4 | pass | 113.0s |
 | cycleSearchMode | src/core/search-modes.js | 4 | pending | - |
 | modeIndicatorModel | src/core/search-modes.js | 4 | pending | - |
 | fetchRecentlyClosed | src/platform/sessions-provider.js | 4 | pending | - |
@@ -90,3 +90,6 @@ updated: 2026-04-27T19:08:21.717Z
 - 15:05:52 isCopiedFeedbackVisible: running
 - 15:08:20 isCopiedFeedbackVisible: pass (148.2s, $0.6153)
 - 15:08:21 implementer_post verification for isCopiedFeedbackVisible: pass
+- 15:08:28 createModeCache: running
+- 15:10:21 createModeCache: pass (113.0s, $0.4981)
+- 15:10:22 implementer_post verification for createModeCache: pass

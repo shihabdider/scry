@@ -31,7 +31,12 @@ export const DEFAULT_SEARCH_MODE = 'recent'
  */
 
 export function createModeCache() {
-  throw new Error('not implemented: createModeCache')
+  return Object.fromEntries(
+    SEARCH_MODES.map((mode) => [
+      mode,
+      { mode, status: 'idle', index: null, error: null, loadedAt: null },
+    ]),
+  )
 }
 
 export function cycleSearchMode(currentMode, { direction = 1 } = {}) {
