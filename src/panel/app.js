@@ -2,8 +2,10 @@ import { parseQuery } from '../core/query.js'
 import { buildVisibleRows } from '../core/rows.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
+import { createModeCache } from '../core/search-modes.js'
 import { fetchHistory } from '../platform/history-provider.js'
 import { loadSelectionData, saveSelectionData } from '../platform/selection-store.js'
+import { fetchRecentlyClosed, flattenClosedSessions } from '../platform/sessions-provider.js'
 import { openUrl } from '../platform/tabs.js'
 
 const SEARCH_LIMIT = 100
@@ -120,7 +122,57 @@ export class ScryPanelApp {
   }
 
   async ensureSearchModeReady(mode) {
-    throw new Error('not implemented: ensureSearchModeReady')
+    this.modeCache ??= createModeCache()
+    const state = this.modeCache[mode]
+    if (!state) throw new Error(`Unknown search mode: ${mode}`)
+
+    this.searchMode = mode
+    this.deep = mode === 'deep'
+
+    if (state.status === 'ready' && state.index) {
+      this.index = state.index
+      this.loading = false
+      return state
+    }
+
+    state.status = 'loading'
+    state.error = null
+    state.index = null
+    state.loadedAt = null
+    this.loading = true
+
+    try {
+      let rawEntries
+      let loadedAt
+
+      if (mode === 'closed') {
+        const recentlyClosed = await fetchRecentlyClosed({ chromeApi: this.chromeApi })
+        loadedAt = this.clock()
+        rawEntries = flattenClosedSessions(recentlyClosed, { now: loadedAt })
+      } else {
+        const requestedAt = this.clock()
+        rawEntries = await fetchHistory({ chromeApi: this.chromeApi, now: requestedAt, deep: mode === 'deep' })
+        loadedAt = this.clock()
+      }
+
+      const index = buildHistoryIndex(rawEntries, { now: loadedAt })
+
+      state.status = 'ready'
+      state.index = index
+      state.error = null
+      state.loadedAt = loadedAt
+      this.index = index
+    } catch (error) {
+      state.status = 'error'
+      state.index = null
+      state.error = error
+      state.loadedAt = null
+      this.index = null
+    } finally {
+      this.loading = false
+    }
+
+    return state
   }
 
   resetSelectionForModeSwitch() {

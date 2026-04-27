@@ -170,6 +170,176 @@ test('mode switch reset is harmless when already at the top with an empty query'
   assert.equal(input.value, '')
 })
 
+test('ensureSearchModeReady lazily loads recent history and reuses the popup-session ready index', async () => {
+  const document = createScryDocument()
+  const historyCalls = []
+  const chromeApi = {
+    history: {
+      async search(query) {
+        historyCalls.push(query)
+        return [historyEntry(1)]
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.ensureSearchModeReady('recent')
+
+  assert.equal(historyCalls.length, 1)
+  assert.equal(historyCalls[0].maxResults, 10_000)
+  assert.equal(historyCalls[0].startTime, now - 90 * 24 * 60 * 60 * 1_000)
+  assert.equal(app.loading, false)
+  assert.equal(app.deep, false)
+  assert.equal(app.searchMode, 'recent')
+  assert.equal(app.modeCache.recent.status, 'ready')
+  assert.equal(app.modeCache.recent.error, null)
+  assert.equal(app.modeCache.recent.loadedAt, now)
+  assert.equal(app.modeCache.recent.index.entries.length, 1)
+  assert.equal(app.index, app.modeCache.recent.index)
+
+  await app.ensureSearchModeReady('recent')
+
+  assert.equal(historyCalls.length, 1)
+  assert.equal(app.index, app.modeCache.recent.index)
+})
+
+test('ensureSearchModeReady loads deep history separately from recent history', async () => {
+  const document = createScryDocument()
+  const historyCalls = []
+  const chromeApi = {
+    history: {
+      async search(query) {
+        historyCalls.push(query)
+        return [historyEntry(query.startTime === 0 ? 2 : 1)]
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.ensureSearchModeReady('deep')
+
+  assert.equal(historyCalls.length, 1)
+  assert.deepEqual(historyCalls[0], { text: '', startTime: 0, maxResults: 100_000 })
+  assert.equal(app.deep, true)
+  assert.equal(app.searchMode, 'deep')
+  assert.equal(app.modeCache.recent.status, 'idle')
+  assert.equal(app.modeCache.deep.status, 'ready')
+  assert.equal(app.modeCache.deep.index.entries.length, 1)
+  assert.equal(app.index, app.modeCache.deep.index)
+})
+
+test('ensureSearchModeReady loads recently closed sessions through the sessions adapter', async () => {
+  const document = createScryDocument()
+  let sessionsCalls = 0
+  const closedAtSeconds = now / 1_000 - 60
+  const chromeApi = {
+    history: {
+      async search() {
+        assert.fail('closed mode must not query Chrome history')
+      },
+    },
+    sessions: {
+      async getRecentlyClosed() {
+        sessionsCalls++
+        return [
+          {
+            lastModified: closedAtSeconds,
+            tab: { url: 'https://closed.example/standalone', title: 'Standalone closed tab' },
+          },
+          {
+            lastModified: closedAtSeconds - 10,
+            window: {
+              tabs: [
+                { url: 'https://closed.example/window', title: 'Closed window tab' },
+                { title: 'missing URL is skipped' },
+              ],
+            },
+          },
+        ]
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.ensureSearchModeReady('closed')
+
+  assert.equal(sessionsCalls, 1)
+  assert.equal(app.loading, false)
+  assert.equal(app.deep, false)
+  assert.equal(app.searchMode, 'closed')
+  assert.equal(app.modeCache.closed.status, 'ready')
+  assert.equal(app.modeCache.closed.error, null)
+  assert.equal(app.modeCache.closed.loadedAt, now)
+  assert.equal(app.index, app.modeCache.closed.index)
+  assert.deepEqual(app.modeCache.closed.index.entries.map((entry) => entry.url), [
+    'https://closed.example/standalone',
+    'https://closed.example/window',
+  ])
+  assert.deepEqual(app.modeCache.closed.index.entries.map((entry) => entry.visitCount), [1, 1])
+})
+
+test('ensureSearchModeReady exposes loading state while a mode load is pending', async () => {
+  const document = createScryDocument()
+  let finishSearch
+  const chromeApi = {
+    history: {
+      search() {
+        return new Promise((resolve) => {
+          finishSearch = resolve
+        })
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  const loading = app.ensureSearchModeReady('recent')
+
+  assert.equal(app.loading, true)
+  assert.equal(app.modeCache.recent.status, 'loading')
+  assert.equal(app.modeCache.recent.index, null)
+  assert.equal(app.modeCache.recent.error, null)
+
+  finishSearch([historyEntry(1)])
+  await loading
+
+  assert.equal(app.loading, false)
+  assert.equal(app.modeCache.recent.status, 'ready')
+})
+
+test('ensureSearchModeReady stores mode-local errors without breaking other modes', async () => {
+  const document = createScryDocument()
+  const error = new Error('sessions unavailable')
+  const chromeApi = {
+    history: {
+      async search() {
+        return [historyEntry(3)]
+      },
+    },
+    sessions: {
+      async getRecentlyClosed() {
+        throw error
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await assert.doesNotReject(app.ensureSearchModeReady('closed'))
+
+  assert.equal(app.loading, false)
+  assert.equal(app.index, null)
+  assert.equal(app.modeCache.closed.status, 'error')
+  assert.equal(app.modeCache.closed.index, null)
+  assert.equal(app.modeCache.closed.error, error)
+  assert.equal(app.modeCache.closed.loadedAt, null)
+
+  await app.ensureSearchModeReady('recent')
+
+  assert.equal(app.modeCache.closed.status, 'error')
+  assert.equal(app.modeCache.closed.error, error)
+  assert.equal(app.modeCache.recent.status, 'ready')
+  assert.equal(app.index, app.modeCache.recent.index)
+})
+
 test('command palette keeps trying to focus search while Chrome is finishing popup open', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2)])

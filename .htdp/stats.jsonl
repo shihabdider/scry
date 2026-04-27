@@ -23,3 +23,4 @@
 {"ts":"2026-04-27T19:37:36.060Z","agent":"implementer","wish":"searchParsedHistory","layer":3,"status":"pass","turns":31,"input":62216,"output":11983,"cacheRead":918528,"cost":1.1298,"duration":253.1}
 {"ts":"2026-04-27T19:40:36.727Z","agent":"implementer","wish":"buildVisibleRows","layer":3,"status":"pass","turns":25,"input":60185,"output":7838,"cacheRead":726528,"cost":0.8993,"duration":170.6}
 {"ts":"2026-04-27T19:43:37.319Z","agent":"implementer","wish":"selectedVisibleRow","layer":3,"status":"pass","turns":27,"input":46900,"output":6721,"cacheRead":709632,"cost":0.7909,"duration":170.8}
+{"ts":"2026-04-27T19:47:15.334Z","agent":"implementer","wish":"ensureSearchModeReady","layer":3,"status":"pass","turns":22,"input":46846,"output":11528,"cacheRead":470528,"cost":0.8153,"duration":211.3}
