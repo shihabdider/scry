@@ -103,22 +103,21 @@ export class ScryPanelApp {
   }
 
   async loadHistory({ deep }) {
-    this.loading = true
-    this.deep = deep
-    this.renderLoading()
+    const mode = deep ? 'deep' : 'recent'
+    const ready = this.ensureSearchModeReady(mode)
+    this.renderModeIndicator()
+    const state = await ready
 
-    try {
-      const rawHistory = await fetchHistory({ chromeApi: this.chromeApi, now: this.clock(), deep })
-      this.index = buildHistoryIndex(rawHistory, { now: this.clock() })
-      this.loading = false
-      this.setStatus(deep ? `${this.index.entries.length} deep history URLs` : `${this.index.entries.length} recent history URLs`)
+    if (state.status === 'ready' && state.index) {
       this.updateResults()
-    } catch (error) {
-      this.loading = false
-      console.error('Scry failed to load history', error)
-      this.setStatus('History unavailable')
-      this.showMessage('Could not load browser history. Check extension permissions.')
+    } else {
+      this.results = []
+      this.renderResults()
     }
+
+    this.updateVisibleRows()
+    this.renderModeIndicator()
+    return state
   }
 
   async switchSearchMode(mode) {

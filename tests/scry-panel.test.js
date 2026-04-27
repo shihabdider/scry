@@ -682,6 +682,144 @@ test('ensureSearchModeReady stores mode-local errors without breaking other mode
   assert.equal(app.index, app.modeCache.recent.index)
 })
 
+test('loadHistory maps legacy deep false to cached recent mode loading', async () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  document.body.append(modeIndicator)
+  const historyCalls = []
+  const chromeApi = {
+    history: {
+      async search(query) {
+        historyCalls.push(query)
+        return [historyEntry(1)]
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.loadHistory({ deep: false })
+  const recentIndex = app.modeCache.recent.index
+
+  assert.equal(historyCalls.length, 1)
+  assert.equal(historyCalls[0].maxResults, 10_000)
+  assert.equal(historyCalls[0].startTime, now - 90 * 24 * 60 * 60 * 1_000)
+  assert.equal(app.loading, false)
+  assert.equal(app.deep, false)
+  assert.equal(app.searchMode, 'recent')
+  assert.equal(app.modeCache.recent.status, 'ready')
+  assert.equal(app.modeCache.recent.error, null)
+  assert.equal(app.index, recentIndex)
+  assert.equal(app.results.length, 1)
+  assert.equal(modeIndicator.dataset.mode, 'recent')
+  assert.equal(modeIndicator.dataset.status, 'ready')
+  assert.equal(document.querySelector('#status').textContent, '1 recent history URL')
+
+  await app.loadHistory({ deep: false })
+
+  assert.equal(historyCalls.length, 1)
+  assert.equal(app.index, recentIndex)
+})
+
+test('loadHistory maps legacy deep true to cached deep mode even when recent has matches', async () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  document.body.append(modeIndicator)
+  const input = document.querySelector('#search-input')
+  input.value = 'issue'
+  const historyCalls = []
+  const chromeApi = {
+    history: {
+      async search(query) {
+        historyCalls.push(query)
+        return [historyEntry(query.startTime === 0 ? 2 : 1)]
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.loadHistory({ deep: false })
+  assert.equal(app.results.length, 1)
+  assert.equal(app.results[0].url, 'https://github.com/shihabdider/scry/issues/1')
+
+  await app.loadHistory({ deep: true })
+  const deepIndex = app.modeCache.deep.index
+
+  assert.deepEqual(historyCalls, [
+    { text: '', startTime: now - 90 * 24 * 60 * 60 * 1_000, maxResults: 10_000 },
+    { text: '', startTime: 0, maxResults: 100_000 },
+  ])
+  assert.equal(app.loading, false)
+  assert.equal(app.deep, true)
+  assert.equal(app.searchMode, 'deep')
+  assert.equal(app.modeCache.recent.status, 'ready')
+  assert.equal(app.modeCache.deep.status, 'ready')
+  assert.equal(app.modeCache.deep.error, null)
+  assert.equal(app.index, deepIndex)
+  assert.equal(app.results.length, 1)
+  assert.equal(app.results[0].url, 'https://github.com/shihabdider/scry/issues/2')
+  assert.equal(modeIndicator.dataset.mode, 'deep')
+  assert.equal(modeIndicator.dataset.status, 'ready')
+  assert.equal(document.querySelector('#status').textContent, '1 deep history URL')
+
+  await app.loadHistory({ deep: true })
+
+  assert.equal(historyCalls.length, 2)
+  assert.equal(app.index, deepIndex)
+})
+
+test('loadHistory keeps legacy deep load errors mode-local and can return to recent', async () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  document.body.append(modeIndicator)
+  const input = document.querySelector('#search-input')
+  input.value = 'typed.example/error'
+  const error = new Error('history unavailable')
+  const historyCalls = []
+  const chromeApi = {
+    history: {
+      async search(query) {
+        historyCalls.push(query)
+        if (query.startTime === 0) throw error
+        return [historyEntry(1)]
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.loadHistory({ deep: false })
+  const recentIndex = app.modeCache.recent.index
+
+  await assert.doesNotReject(app.loadHistory({ deep: true }))
+
+  assert.equal(app.loading, false)
+  assert.equal(app.searchMode, 'deep')
+  assert.equal(app.deep, true)
+  assert.equal(app.index, null)
+  assert.equal(app.results.length, 0)
+  assert.equal(app.visibleRows.length, 1)
+  assert.equal(app.visibleRows[0].kind, 'open-typed-url')
+  assert.equal(app.modeCache.deep.status, 'error')
+  assert.equal(app.modeCache.deep.index, null)
+  assert.equal(app.modeCache.deep.error, error)
+  assert.equal(app.modeCache.recent.status, 'ready')
+  assert.equal(modeIndicator.dataset.mode, 'deep')
+  assert.equal(modeIndicator.dataset.status, 'error')
+  assert.equal(document.querySelector('#status').textContent, 'Deep history unavailable')
+  assert.equal(document.querySelector('#deep-search-button').hidden, true)
+
+  await app.loadHistory({ deep: false })
+
+  assert.equal(historyCalls.length, 2)
+  assert.equal(app.searchMode, 'recent')
+  assert.equal(app.deep, false)
+  assert.equal(app.index, recentIndex)
+  assert.equal(app.modeCache.deep.status, 'error')
+  assert.equal(app.modeCache.deep.error, error)
+})
+
 test('switchSearchMode preserves query, resets top, lazy-loads the target mode, and refreshes results', async () => {
   const document = createScryDocument()
   const modeIndicator = document.createElement('button')
