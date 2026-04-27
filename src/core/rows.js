@@ -50,7 +50,10 @@ export function rowSelectionLearningKey(row) {
 }
 
 export function rowEditableText(row) {
-  throw new Error('not implemented: rowEditableText')
+  if (row?.kind !== 'result') return null
+
+  const displayUrl = row.result?.displayUrl
+  return typeof displayUrl === 'string' && displayUrl ? displayUrl : null
 }
 
 export function isCopiedFeedbackVisible(row, copiedFeedback, now = Date.now()) {
