@@ -95,7 +95,7 @@ export function collectExactPhraseEvidence(entry, exactPhrases) {
 }
 
 export function compareQuoteEvidence(a, b) {
-  throw new Error('not implemented: compareQuoteEvidence')
+  return compareTuple(a?.qualityTuple ?? [], b?.qualityTuple ?? [])
 }
 
 export function searchParsedHistory(index, parsedQuery, { now = Date.now(), limit = DEFAULT_LIMIT, selections } = {}) {

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { formatAge, highlightText } from '../src/core/format.js'
 import { normalizeExactPhrase } from '../src/core/query.js'
 import { recordSelection } from '../src/core/selection-learning.js'
-import { buildHistoryIndex, collectExactPhraseEvidence, searchHistory } from '../src/core/search.js'
+import { buildHistoryIndex, collectExactPhraseEvidence, compareQuoteEvidence, searchHistory } from '../src/core/search.js'
 import { middleTruncate } from '../src/core/url.js'
 
 const now = Date.parse('2026-04-27T00:00:00Z')
@@ -159,6 +159,37 @@ test('exact phrase evidence vacuously matches when there are no exact phrases', 
     evidence: [],
     qualityTuple: [0, 0],
   })
+})
+
+test('quote evidence comparator sorts display URL phrase matches before title-only matches', () => {
+  const phrase = normalizeExactPhrase('alpha')
+  const displayUrlEvidence = collectExactPhraseEvidence({ displayUrl: 'example.com/alpha', title: 'Alpha page' }, [phrase])
+  const titleOnlyEvidence = collectExactPhraseEvidence({ displayUrl: 'example.com/page', title: 'Alpha page' }, [phrase])
+
+  assert.ok(compareQuoteEvidence(displayUrlEvidence, titleOnlyEvidence) < 0)
+  assert.ok(compareQuoteEvidence(titleOnlyEvidence, displayUrlEvidence) > 0)
+  assert.deepEqual([titleOnlyEvidence, displayUrlEvidence].sort(compareQuoteEvidence), [displayUrlEvidence, titleOnlyEvidence])
+})
+
+test('quote evidence comparator prefers earlier phrase positions among close matches', () => {
+  const phrase = normalizeExactPhrase('alpha')
+  const earlierEvidence = collectExactPhraseEvidence({ displayUrl: 'alpha.example.com/docs', title: 'Docs' }, [phrase])
+  const laterEvidence = collectExactPhraseEvidence({ displayUrl: 'example.com/docs/alpha', title: 'Docs' }, [phrase])
+
+  assert.ok(compareQuoteEvidence(earlierEvidence, laterEvidence) < 0)
+  assert.ok(compareQuoteEvidence(laterEvidence, earlierEvidence) > 0)
+  assert.deepEqual([laterEvidence, earlierEvidence].sort(compareQuoteEvidence), [earlierEvidence, laterEvidence])
+})
+
+test('quote evidence comparator ties equivalent quote quality including empty phrase sets', () => {
+  const phrase = normalizeExactPhrase('alpha')
+  const leftTitleEvidence = collectExactPhraseEvidence({ displayUrl: 'example.com/one', title: 'Alpha one' }, [phrase])
+  const rightTitleEvidence = collectExactPhraseEvidence({ displayUrl: 'example.com/two', title: 'Alpha two' }, [phrase])
+  const leftEmptyEvidence = collectExactPhraseEvidence({ displayUrl: 'example.com/one', title: 'One' }, [])
+  const rightEmptyEvidence = collectExactPhraseEvidence({ displayUrl: 'example.com/two', title: 'Two' }, [])
+
+  assert.equal(compareQuoteEvidence(leftTitleEvidence, rightTitleEvidence), 0)
+  assert.equal(compareQuoteEvidence(leftEmptyEvidence, rightEmptyEvidence), 0)
 })
 
 test('conservative URL normalization deduplicates fragments and tracking parameters while preserving meaningful query strings', () => {
