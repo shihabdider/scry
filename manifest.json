@@ -3,7 +3,7 @@
   "name": "Scry",
   "version": "0.1.0",
   "description": "History-first URL recall for Chrome.",
-  "permissions": ["history", "storage", "tabs"],
+  "permissions": ["history", "sessions", "storage", "tabs"],
   "action": {
     "default_title": "Scry",
     "default_popup": "popup.html"

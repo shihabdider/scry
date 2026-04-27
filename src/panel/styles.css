@@ -55,6 +55,40 @@ h1 {
   font-size: 11px;
 }
 
+.mode-indicator {
+  appearance: none;
+  background: #fff;
+  border: 1px solid #999;
+  border-radius: 0;
+  color: #0000cc;
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  line-height: 1.1;
+  padding: 1px 4px;
+}
+
+.mode-indicator:hover,
+.mode-indicator:focus {
+  background: #ffffcc;
+  outline: 1px solid #cccc66;
+  outline-offset: -1px;
+}
+
+.mode-indicator[data-status="loading"] {
+  color: #666;
+}
+
+.mode-indicator[data-status="error"] {
+  border-color: #cc6666;
+  color: #cc0000;
+}
+
+.mode-indicator[data-clickable="false"] {
+  color: #666;
+  cursor: default;
+}
+
 .search-label {
   color: #222;
   display: block;
@@ -108,6 +142,7 @@ h1 {
   display: block;
   font: inherit;
   padding: 5px 4px 6px;
+  position: relative;
   text-align: left;
   width: 100%;
 }
@@ -117,6 +152,20 @@ h1 {
   background: #ffffcc;
   outline: 1px solid #cccc66;
   outline-offset: -1px;
+}
+
+.result-action.open-typed-url {
+  border-bottom-color: #ddd;
+}
+
+.open-typed-url-button {
+  background: #fafafa;
+  padding: 4px 4px 5px;
+}
+
+.result-action.open-typed-url.selected .open-typed-url-button,
+.open-typed-url-button:focus {
+  background: #ffffcc;
 }
 
 .result-url,
@@ -149,6 +198,27 @@ h1 {
   font-size: 11px;
   line-height: 1.3;
   margin-top: 1px;
+}
+
+.result-copied-feedback {
+  background: #ffffcc;
+  border: 1px solid #cccc66;
+  color: #666;
+  display: inline-block;
+  font-size: 10px;
+  line-height: 1;
+  margin-right: 5px;
+  padding: 1px 3px;
+  vertical-align: 1px;
+}
+
+.open-typed-url-title {
+  color: #222;
+  font-size: 12px;
+}
+
+.open-typed-url-meta {
+  color: #777;
 }
 
 b {

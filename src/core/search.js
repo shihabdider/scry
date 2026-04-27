@@ -223,9 +223,10 @@ function compareMatch(a, b) {
   return b.segment.order - a.segment.order
 }
 
-function bestTokenMatch(entry, token) {
+function bestSegmentMatch(segments, token, { afterOrder = null } = {}) {
   let best = null
-  for (const segment of entry.segments) {
+  for (const segment of segments) {
+    if (afterOrder !== null && segment.order <= afterOrder) continue
     const tier = matchTier(token, segment.token)
     if (!tier) continue
     const candidate = {
@@ -240,6 +241,10 @@ function bestTokenMatch(entry, token) {
   return best
 }
 
+function bestTokenMatch(entry, token) {
+  return bestSegmentMatch(entry.segments, token)
+}
+
 function bestOrderedUrlMatches(entry, tokens) {
   const urlSegments = entry.segments.filter((segment) => URL_FIELDS.has(segment.field))
   let previousOrder = -1
@@ -249,20 +254,7 @@ function bestOrderedUrlMatches(entry, tokens) {
   let tierSum = 0
 
   for (const token of tokens) {
-    let best = null
-    for (const segment of urlSegments) {
-      if (segment.order <= previousOrder) continue
-      const tier = matchTier(token, segment.token)
-      if (!tier) continue
-      const candidate = {
-        token,
-        field: segment.field,
-        tier,
-        strength: matchStrength(segment, tier),
-        segment,
-      }
-      if (compareMatch(candidate, best) > 0) best = candidate
-    }
+    const best = bestSegmentMatch(urlSegments, token, { afterOrder: previousOrder })
 
     if (!best) continue
     if (previousMatchedOrder != null && best.segment.order === previousMatchedOrder + 1) adjacentPairs++

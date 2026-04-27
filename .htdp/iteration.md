@@ -107,6 +107,7 @@ Dependency tree:
 - 2026-04-27T18:29:21Z — user confirmed side panel is completely deprecated; keep popup architecture and treat side-panel keep-open as stale/superseded.
 - 2026-04-27T18:37:36Z — Phase 1 stubber completed 50 wishes across 5 layers and flagged three existing test assertions whose oracles must change for sessions permission and non-closing result-mode Escape.
 - 2026-04-27T18:40:00Z — user accepted flagged oracle changes: add `sessions` permission expectation and replace result-mode second-Escape close/blur assertions with non-closing actionable behavior.
+- 2026-04-27T21:20:00Z — Phase 2 implementation completed all 50 wishes; final_preverify hook passed after correcting a temporary manifest shortcut regression back to Cmd/Ctrl+K.
 
 ### Look Back
 

@@ -11,6 +11,7 @@
       <header class="scry-header">
         <div class="brand-line">
           <h1>Scry</h1>
+          <button id="mode-indicator" class="mode-indicator" type="button" data-mode="recent" data-status="idle" data-clickable="true" aria-label="mode: recent; Recent history not loaded" title="Recent history not loaded">mode: recent</button>
           <span id="status" class="status" role="status">Loading history…</span>
         </div>
         <label class="search-label" for="search-input">Search browser history</label>
@@ -26,11 +27,11 @@
         <button id="next-page-button" class="page-button" type="button">l next</button>
       </nav>
 
-      <section class="deep-search">
-        <button id="deep-search-button" class="deep-search-button" type="button" hidden>Deep search all history</button>
+      <section class="deep-search" hidden aria-hidden="true">
+        <button id="deep-search-button" class="deep-search-button" type="button" hidden aria-hidden="true" tabindex="-1">Deep search all history</button>
       </section>
 
-      <footer class="footer-hints">⌘K open · Esc results/close · j/k move · h/l page · Enter open</footer>
+      <footer class="footer-hints">⌘K open · Tab/⇧Tab mode · Esc result mode (stays open) · i search · y copy · c edit URL · j/k move · h/l page · Enter open</footer>
     </main>
     <script type="module" src="src/panel/main.js"></script>
   </body>

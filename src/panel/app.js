@@ -116,26 +116,15 @@ export class ScryPanelApp {
   }
 
   async loadHistory({ deep }) {
-    const mode = deep ? 'deep' : 'recent'
-    const ready = this.ensureSearchModeReady(mode)
-    this.renderModeIndicator()
-    const state = await ready
-
-    if (state.status === 'ready' && state.index) {
-      this.updateResults()
-    } else {
-      this.results = []
-      this.renderResults()
-    }
-
-    this.updateVisibleRows()
-    this.renderModeIndicator()
-    return state
+    return this.activateSearchMode(deep ? 'deep' : 'recent')
   }
 
   async switchSearchMode(mode) {
     this.resetSelectionForModeSwitch()
+    return this.activateSearchMode(mode)
+  }
 
+  async activateSearchMode(mode) {
     const ready = this.ensureSearchModeReady(mode)
     this.renderModeIndicator()
     const state = await ready
@@ -218,8 +207,13 @@ export class ScryPanelApp {
     if (this.status) this.setStatus(model.statusText)
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
 
+    this.renderModeIndicatorElement(model)
+    return model
+  }
+
+  renderModeIndicatorElement(model) {
     const indicator = this.document.querySelector('#mode-indicator')
-    if (!indicator) return model
+    if (!indicator) return
 
     indicator.hidden = false
     indicator.textContent = model.label
@@ -230,8 +224,6 @@ export class ScryPanelApp {
     indicator.title = model.statusText
     indicator.setAttribute('aria-disabled', model.clickable ? 'false' : 'true')
     indicator.setAttribute('aria-label', `${model.label}; ${model.statusText}`)
-
-    return model
   }
 
   updateVisibleRows() {
@@ -318,23 +310,27 @@ export class ScryPanelApp {
     this.renderResults()
   }
 
-  pageCount() {
-    const resultCount = Array.isArray(this.visibleRows) && this.visibleRows.length > 0
+  visibleResultCount() {
+    return Array.isArray(this.visibleRows) && this.visibleRows.length > 0
       ? this.visibleRows.filter((row) => row?.kind === 'result').length
       : this.results.length
+  }
 
-    return Math.max(1, Math.ceil(resultCount / RESULTS_PER_PAGE))
+  pageCount() {
+    return Math.max(1, Math.ceil(this.visibleResultCount() / RESULTS_PER_PAGE))
+  }
+
+  clampedPageIndex(pageCount = this.pageCount()) {
+    const rawPageIndex = Number.isFinite(this.pageIndex) ? Math.trunc(this.pageIndex) : 0
+    return Math.min(Math.max(0, rawPageIndex), pageCount - 1)
   }
 
   pageStart() {
-    const rawPageIndex = Number.isFinite(this.pageIndex) ? Math.trunc(this.pageIndex) : 0
-    const pageIndex = Math.min(Math.max(0, rawPageIndex), this.pageCount() - 1)
-    return pageIndex * RESULTS_PER_PAGE
+    return this.clampedPageIndex() * RESULTS_PER_PAGE
   }
 
   clampPageIndex() {
-    const rawPageIndex = Number.isFinite(this.pageIndex) ? Math.trunc(this.pageIndex) : 0
-    this.pageIndex = Math.min(Math.max(0, rawPageIndex), this.pageCount() - 1)
+    this.pageIndex = this.clampedPageIndex()
   }
 
   ensureSelectedVisible() {
@@ -530,12 +526,13 @@ export class ScryPanelApp {
     this.leavePanelFocus()
   }
 
+  activeSearchMode() {
+    if (this.searchMode === 'recent' || this.searchMode === 'deep' || this.searchMode === 'closed') return this.searchMode
+    return this.deep ? 'deep' : 'recent'
+  }
+
   renderLoading() {
-    const mode = this.searchMode === 'recent' || this.searchMode === 'deep' || this.searchMode === 'closed'
-      ? this.searchMode
-      : this.deep
-        ? 'deep'
-        : 'recent'
+    const mode = this.activeSearchMode()
     const modeState = this.modeCache?.[mode] ?? null
     const loadingState = modeState?.status === 'loading'
       ? modeState
@@ -558,29 +555,13 @@ export class ScryPanelApp {
     if (this.previousPageButton) this.previousPageButton.disabled = true
     if (this.nextPageButton) this.nextPageButton.disabled = true
 
-    const indicator = this.document.querySelector('#mode-indicator')
-    if (!indicator) return model
-
-    indicator.hidden = false
-    indicator.textContent = model.label
-    indicator.dataset.mode = model.mode
-    indicator.dataset.status = model.status
-    indicator.dataset.clickable = String(model.clickable)
-    indicator.disabled = !model.clickable
-    indicator.title = model.statusText
-    indicator.setAttribute('aria-disabled', model.clickable ? 'false' : 'true')
-    indicator.setAttribute('aria-label', `${model.label}; ${model.statusText}`)
-
+    this.renderModeIndicatorElement(model)
     return model
   }
 
   renderResults() {
     const query = this.input.value.trim()
-    const mode = this.searchMode === 'recent' || this.searchMode === 'deep' || this.searchMode === 'closed'
-      ? this.searchMode
-      : this.deep
-        ? 'deep'
-        : 'recent'
+    const mode = this.activeSearchMode()
     const modeState = this.modeCache?.[mode] ?? null
     const messages = {
       recent: {
@@ -722,12 +703,9 @@ export class ScryPanelApp {
   renderPagination() {
     if (!this.pagination || !this.pageStatus) return
 
-    const resultCount = Array.isArray(this.visibleRows) && this.visibleRows.length > 0
-      ? this.visibleRows.filter((row) => row?.kind === 'result').length
-      : this.results.length
+    const resultCount = this.visibleResultCount()
     const pageCount = this.pageCount()
-    const rawPageIndex = Number.isFinite(this.pageIndex) ? Math.trunc(this.pageIndex) : 0
-    const pageIndex = Math.min(Math.max(0, rawPageIndex), pageCount - 1)
+    const pageIndex = this.clampedPageIndex(pageCount)
 
     this.pagination.hidden = resultCount === 0 || pageCount <= 1
     this.pageStatus.textContent = resultCount ? `Page ${pageIndex + 1} of ${pageCount}` : 'No results'
