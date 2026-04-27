@@ -8,7 +8,7 @@ test('manifest exposes a Chrome popup command palette for history-only recall', 
   const manifest = JSON.parse(await readFile('manifest.json', 'utf8'))
 
   assert.equal(manifest.manifest_version, 3)
-  assert.equal(manifest.minimum_chrome_version, '147')
+  assert.equal('minimum_chrome_version' in manifest, false)
   assert.equal(manifest.action.default_popup, 'popup.html')
   assert.equal(manifest.commands._execute_action.suggested_key.default, 'Ctrl+K')
   assert.equal(manifest.commands._execute_action.suggested_key.mac, 'Command+K')
