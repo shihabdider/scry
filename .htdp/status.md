@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 4
-updated: 2026-04-27T19:11:42.664Z
+updated: 2026-04-27T19:14:56.360Z
 
 ## Wishes
 
@@ -19,7 +19,7 @@ updated: 2026-04-27T19:11:42.664Z
 | isCopiedFeedbackVisible | src/core/rows.js | 4 | pass | 148.2s |
 | createModeCache | src/core/search-modes.js | 4 | pass | 113.0s |
 | cycleSearchMode | src/core/search-modes.js | 4 | pass | 73.9s |
-| modeIndicatorModel | src/core/search-modes.js | 4 | pending | - |
+| modeIndicatorModel | src/core/search-modes.js | 4 | pass | 187.6s |
 | fetchRecentlyClosed | src/platform/sessions-provider.js | 4 | pending | - |
 | flattenClosedSessions | src/platform/sessions-provider.js | 4 | pending | - |
 | writeClipboardText | src/platform/clipboard.js | 4 | pending | - |
@@ -96,3 +96,6 @@ updated: 2026-04-27T19:11:42.664Z
 - 15:10:27 cycleSearchMode: running
 - 15:11:41 cycleSearchMode: pass (73.9s, $0.2899)
 - 15:11:42 implementer_post verification for cycleSearchMode: pass
+- 15:11:47 modeIndicatorModel: running
+- 15:14:55 modeIndicatorModel: pass (187.6s, $0.9389)
+- 15:14:56 implementer_post verification for modeIndicatorModel: pass

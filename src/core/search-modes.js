@@ -49,5 +49,36 @@ export function cycleSearchMode(currentMode, { direction = 1 } = {}) {
 }
 
 export function modeIndicatorModel(mode, state) {
-  throw new Error('not implemented: modeIndicatorModel')
+  const activeMode = SEARCH_MODES.includes(mode) ? mode : DEFAULT_SEARCH_MODE
+  const status = state?.status ?? 'idle'
+  const entryCount = Array.isArray(state?.index?.entries) ? state.index.entries.length : 0
+  const urlWord = entryCount === 1 ? 'URL' : 'URLs'
+  const text = {
+    recent: {
+      idle: 'Recent history not loaded',
+      loading: 'Loading recent history…',
+      ready: `${entryCount} recent history ${urlWord}`,
+      error: 'Recent history unavailable',
+    },
+    deep: {
+      idle: 'Deep history not loaded',
+      loading: 'Loading deep history…',
+      ready: `${entryCount} deep history ${urlWord}`,
+      error: 'Deep history unavailable',
+    },
+    closed: {
+      idle: 'Recently closed URLs not loaded',
+      loading: 'Loading recently closed URLs…',
+      ready: `${entryCount} recently closed ${urlWord}`,
+      error: 'Recently closed URLs unavailable',
+    },
+  }[activeMode]
+
+  return {
+    label: `mode: ${activeMode}`,
+    mode: activeMode,
+    status,
+    clickable: true,
+    statusText: text[status] ?? text.idle,
+  }
 }
