@@ -25,5 +25,31 @@ export async function fetchRecentlyClosed({ chromeApi = chrome } = {}) {
 }
 
 export function flattenClosedSessions(recentlyClosed, { now = Date.now() } = {}) {
-  throw new Error('not implemented: flattenClosedSessions')
+  const entries = []
+  const oldestAllowed = now - CLOSED_SESSION_WINDOW_MS
+
+  const appendTab = (tab, lastVisitTime) => {
+    if (!tab || typeof tab.url !== 'string' || tab.url.length === 0) return
+    entries.push({
+      url: tab.url,
+      title: tab.title,
+      visitCount: 1,
+      lastVisitTime,
+    })
+  }
+
+  for (const record of recentlyClosed ?? []) {
+    if (!record || typeof record.lastModified !== 'number' || !Number.isFinite(record.lastModified)) continue
+
+    const lastVisitTime = record.lastModified * 1_000
+    if (lastVisitTime < oldestAllowed || lastVisitTime > now) continue
+
+    appendTab(record.tab, lastVisitTime)
+
+    const windowTabs = record.window?.tabs
+    if (!Array.isArray(windowTabs)) continue
+    for (const tab of windowTabs) appendTab(tab, lastVisitTime)
+  }
+
+  return entries
 }
