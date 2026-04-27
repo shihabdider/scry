@@ -306,7 +306,11 @@ export class ScryPanelApp {
   }
 
   pageCount() {
-    return Math.max(1, Math.ceil(this.results.length / RESULTS_PER_PAGE))
+    const resultCount = Array.isArray(this.visibleRows) && this.visibleRows.length > 0
+      ? this.visibleRows.filter((row) => row?.kind === 'result').length
+      : this.results.length
+
+    return Math.max(1, Math.ceil(resultCount / RESULTS_PER_PAGE))
   }
 
   pageStart() {

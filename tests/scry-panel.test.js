@@ -206,6 +206,52 @@ test('selectedVisibleRow returns the selected synthetic or real row in visible r
   assert.equal(app.selectedVisibleRow(), visibleRows[2])
 })
 
+test('pageCount counts visible real result rows and ignores a pinned typed URL row at the page boundary', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 6 }, (_, index) => searchResult(`page-boundary-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+
+  assert.equal(app.pageCount(), 1)
+})
+
+test('pageCount computes multiple pages from visible real result rows', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 7 }, (_, index) => searchResult(`visible-page-${index + 1}`))
+  app.results = []
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+
+  assert.equal(app.pageCount(), 2)
+})
+
+test('pageCount falls back to legacy results and keeps a one-page minimum', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.results = Array.from({ length: 7 }, (_, index) => searchResult(`legacy-page-${index + 1}`))
+  app.visibleRows = []
+
+  assert.equal(app.pageCount(), 2)
+
+  app.results = []
+
+  assert.equal(app.pageCount(), 1)
+})
+
 // Compatibility: callers can use selectedVisibleRow before updateVisibleRows is wired in.
 test('selectedVisibleRow wraps legacy result state when visible rows are not populated yet', () => {
   const document = createScryDocument()
