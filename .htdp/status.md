@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 4
-updated: 2026-04-27T19:14:56.360Z
+updated: 2026-04-27T19:16:38.046Z
 
 ## Wishes
 
@@ -20,7 +20,7 @@ updated: 2026-04-27T19:14:56.360Z
 | createModeCache | src/core/search-modes.js | 4 | pass | 113.0s |
 | cycleSearchMode | src/core/search-modes.js | 4 | pass | 73.9s |
 | modeIndicatorModel | src/core/search-modes.js | 4 | pass | 187.6s |
-| fetchRecentlyClosed | src/platform/sessions-provider.js | 4 | pending | - |
+| fetchRecentlyClosed | src/platform/sessions-provider.js | 4 | pass | 92.6s |
 | flattenClosedSessions | src/platform/sessions-provider.js | 4 | pending | - |
 | writeClipboardText | src/platform/clipboard.js | 4 | pending | - |
 | resetSelectionForModeSwitch | src/panel/app.js | 4 | pending | - |
@@ -99,3 +99,6 @@ updated: 2026-04-27T19:14:56.360Z
 - 15:11:47 modeIndicatorModel: running
 - 15:14:55 modeIndicatorModel: pass (187.6s, $0.9389)
 - 15:14:56 implementer_post verification for modeIndicatorModel: pass
+- 15:15:04 fetchRecentlyClosed: running
+- 15:16:36 fetchRecentlyClosed: pass (92.6s, $0.5368)
+- 15:16:38 implementer_post verification for fetchRecentlyClosed: pass

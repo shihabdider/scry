@@ -21,7 +21,7 @@ export const CLOSED_SESSION_WINDOW_MS = 24 * 60 * 60 * 1000
  */
 
 export async function fetchRecentlyClosed({ chromeApi = chrome } = {}) {
-  throw new Error('not implemented: fetchRecentlyClosed')
+  return chromeApi.sessions.getRecentlyClosed()
 }
 
 export function flattenClosedSessions(recentlyClosed, { now = Date.now() } = {}) {
