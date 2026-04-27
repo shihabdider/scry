@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { formatAge, highlightText } from '../src/core/format.js'
 import { normalizeExactPhrase } from '../src/core/query.js'
 import { recordSelection } from '../src/core/selection-learning.js'
-import { buildHistoryIndex, collectExactPhraseEvidence, compareQuoteEvidence, searchHistory } from '../src/core/search.js'
+import { __testing, buildHistoryIndex, collectExactPhraseEvidence, compareQuoteEvidence, searchHistory } from '../src/core/search.js'
 import { middleTruncate } from '../src/core/url.js'
 
 const now = Date.parse('2026-04-27T00:00:00Z')
@@ -190,6 +190,54 @@ test('quote evidence comparator ties equivalent quote quality including empty ph
 
   assert.equal(compareQuoteEvidence(leftTitleEvidence, rightTitleEvidence), 0)
   assert.equal(compareQuoteEvidence(leftEmptyEvidence, rightEmptyEvidence), 0)
+})
+
+test('result conversion carries quote-match debug evidence without rendering it', () => {
+  const entry = indexOf([
+    {
+      url: 'https://example.com/alpha',
+      title: 'Alpha page',
+      visitCount: 7,
+      lastVisitTime: now - 60 * 1000,
+    },
+  ]).entries[0]
+  const quoteEvidence = collectExactPhraseEvidence(entry, [normalizeExactPhrase('example.com/alpha')])
+  const debug = { mode: 'quoted', quoteEvidence, debugOnly: 'DO_NOT_RENDER' }
+
+  const result = __testing.toResult(entry, { tokens: ['alpha'], now, debug })
+
+  assert.equal(result.displayUrl, 'example.com/alpha')
+  assert.equal(result.title, 'Alpha page')
+  assert.equal(result.visitsLabel, '7 visits')
+  assert.equal(result.lastVisitedLabel, '1m ago')
+  assert.equal(result.urlHtml, 'example.com/<b>alpha</b>')
+  assert.equal(result.titleHtml, '<b>Alpha</b> page')
+  assert.deepEqual(result.debug, debug)
+  assert.equal(result.urlHtml.includes('DO_NOT_RENDER'), false)
+  assert.equal(result.titleHtml.includes('DO_NOT_RENDER'), false)
+})
+
+test('result conversion remains backward compatible when optional display inputs are absent', () => {
+  const entry = {
+    key: 'https://example.com/no-title',
+    url: 'https://example.com/no-title',
+    displayUrl: 'example.com/no-title',
+    title: '',
+    visitCount: 1,
+    lastVisitTime: now,
+  }
+
+  const result = __testing.toResult(entry, { now })
+
+  assert.equal(result.key, entry.key)
+  assert.equal(result.url, entry.url)
+  assert.equal(result.displayUrl, entry.displayUrl)
+  assert.equal(result.title, entry.displayUrl)
+  assert.equal(result.visitsLabel, '1 visit')
+  assert.equal(result.lastVisitedLabel, 'now')
+  assert.equal(result.urlHtml, entry.displayUrl)
+  assert.equal(result.titleHtml, entry.displayUrl)
+  assert.deepEqual(result.debug, {})
 })
 
 test('conservative URL normalization deduplicates fragments and tracking parameters while preserving meaningful query strings', () => {

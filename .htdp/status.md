@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 4
-updated: 2026-04-27T18:51:10.543Z
+updated: 2026-04-27T18:54:47.422Z
 
 ## Wishes
 
@@ -11,7 +11,7 @@ updated: 2026-04-27T18:51:10.543Z
 | normalizeExactPhrase | src/core/query.js | 4 | pass | 110.0s |
 | collectExactPhraseEvidence | src/core/search.js | 4 | pass | 220.4s |
 | compareQuoteEvidence | src/core/search.js | 4 | pass | 136.4s |
-| toResult | src/core/search.js | 4 | pending | - |
+| toResult | src/core/search.js | 4 | pass | 210.0s |
 | createTypedUrlCandidate | src/core/url.js | 4 | pending | - |
 | rowOpenUrl | src/core/rows.js | 4 | pending | - |
 | rowSelectionLearningKey | src/core/rows.js | 4 | pending | - |
@@ -72,3 +72,6 @@ updated: 2026-04-27T18:51:10.543Z
 - 14:48:53 compareQuoteEvidence: running
 - 14:51:09 compareQuoteEvidence: pass (136.4s, $0.5578)
 - 14:51:10 implementer_post verification for compareQuoteEvidence: pass
+- 14:51:16 toResult: running
+- 14:54:46 toResult: pass (210.0s, $0.8193)
+- 14:54:47 implementer_post verification for toResult: pass

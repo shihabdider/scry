@@ -267,6 +267,7 @@ function compareTuple(a, b) {
 function toResult(entry, { tokens = [], now = Date.now(), debug = {} } = {}) {
   const displayUrl = middleTruncate(entry.displayUrl, 112)
   const title = entry.title || entry.displayUrl
+  const resultDebug = debug ?? {}
   return {
     key: entry.key,
     url: entry.url,
@@ -278,7 +279,7 @@ function toResult(entry, { tokens = [], now = Date.now(), debug = {} } = {}) {
     lastVisitedLabel: formatAge(entry.lastVisitTime, now),
     urlHtml: highlightText(displayUrl, tokens),
     titleHtml: highlightText(title, tokens),
-    debug,
+    debug: resultDebug,
   }
 }
 
@@ -353,4 +354,5 @@ export function searchHistory(index, query, { now = Date.now(), limit = DEFAULT_
 export const __testing = {
   matchTier,
   frecencyScore,
+  toResult,
 }
