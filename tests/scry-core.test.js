@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { formatAge, highlightText } from '../src/core/format.js'
-import { normalizeExactPhrase, parseExactPhrases } from '../src/core/query.js'
+import { normalizeExactPhrase, parseExactPhrases, parseQuery } from '../src/core/query.js'
 import { recordSelection } from '../src/core/selection-learning.js'
 import { __testing, buildHistoryIndex, collectExactPhraseEvidence, compareQuoteEvidence, searchHistory } from '../src/core/search.js'
 import { createTypedUrlCandidate, middleTruncate } from '../src/core/url.js'
@@ -119,6 +119,46 @@ test('exact phrase parsing keeps unquoted tokens separated around adjacent quote
       },
     ],
     hasIncompleteQuote: false,
+  })
+})
+
+test('query parsing preserves unquoted search tokens and derives the learning key from them', () => {
+  assert.deepEqual(parseQuery(' GitHub PR-13 README '), {
+    raw: ' GitHub PR-13 README ',
+    tokens: ['github', 'pr', '13', 'readme'],
+    unquotedTokens: ['github', 'pr', '13', 'readme'],
+    exactPhrases: [],
+    key: 'github pr 13 readme',
+  })
+})
+
+test('query parsing separates complete quoted phrases from unquoted ranking tokens', () => {
+  assert.deepEqual(parseQuery('github "MSKILAB-org/repo" issue "pull\n requests"'), {
+    raw: 'github "MSKILAB-org/repo" issue "pull\n requests"',
+    tokens: ['github', 'issue'],
+    unquotedTokens: ['github', 'issue'],
+    exactPhrases: [normalizeExactPhrase('MSKILAB-org/repo'), normalizeExactPhrase('pull\n requests')],
+    key: 'github issue',
+  })
+})
+
+test('query parsing uses an empty learning key when all text is quoted', () => {
+  assert.deepEqual(parseQuery('"github.com/mskilab-org/repo"'), {
+    raw: '"github.com/mskilab-org/repo"',
+    tokens: [],
+    unquotedTokens: [],
+    exactPhrases: [normalizeExactPhrase('github.com/mskilab-org/repo')],
+    key: '',
+  })
+})
+
+test('query parsing treats incomplete quotes as ordinary unquoted text', () => {
+  assert.deepEqual(parseQuery('github "pull requests'), {
+    raw: 'github "pull requests',
+    tokens: ['github', 'pull', 'requests'],
+    unquotedTokens: ['github', 'pull', 'requests'],
+    exactPhrases: [],
+    key: 'github pull requests',
   })
 })
 

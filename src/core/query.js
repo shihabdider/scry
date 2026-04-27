@@ -32,12 +32,13 @@ export function tokenizeText(value) {
 
 export function parseQuery(query) {
   const raw = String(query ?? '')
-  const tokens = tokenizeText(raw)
+  const { unquotedText, exactPhrases } = parseExactPhrases(raw)
+  const tokens = tokenizeText(unquotedText)
   return {
     raw,
     tokens,
     unquotedTokens: tokens,
-    exactPhrases: [],
+    exactPhrases,
     key: queryKey(tokens),
   }
 }
