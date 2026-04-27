@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 4
-updated: 2026-04-27T19:02:19.243Z
+updated: 2026-04-27T19:03:50.423Z
 
 ## Wishes
 
@@ -14,7 +14,7 @@ updated: 2026-04-27T19:02:19.243Z
 | toResult | src/core/search.js | 4 | pass | 210.0s |
 | createTypedUrlCandidate | src/core/url.js | 4 | pass | 300.2s |
 | rowOpenUrl | src/core/rows.js | 4 | pass | 134.8s |
-| rowSelectionLearningKey | src/core/rows.js | 4 | pending | - |
+| rowSelectionLearningKey | src/core/rows.js | 4 | pass | 81.4s |
 | rowEditableText | src/core/rows.js | 4 | pending | - |
 | isCopiedFeedbackVisible | src/core/rows.js | 4 | pending | - |
 | createModeCache | src/core/search-modes.js | 4 | pending | - |
@@ -81,3 +81,6 @@ updated: 2026-04-27T19:02:19.243Z
 - 15:00:03 rowOpenUrl: running
 - 15:02:18 rowOpenUrl: pass (134.8s, $0.4764)
 - 15:02:19 implementer_post verification for rowOpenUrl: pass
+- 15:02:27 rowSelectionLearningKey: running
+- 15:03:49 rowSelectionLearningKey: pass (81.4s, $0.2946)
+- 15:03:50 implementer_post verification for rowSelectionLearningKey: pass

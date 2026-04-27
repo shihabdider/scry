@@ -43,7 +43,10 @@ export function rowOpenUrl(row) {
 }
 
 export function rowSelectionLearningKey(row) {
-  throw new Error('not implemented: rowSelectionLearningKey')
+  if (row?.kind !== 'result') return null
+
+  const key = row.result?.key
+  return typeof key === 'string' && key ? key : null
 }
 
 export function rowEditableText(row) {
