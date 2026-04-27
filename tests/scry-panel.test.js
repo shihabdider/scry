@@ -73,6 +73,16 @@ function searchResult(name) {
   }
 }
 
+function createClipboardNavigator(writes) {
+  return {
+    clipboard: {
+      async writeText(text) {
+        writes.push(text)
+      },
+    },
+  }
+}
+
 test('updateVisibleRows pins a typed URL candidate above corpus results and selection follows visible row order', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
@@ -230,6 +240,150 @@ test('selectedVisibleRow returns null when no visible row is selected', () => {
   app.results = []
   app.selectedIndex = 0
   assert.equal(app.selectedVisibleRow(), null)
+})
+
+test('copySelectedRow copies a selected real result URL, marks copied feedback, then expires it without changing focus', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const writes = []
+  const scheduledTimers = []
+  const windowApi = {
+    closeCalls: 0,
+    blurCalls: 0,
+    setTimeout(callback, delay) {
+      scheduledTimers.push({ callback, delay })
+      return { unref() {} }
+    },
+    close() {
+      this.closeCalls++
+    },
+    blur() {
+      this.blurCalls++
+    },
+  }
+  const app = new ScryPanelApp({
+    document,
+    chromeApi,
+    clock: () => now,
+    windowApi,
+    navigatorApi: createClipboardNavigator(writes),
+  })
+  const firstResult = searchResult('first')
+  const secondResult = searchResult('second')
+  app.results = [firstResult, secondResult]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 1
+  app.focusMode = 'results'
+  const activeElement = document.createElement('button')
+  document.activeElement = activeElement
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+    app.updateVisibleRows()
+  }
+
+  await app.copySelectedRow()
+
+  assert.deepEqual(writes, ['https://example.com/second?tab=readme'])
+  assert.deepEqual(app.copiedFeedback, {
+    key: 'result:https://example.com/second',
+    expiresAt: now + 1_200,
+  })
+  assert.equal(app.visibleRows[1].copied, true)
+  assert.equal(scheduledTimers.length, 1)
+  assert.equal(scheduledTimers[0].delay, 1_200)
+  assert.equal(renderCalls, 1)
+  assert.equal(app.focusMode, 'results')
+  assert.equal(document.activeElement, activeElement)
+  assert.equal(windowApi.closeCalls, 0)
+  assert.equal(windowApi.blurCalls, 0)
+
+  scheduledTimers[0].callback()
+
+  assert.equal(app.copiedFeedback, null)
+  assert.equal(app.visibleRows[1].copied, false)
+  assert.equal(renderCalls, 2)
+  assert.equal(app.focusMode, 'results')
+  assert.equal(document.activeElement, activeElement)
+  assert.equal(windowApi.closeCalls, 0)
+  assert.equal(windowApi.blurCalls, 0)
+})
+
+test('copySelectedRow copies the selected synthetic typed URL row normalized URL', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const writes = []
+  const scheduledTimers = []
+  const app = new ScryPanelApp({
+    document,
+    chromeApi,
+    clock: () => now,
+    windowApi: {
+      setTimeout(callback, delay) {
+        scheduledTimers.push({ callback, delay })
+        return { unref() {} }
+      },
+      blur() {},
+    },
+    navigatorApi: createClipboardNavigator(writes),
+  })
+  app.input.value = 'typed.example/path#fragment'
+  app.results = [searchResult('visited')]
+  app.updateVisibleRows()
+  app.selectedIndex = 0
+  app.focusMode = 'search'
+  const activeElement = app.input
+  document.activeElement = activeElement
+  app.renderResults = () => {
+    app.updateVisibleRows()
+  }
+
+  await app.copySelectedRow()
+
+  assert.deepEqual(writes, ['https://typed.example/path'])
+  assert.deepEqual(app.copiedFeedback, {
+    key: 'open-typed-url:https://typed.example/path',
+    expiresAt: now + 1_200,
+  })
+  assert.equal(app.visibleRows[0].kind, 'open-typed-url')
+  assert.equal(app.visibleRows[0].copied, true)
+  assert.equal(scheduledTimers.length, 1)
+  assert.equal(scheduledTimers[0].delay, 1_200)
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, activeElement)
+})
+
+test('copySelectedRow is a no-op when no selected row has a copyable URL', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const writes = []
+  const scheduledTimers = []
+  const app = new ScryPanelApp({
+    document,
+    chromeApi,
+    clock: () => now,
+    windowApi: {
+      setTimeout(callback, delay) {
+        scheduledTimers.push({ callback, delay })
+      },
+      blur() {},
+    },
+    navigatorApi: createClipboardNavigator(writes),
+  })
+  app.visibleRows = []
+  app.results = []
+  app.selectedIndex = 0
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  await app.copySelectedRow()
+
+  assert.deepEqual(writes, [])
+  assert.equal(app.copiedFeedback, null)
+  assert.equal(scheduledTimers.length, 0)
+  assert.equal(renderCalls, 0)
 })
 
 test('mode switch reset returns selection and pagination to the top while keeping the query', () => {

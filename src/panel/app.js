@@ -1,5 +1,5 @@
 import { parseQuery } from '../core/query.js'
-import { buildVisibleRows } from '../core/rows.js'
+import { buildVisibleRows, rowOpenUrl } from '../core/rows.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
@@ -8,17 +8,20 @@ import { fetchHistory } from '../platform/history-provider.js'
 import { loadSelectionData, saveSelectionData } from '../platform/selection-store.js'
 import { fetchRecentlyClosed, flattenClosedSessions } from '../platform/sessions-provider.js'
 import { openUrl } from '../platform/tabs.js'
+import { writeClipboardText } from '../platform/clipboard.js'
 
 const SEARCH_LIMIT = 100
 const RESULTS_PER_PAGE = 6
 const FOCUS_RETRY_DELAYS_MS = [0, 50, 150, 300, 600, 1000]
+const COPY_FEEDBACK_DURATION_MS = 1_200
 
 export class ScryPanelApp {
-  constructor({ document, chromeApi = chrome, clock = () => Date.now(), windowApi = globalThis.window } = {}) {
+  constructor({ document, chromeApi = chrome, clock = () => Date.now(), windowApi = globalThis.window, navigatorApi = globalThis.navigator } = {}) {
     this.document = document
     this.chromeApi = chromeApi
     this.clock = clock
     this.windowApi = windowApi
+    this.navigatorApi = navigatorApi
     this.index = null
     this.deep = false
     this.loading = false
@@ -210,6 +213,7 @@ export class ScryPanelApp {
       corpusResults: this.results,
       typedUrlCandidate,
       copiedFeedback: this.copiedFeedback,
+      now: this.clock(),
     })
   }
 
@@ -225,7 +229,33 @@ export class ScryPanelApp {
   }
 
   async copySelectedRow() {
-    throw new Error('not implemented: copySelectedRow')
+    const row = this.selectedVisibleRow()
+    const url = rowOpenUrl(row)
+    const rowKey = row?.key
+    if (!url || typeof rowKey !== 'string' || !rowKey) return
+
+    await writeClipboardText(url, { navigatorApi: this.navigatorApi })
+
+    const copiedFeedback = {
+      key: rowKey,
+      expiresAt: this.clock() + COPY_FEEDBACK_DURATION_MS,
+    }
+    this.copiedFeedback = copiedFeedback
+    this.updateVisibleRows()
+    this.renderResults()
+
+    const timeoutApi = typeof this.windowApi?.setTimeout === 'function' ? this.windowApi : globalThis
+    const setCopyFeedbackTimeout = timeoutApi?.setTimeout
+    if (typeof setCopyFeedbackTimeout !== 'function') return
+
+    const timer = setCopyFeedbackTimeout.call(timeoutApi, () => {
+      if (this.copiedFeedback !== copiedFeedback) return
+
+      this.copiedFeedback = null
+      this.updateVisibleRows()
+      this.renderResults()
+    }, COPY_FEEDBACK_DURATION_MS)
+    timer?.unref?.()
   }
 
   changeSelectedRowToSearch() {

@@ -24,7 +24,7 @@
  * @property {number} expiresAt Millisecond timestamp when feedback should disappear.
  */
 
-export function buildVisibleRows({ corpusResults = [], typedUrlCandidate = null, copiedFeedback = null } = {}) {
+export function buildVisibleRows({ corpusResults = [], typedUrlCandidate = null, copiedFeedback = null, now = Date.now() } = {}) {
   const rows = []
 
   if (typedUrlCandidate) {
@@ -35,7 +35,7 @@ export function buildVisibleRows({ corpusResults = [], typedUrlCandidate = null,
     }
     rows.push({
       ...typedUrlRow,
-      copied: isCopiedFeedbackVisible(typedUrlRow, copiedFeedback),
+      copied: isCopiedFeedbackVisible(typedUrlRow, copiedFeedback, now),
     })
   }
 
@@ -47,7 +47,7 @@ export function buildVisibleRows({ corpusResults = [], typedUrlCandidate = null,
     }
     rows.push({
       ...resultRow,
-      copied: isCopiedFeedbackVisible(resultRow, copiedFeedback),
+      copied: isCopiedFeedbackVisible(resultRow, copiedFeedback, now),
     })
   }
 
