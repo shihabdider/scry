@@ -574,6 +574,61 @@ test('renderResults uses mode-appropriate empty messages and keeps the old deep-
   }
 })
 
+test('renderLoading uses the active search mode for loading copy and clears stale result UI', () => {
+  const cases = [
+    ['recent', true, 'Loading recent history…', 'Indexing recent browser history…'],
+    ['deep', false, 'Loading deep history…', 'Searching all available history. This can take a moment.'],
+    ['closed', true, 'Loading recently closed URLs…', 'Loading recently closed URLs…'],
+  ]
+
+  for (const [mode, legacyDeepFlag, expectedStatus, expectedMessage] of cases) {
+    const document = createScryDocument()
+    const chromeApi = createPanelChrome([])
+    const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+    app.searchMode = mode
+    app.deep = legacyDeepFlag
+    app.deepSearchButton.hidden = false
+    app.pagination.hidden = false
+    appendFocusableRow(app.resultsList, { resultIndex: 0 })
+
+    app.renderLoading()
+
+    assert.equal(app.status.textContent, expectedStatus, mode)
+    assert.equal(app.message.hidden, false, mode)
+    assert.equal(app.message.textContent, expectedMessage, mode)
+    assert.equal(app.resultsList.childElementCount, 0, mode)
+    assert.equal(app.deepSearchButton.hidden, true, mode)
+    assert.equal(app.pagination.hidden, true, mode)
+  }
+})
+
+test('renderLoading marks the mode indicator as loading for the active mode', () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  modeIndicator.hidden = true
+  document.body.append(modeIndicator)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.searchMode = 'closed'
+  app.modeCache = {
+    closed: { mode: 'closed', status: 'loading', index: null, error: null, loadedAt: null },
+  }
+
+  app.renderLoading()
+
+  assert.equal(modeIndicator.hidden, false)
+  assert.equal(modeIndicator.textContent, 'mode: closed')
+  assert.equal(modeIndicator.dataset.mode, 'closed')
+  assert.equal(modeIndicator.dataset.status, 'loading')
+  assert.equal(modeIndicator.dataset.clickable, 'true')
+  assert.equal(modeIndicator.disabled, false)
+  assert.equal(modeIndicator.title, 'Loading recently closed URLs…')
+  assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
+  assert.equal(modeIndicator.getAttribute('aria-label'), 'mode: closed; Loading recently closed URLs…')
+  assert.equal(app.status.textContent, 'Loading recently closed URLs…')
+})
+
 test('renderResults reports active mode errors while still rendering a typed URL action row', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])

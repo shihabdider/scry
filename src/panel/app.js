@@ -506,11 +506,47 @@ export class ScryPanelApp {
   }
 
   renderLoading() {
-    this.setStatus(this.deep ? 'Deep searching history…' : 'Loading history…')
-    this.resultsList.innerHTML = ''
-    this.showMessage(this.deep ? 'Searching all available history. This can take a moment.' : 'Indexing recent browser history…')
-    this.deepSearchButton.hidden = true
+    const mode = this.searchMode === 'recent' || this.searchMode === 'deep' || this.searchMode === 'closed'
+      ? this.searchMode
+      : this.deep
+        ? 'deep'
+        : 'recent'
+    const modeState = this.modeCache?.[mode] ?? null
+    const loadingState = modeState?.status === 'loading'
+      ? modeState
+      : { mode, status: 'loading', index: null, error: null, loadedAt: null }
+    const model = modeIndicatorModel(mode, loadingState)
+    const messages = {
+      recent: 'Indexing recent browser history…',
+      deep: 'Searching all available history. This can take a moment.',
+      closed: 'Loading recently closed URLs…',
+    }
+
+    this.results = []
+    this.visibleRows = []
+    if (this.status) this.setStatus(model.statusText)
+    if (this.resultsList) this.resultsList.innerHTML = ''
+    if (this.message) this.showMessage(messages[model.mode])
+    if (this.deepSearchButton) this.deepSearchButton.hidden = true
     if (this.pagination) this.pagination.hidden = true
+    if (this.pageStatus) this.pageStatus.textContent = 'Loading…'
+    if (this.previousPageButton) this.previousPageButton.disabled = true
+    if (this.nextPageButton) this.nextPageButton.disabled = true
+
+    const indicator = this.document.querySelector('#mode-indicator')
+    if (!indicator) return model
+
+    indicator.hidden = false
+    indicator.textContent = model.label
+    indicator.dataset.mode = model.mode
+    indicator.dataset.status = model.status
+    indicator.dataset.clickable = String(model.clickable)
+    indicator.disabled = !model.clickable
+    indicator.title = model.statusText
+    indicator.setAttribute('aria-disabled', model.clickable ? 'false' : 'true')
+    indicator.setAttribute('aria-label', `${model.label}; ${model.statusText}`)
+
+    return model
   }
 
   renderResults() {
