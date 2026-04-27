@@ -1,8 +1,8 @@
 # Status
 
 phase: 2
-layer: 3
-updated: 2026-04-27T19:50:28.569Z
+layer: 2
+updated: 2026-04-27T19:52:47.171Z
 
 ## Wishes
 
@@ -33,7 +33,7 @@ updated: 2026-04-27T19:50:28.569Z
 | selectedVisibleRow | src/panel/app.js | 3 | pass | 170.8s |
 | ensureSearchModeReady | src/panel/app.js | 3 | pass | 211.3s |
 | renderModeIndicator | src/panel/app.js | 3 | pass | 183.2s |
-| searchHistory | src/core/search.js | 2 | pending | - |
+| searchHistory | src/core/search.js | 2 | pass | 120.1s |
 | recordSelection | src/core/selection-learning.js | 2 | pending | - |
 | updateVisibleRows | src/panel/app.js | 2 | pending | - |
 | copySelectedRow | src/panel/app.js | 2 | pending | - |
@@ -136,3 +136,6 @@ updated: 2026-04-27T19:50:28.569Z
 - 15:50:26 renderModeIndicator: pass (183.2s, $0.8144)
 - 15:50:27 implementer_post verification for renderModeIndicator: pass
 - 15:50:28 layer 3 verification: pass
+- 15:50:45 searchHistory: running
+- 15:52:45 searchHistory: pass (120.1s, $0.3966)
+- 15:52:47 implementer_post verification for searchHistory: pass

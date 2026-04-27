@@ -409,30 +409,7 @@ export function buildHistoryIndex(rawEntries, { now = Date.now() } = {}) {
 }
 
 export function searchHistory(index, query, { now = Date.now(), limit = DEFAULT_LIMIT, selections } = {}) {
-  const parsed = parseQuery(query)
-  const tokens = parsed.tokens
-
-  if (!tokens.length) {
-    return [...(index?.entries ?? [])]
-      .map((entry) => ({ entry, score: frecencyScore(entry, now) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
-      .map(({ entry, score }) => toResult(entry, { tokens, now, debug: { mode: 'frecency', score } }))
-  }
-
-  return [...(index?.entries ?? [])]
-    .map((entry) => {
-      const rank = rankTupleFor(entry, tokens, selections, now)
-      return rank ? { entry, rank } : null
-    })
-    .filter(Boolean)
-    .sort((a, b) => {
-      const tuple = compareTuple(a.rank.tuple, b.rank.tuple)
-      if (tuple !== 0) return tuple
-      return a.entry.displayUrl.localeCompare(b.entry.displayUrl)
-    })
-    .slice(0, limit)
-    .map(({ entry, rank }) => toResult(entry, { tokens, now, debug: rank.debug }))
+  return searchParsedHistory(index, parseQuery(query), { now, limit, selections })
 }
 
 export const __testing = {

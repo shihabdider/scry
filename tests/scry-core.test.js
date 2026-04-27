@@ -379,6 +379,73 @@ test('parsed unquoted search preserves existing token ranking behavior', () => {
   )
 })
 
+test('public search handles quote-only exact phrases through parsed search', () => {
+  const index = indexOf([
+    {
+      url: 'https://example.com/alpha-reference',
+      title: 'Old URL phrase',
+      visitCount: 1,
+      lastVisitTime: now - 30 * 24 * 60 * 60 * 1000,
+    },
+    {
+      url: 'https://example.com/reference',
+      title: 'Alpha reference',
+      visitCount: 100,
+      lastVisitTime: now,
+    },
+    {
+      url: 'https://example.com/no-match',
+      title: 'Different reference',
+      visitCount: 1000,
+      lastVisitTime: now,
+    },
+  ])
+
+  const results = searchHistory(index, '"alpha"', { now })
+
+  assert.deepEqual(
+    results.map((result) => result.url),
+    ['https://example.com/alpha-reference', 'https://example.com/reference'],
+  )
+  assert.equal(results[0].debug.mode, 'quoted')
+  assert.equal(results[0].debug.quoteEvidence.evidence[0].field, 'displayUrl')
+  assert.equal(results[1].debug.quoteEvidence.evidence[0].field, 'title')
+})
+
+test('public search combines unquoted token ranking with quoted exact phrase filtering', () => {
+  const index = indexOf([
+    {
+      url: 'https://example.com/alpha',
+      title: 'Issues from title only',
+      visitCount: 500,
+      lastVisitTime: now,
+    },
+    {
+      url: 'https://github.com/org/issues/13',
+      title: 'Alpha tracking',
+      visitCount: 1,
+      lastVisitTime: now - 30 * 24 * 60 * 60 * 1000,
+    },
+    {
+      url: 'https://github.com/org/issues/99',
+      title: 'No quoted phrase',
+      visitCount: 1000,
+      lastVisitTime: now,
+    },
+  ])
+
+  const results = searchHistory(index, 'issues "alpha"', { now })
+
+  assert.deepEqual(
+    results.map((result) => result.url),
+    ['https://github.com/org/issues/13', 'https://example.com/alpha'],
+  )
+  assert.deepEqual(results[0].debug.tokens, ['issues'])
+  assert.equal(results[0].debug.mode, 'mixed')
+  assert.equal(results[0].debug.quoteEvidence.evidence[0].field, 'title')
+  assert.equal(results[1].debug.quoteEvidence.evidence[0].field, 'displayUrl')
+})
+
 test('quote-only parsed search hard-filters entries and ranks URL phrase matches before fresher title matches', () => {
   const index = indexOf([
     {

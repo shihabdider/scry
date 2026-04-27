@@ -25,3 +25,4 @@
 {"ts":"2026-04-27T19:43:37.319Z","agent":"implementer","wish":"selectedVisibleRow","layer":3,"status":"pass","turns":27,"input":46900,"output":6721,"cacheRead":709632,"cost":0.7909,"duration":170.8}
 {"ts":"2026-04-27T19:47:15.334Z","agent":"implementer","wish":"ensureSearchModeReady","layer":3,"status":"pass","turns":22,"input":46846,"output":11528,"cacheRead":470528,"cost":0.8153,"duration":211.3}
 {"ts":"2026-04-27T19:50:28.569Z","agent":"implementer","wish":"renderModeIndicator","layer":3,"status":"pass","turns":34,"input":46097,"output":8055,"cacheRead":684544,"cost":0.8144,"duration":183.2}
+{"ts":"2026-04-27T19:52:47.171Z","agent":"implementer","wish":"searchHistory","layer":2,"status":"pass","turns":17,"input":26426,"output":4856,"cacheRead":237568,"cost":0.3966,"duration":120.1}
