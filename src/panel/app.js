@@ -1,6 +1,7 @@
 import { parseQuery } from '../core/query.js'
 import { buildVisibleRows } from '../core/rows.js'
 import { recordSelection } from '../core/selection-learning.js'
+import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
 import { createModeCache, modeIndicatorModel } from '../core/search-modes.js'
 import { fetchHistory } from '../platform/history-provider.js'
@@ -204,7 +205,12 @@ export class ScryPanelApp {
   }
 
   updateVisibleRows() {
-    throw new Error('not implemented: updateVisibleRows')
+    const typedUrlCandidate = createTypedUrlCandidate(this.input.value)
+    this.visibleRows = buildVisibleRows({
+      corpusResults: this.results,
+      typedUrlCandidate,
+      copiedFeedback: this.copiedFeedback,
+    })
   }
 
   selectedVisibleRow() {

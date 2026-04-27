@@ -73,6 +73,102 @@ function searchResult(name) {
   }
 }
 
+test('updateVisibleRows pins a typed URL candidate above corpus results and selection follows visible row order', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const firstResult = searchResult('first')
+  const secondResult = searchResult('second')
+  app.input.value = 'typed.example/path'
+  app.results = [firstResult, secondResult]
+  app.copiedFeedback = { key: 'open-typed-url:https://typed.example/path', expiresAt: 9_999_999_999_999 }
+
+  app.updateVisibleRows()
+
+  assert.deepEqual(app.visibleRows, [
+    {
+      kind: 'open-typed-url',
+      key: 'open-typed-url:https://typed.example/path',
+      candidate: {
+        displayInput: 'typed.example/path',
+        normalizedUrl: 'https://typed.example/path',
+        key: 'https://typed.example/path',
+      },
+      copied: true,
+    },
+    {
+      kind: 'result',
+      key: 'result:https://example.com/first',
+      result: firstResult,
+      copied: false,
+    },
+    {
+      kind: 'result',
+      key: 'result:https://example.com/second',
+      result: secondResult,
+      copied: false,
+    },
+  ])
+
+  app.selectedIndex = 0
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[0])
+  app.selectedIndex = 1
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[1])
+  app.selectedIndex = 2
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[2])
+})
+
+test('updateVisibleRows keeps non-URL search queries as corpus result rows with copied feedback', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const firstResult = searchResult('first')
+  const secondResult = searchResult('second')
+  app.input.value = 'typed example docs'
+  app.results = [firstResult, secondResult]
+  app.copiedFeedback = { key: 'result:https://example.com/second', expiresAt: 9_999_999_999_999 }
+
+  app.updateVisibleRows()
+
+  assert.deepEqual(app.visibleRows, [
+    {
+      kind: 'result',
+      key: 'result:https://example.com/first',
+      result: firstResult,
+      copied: false,
+    },
+    {
+      kind: 'result',
+      key: 'result:https://example.com/second',
+      result: secondResult,
+      copied: true,
+    },
+  ])
+})
+
+test('updateVisibleRows exposes a typed URL row when a URL-like query has no corpus results', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.input.value = 'https://typed.example/path#fragment'
+  app.results = []
+
+  app.updateVisibleRows()
+
+  assert.deepEqual(app.visibleRows, [
+    {
+      kind: 'open-typed-url',
+      key: 'open-typed-url:https://typed.example/path',
+      candidate: {
+        displayInput: 'typed.example/path',
+        normalizedUrl: 'https://typed.example/path',
+        key: 'https://typed.example/path',
+      },
+      copied: false,
+    },
+  ])
+})
+
 test('selectedVisibleRow returns the selected synthetic or real row in visible row order', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
