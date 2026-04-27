@@ -14,8 +14,17 @@ export function normalizeSelectionData(data) {
 
 export function recordSelection(data, { query, tokens, urlKey, selectedAt = Date.now() }) {
   const normalized = normalizeSelectionData(data)
-  const key = queryKey(tokens ?? parseQuery(query).tokens)
-  if (!key || !urlKey) return normalized
+  if (!urlKey) return normalized
+
+  const key = (() => {
+    if (query && typeof query === 'object' && !Array.isArray(query)) {
+      if (typeof query.key === 'string') return query.key
+      return queryKey(query.unquotedTokens ?? query.tokens)
+    }
+    if (query !== undefined) return parseQuery(query).key
+    return queryKey(tokens)
+  })()
+  if (!key) return normalized
 
   const byQuery = { ...(normalized.aggregates[key] ?? {}) }
   const current = byQuery[urlKey] ?? { count: 0, lastSelectedAt: 0, selectedAt: [] }
