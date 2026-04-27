@@ -1,8 +1,8 @@
 # Status
 
 phase: 2
-layer: 4
-updated: 2026-04-27T19:24:31.762Z
+layer: 3
+updated: 2026-04-27T19:31:31.054Z
 
 ## Wishes
 
@@ -26,7 +26,7 @@ updated: 2026-04-27T19:24:31.762Z
 | resetSelectionForModeSwitch | src/panel/app.js | 4 | pass | 98.5s |
 | focusSearch | src/panel/app.js | 4 | pass | 151.8s |
 | docs/action-popup-alignment.md | docs/action-popup-alignment.md | 4 | pending | - |
-| parseExactPhrases | src/core/query.js | 3 | pending | - |
+| parseExactPhrases | src/core/query.js | 3 | pass | 177.3s |
 | parseQuery | src/core/query.js | 3 | pending | - |
 | searchParsedHistory | src/core/search.js | 3 | pending | - |
 | buildVisibleRows | src/core/rows.js | 3 | pending | - |
@@ -114,3 +114,6 @@ updated: 2026-04-27T19:24:31.762Z
 - 15:21:58 focusSearch: running
 - 15:24:30 focusSearch: pass (151.8s, $0.7187)
 - 15:24:31 implementer_post verification for focusSearch: pass
+- 15:28:32 parseExactPhrases: running
+- 15:31:29 parseExactPhrases: pass (177.3s, $0.9280)
+- 15:31:31 implementer_post verification for parseExactPhrases: pass

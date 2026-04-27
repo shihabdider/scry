@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { formatAge, highlightText } from '../src/core/format.js'
-import { normalizeExactPhrase } from '../src/core/query.js'
+import { normalizeExactPhrase, parseExactPhrases } from '../src/core/query.js'
 import { recordSelection } from '../src/core/selection-learning.js'
 import { __testing, buildHistoryIndex, collectExactPhraseEvidence, compareQuoteEvidence, searchHistory } from '../src/core/search.js'
 import { createTypedUrlCandidate, middleTruncate } from '../src/core/url.js'
@@ -42,6 +42,83 @@ test('exact phrase normalization treats empty quoted phrases as case-insensitive
     rawText: '   ',
     matchText: '',
     caseSensitive: false,
+  })
+})
+
+test('exact phrase parsing leaves ordinary unquoted query text unchanged', () => {
+  assert.deepEqual(parseExactPhrases('github repo issue'), {
+    unquotedText: 'github repo issue',
+    exactPhrases: [],
+    hasIncompleteQuote: false,
+  })
+})
+
+test('exact phrase parsing removes complete quoted phrases and normalizes each phrase', () => {
+  assert.deepEqual(parseExactPhrases('github "MSKILAB-org/repo" issue "pull\n requests"'), {
+    unquotedText: 'github  issue ',
+    exactPhrases: [
+      {
+        rawText: 'MSKILAB-org/repo',
+        matchText: 'MSKILAB-org/repo',
+        caseSensitive: true,
+      },
+      {
+        rawText: 'pull\n requests',
+        matchText: 'pull requests',
+        caseSensitive: false,
+      },
+    ],
+    hasIncompleteQuote: false,
+  })
+})
+
+test('exact phrase parsing treats an unfinished quote as ordinary unquoted text without warning', () => {
+  assert.deepEqual(parseExactPhrases('"github.com/mskilab'), {
+    unquotedText: '"github.com/mskilab',
+    exactPhrases: [],
+    hasIncompleteQuote: false,
+  })
+})
+
+test('exact phrase parsing preserves complete phrases before an unfinished ordinary quote segment', () => {
+  assert.deepEqual(parseExactPhrases('github "pull requests" "mskilab'), {
+    unquotedText: 'github  "mskilab',
+    exactPhrases: [
+      {
+        rawText: 'pull requests',
+        matchText: 'pull requests',
+        caseSensitive: false,
+      },
+    ],
+    hasIncompleteQuote: false,
+  })
+})
+
+test('exact phrase parsing does not treat backslashes as quote escapes', () => {
+  assert.deepEqual(parseExactPhrases(String.raw`alpha "one \" omega`), {
+    unquotedText: 'alpha  omega',
+    exactPhrases: [
+      {
+        rawText: 'one \\',
+        matchText: 'one \\',
+        caseSensitive: false,
+      },
+    ],
+    hasIncompleteQuote: false,
+  })
+})
+
+test('exact phrase parsing keeps unquoted tokens separated around adjacent quoted text', () => {
+  assert.deepEqual(parseExactPhrases('alpha"discard"omega'), {
+    unquotedText: 'alpha omega',
+    exactPhrases: [
+      {
+        rawText: 'discard',
+        matchText: 'discard',
+        caseSensitive: false,
+      },
+    ],
+    hasIncompleteQuote: false,
   })
 })
 

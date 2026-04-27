@@ -43,7 +43,42 @@ export function parseQuery(query) {
 }
 
 export function parseExactPhrases(query) {
-  throw new Error('not implemented: parseExactPhrases')
+  const text = String(query ?? '')
+  const exactPhrases = []
+  let unquotedText = ''
+  let index = 0
+
+  while (index < text.length) {
+    const quoteIndex = text.indexOf('"', index)
+    if (quoteIndex === -1) {
+      unquotedText += text.slice(index)
+      break
+    }
+
+    unquotedText += text.slice(index, quoteIndex)
+
+    const closingQuoteIndex = text.indexOf('"', quoteIndex + 1)
+    if (closingQuoteIndex === -1) {
+      unquotedText += text.slice(quoteIndex)
+      break
+    }
+
+    exactPhrases.push(normalizeExactPhrase(text.slice(quoteIndex + 1, closingQuoteIndex)))
+
+    const previousChar = unquotedText.at(-1)
+    const nextChar = text.at(closingQuoteIndex + 1)
+    if (previousChar && nextChar && !/\s/.test(previousChar) && !/\s/.test(nextChar)) {
+      unquotedText += ' '
+    }
+
+    index = closingQuoteIndex + 1
+  }
+
+  return {
+    unquotedText,
+    exactPhrases,
+    hasIncompleteQuote: false,
+  }
 }
 
 export function normalizeExactPhrase(rawText) {
