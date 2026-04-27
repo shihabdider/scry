@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
+import { buildVisibleRows } from '../src/core/rows.js'
 import { ScryPanelApp } from '../src/panel/app.js'
 import { createScryDocument, dispatchInput, dispatchKeydown } from './helpers/fake-dom.js'
 
@@ -55,6 +56,85 @@ function historyEntry(index) {
     lastVisitTime: now - index * 1_000,
   }
 }
+
+function searchResult(name) {
+  return {
+    key: `https://example.com/${name}`,
+    url: `https://example.com/${name}?tab=readme`,
+    displayUrl: `example.com/${name}?tab=readme`,
+    title: `${name} docs`,
+    visitCount: 3,
+    visitsLabel: '3 visits',
+    lastVisitTime: now,
+    lastVisitedLabel: 'now',
+    urlHtml: `example.com/${name}?tab=readme`,
+    titleHtml: `${name} docs`,
+    debug: {},
+  }
+}
+
+test('selectedVisibleRow returns the selected synthetic or real row in visible row order', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const firstResult = searchResult('first')
+  const secondResult = searchResult('second')
+  const visibleRows = buildVisibleRows({ corpusResults: [firstResult, secondResult], typedUrlCandidate })
+  app.results = [firstResult, secondResult]
+  app.visibleRows = visibleRows
+
+  app.selectedIndex = 0
+  assert.equal(app.selectedVisibleRow(), visibleRows[0])
+
+  app.selectedIndex = 1
+  assert.equal(app.selectedVisibleRow(), visibleRows[1])
+
+  app.selectedIndex = 2
+  assert.equal(app.selectedVisibleRow(), visibleRows[2])
+})
+
+// Compatibility: callers can use selectedVisibleRow before updateVisibleRows is wired in.
+test('selectedVisibleRow wraps legacy result state when visible rows are not populated yet', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const firstResult = searchResult('first')
+  const secondResult = searchResult('second')
+  app.results = [firstResult, secondResult]
+  app.visibleRows = []
+  app.selectedIndex = 1
+
+  assert.deepEqual(app.selectedVisibleRow(), {
+    kind: 'result',
+    key: 'result:https://example.com/second',
+    result: secondResult,
+    copied: false,
+  })
+})
+
+test('selectedVisibleRow returns null when no visible row is selected', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const onlyResult = searchResult('only')
+  app.visibleRows = buildVisibleRows({ corpusResults: [onlyResult] })
+
+  app.selectedIndex = -1
+  assert.equal(app.selectedVisibleRow(), null)
+
+  app.selectedIndex = 1
+  assert.equal(app.selectedVisibleRow(), null)
+
+  app.visibleRows = []
+  app.results = []
+  app.selectedIndex = 0
+  assert.equal(app.selectedVisibleRow(), null)
+})
 
 test('mode switch reset returns selection and pagination to the top while keeping the query', () => {
   const document = createScryDocument()

@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 3
-updated: 2026-04-27T19:40:36.726Z
+updated: 2026-04-27T19:43:37.319Z
 
 ## Wishes
 
@@ -30,7 +30,7 @@ updated: 2026-04-27T19:40:36.726Z
 | parseQuery | src/core/query.js | 3 | pass | 95.2s |
 | searchParsedHistory | src/core/search.js | 3 | pass | 253.1s |
 | buildVisibleRows | src/core/rows.js | 3 | pass | 170.6s |
-| selectedVisibleRow | src/panel/app.js | 3 | pending | - |
+| selectedVisibleRow | src/panel/app.js | 3 | pass | 170.8s |
 | ensureSearchModeReady | src/panel/app.js | 3 | pending | - |
 | renderModeIndicator | src/panel/app.js | 3 | pending | - |
 | searchHistory | src/core/search.js | 2 | pending | - |
@@ -126,3 +126,6 @@ updated: 2026-04-27T19:40:36.726Z
 - 15:37:44 buildVisibleRows: running
 - 15:40:35 buildVisibleRows: pass (170.6s, $0.8993)
 - 15:40:36 implementer_post verification for buildVisibleRows: pass
+- 15:40:45 selectedVisibleRow: running
+- 15:43:36 selectedVisibleRow: pass (170.8s, $0.7909)
+- 15:43:37 implementer_post verification for selectedVisibleRow: pass

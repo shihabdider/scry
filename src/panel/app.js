@@ -1,4 +1,5 @@
 import { parseQuery } from '../core/query.js'
+import { buildVisibleRows } from '../core/rows.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
 import { fetchHistory } from '../platform/history-provider.js'
@@ -136,7 +137,14 @@ export class ScryPanelApp {
   }
 
   selectedVisibleRow() {
-    throw new Error('not implemented: selectedVisibleRow')
+    const visibleRows = Array.isArray(this.visibleRows) && this.visibleRows.length > 0
+      ? this.visibleRows
+      : buildVisibleRows({ corpusResults: this.results, copiedFeedback: this.copiedFeedback })
+
+    if (!Number.isInteger(this.selectedIndex)) return null
+    if (this.selectedIndex < 0 || this.selectedIndex >= visibleRows.length) return null
+
+    return visibleRows[this.selectedIndex] ?? null
   }
 
   async copySelectedRow() {
