@@ -3,7 +3,7 @@ import { buildVisibleRows, rowEditableText, rowOpenUrl, rowSelectionLearningKey 
 import { recordSelection } from '../core/selection-learning.js'
 import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
-import { createModeCache, modeIndicatorModel } from '../core/search-modes.js'
+import { createModeCache, cycleSearchMode, modeIndicatorModel } from '../core/search-modes.js'
 import { fetchHistory } from '../platform/history-provider.js'
 import { loadSelectionData, saveSelectionData } from '../platform/selection-store.js'
 import { fetchRecentlyClosed, flattenClosedSessions } from '../platform/sessions-provider.js'
@@ -67,7 +67,10 @@ export class ScryPanelApp {
     })
 
     this.input.addEventListener('keydown', (event) => {
-      if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
+      if (event.key === 'Tab') {
+        event.preventDefault()
+        void this.switchSearchMode(cycleSearchMode(this.searchMode, { direction: event.shiftKey ? -1 : 1 }))
+      } else if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
         event.preventDefault()
         this.moveSelection(1)
       } else if (event.key === 'ArrowUp' || (event.ctrlKey && event.key.toLowerCase() === 'p')) {
@@ -87,6 +90,12 @@ export class ScryPanelApp {
       if (!button) return
       this.selectedIndex = Number(button.dataset.resultIndex)
       void this.openSelected({ newTab: event.metaKey || event.ctrlKey })
+    })
+
+    const modeIndicator = this.document.querySelector('#mode-indicator')
+    modeIndicator?.addEventListener('click', (event) => {
+      event.preventDefault()
+      void this.switchSearchMode(cycleSearchMode(this.searchMode))
     })
 
     this.deepSearchButton.addEventListener('click', () => {
@@ -401,19 +410,30 @@ export class ScryPanelApp {
   handlePanelKeydown(event) {
     if (event.target === this.input || this.focusMode !== 'results') return
 
+    const key = typeof event.key === 'string' ? event.key.toLowerCase() : ''
+
     if (event.key === 'Escape') {
       event.preventDefault()
       this.leavePanelFocus()
-    } else if (event.key.toLowerCase() === 'j') {
+    } else if (key === 'i') {
+      event.preventDefault()
+      this.focusSearch()
+    } else if (key === 'y') {
+      event.preventDefault()
+      void this.copySelectedRow()
+    } else if (key === 'c') {
+      event.preventDefault()
+      this.changeSelectedRowToSearch()
+    } else if (key === 'j') {
       event.preventDefault()
       this.moveSelection(1)
-    } else if (event.key.toLowerCase() === 'k') {
+    } else if (key === 'k') {
       event.preventDefault()
       this.moveSelection(-1)
-    } else if (event.key.toLowerCase() === 'l') {
+    } else if (key === 'l') {
       event.preventDefault()
       this.movePage(1)
-    } else if (event.key.toLowerCase() === 'h') {
+    } else if (key === 'h') {
       event.preventDefault()
       this.movePage(-1)
     } else if (event.key === 'Enter') {

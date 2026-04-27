@@ -1912,6 +1912,201 @@ test('switchSearchMode handles mode-local load errors without breaking other mod
   assert.equal(app.index, app.modeCache.recent.index)
 })
 
+test('Tab and Shift+Tab in the search input cycle modes while preserving the query and resetting position', async () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  document.body.append(modeIndicator)
+  const input = document.querySelector('#search-input')
+  input.value = 'issue 2'
+  const historyCalls = []
+  const chromeApi = {
+    history: {
+      async search(query) {
+        historyCalls.push(query)
+        return [historyEntry(query.startTime === 0 ? 2 : 1)]
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.selectedIndex = 5
+  app.pageIndex = 2
+  app.bindEvents()
+
+  const forwardEvent = dispatchKeydown(input, 'Tab')
+  await settle()
+
+  assert.equal(forwardEvent.defaultPrevented, true)
+  assert.equal(input.value, 'issue 2')
+  assert.equal(app.searchMode, 'deep')
+  assert.equal(app.deep, true)
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
+  assert.deepEqual(historyCalls, [{ text: '', startTime: 0, maxResults: 100_000 }])
+  assert.equal(modeIndicator.dataset.mode, 'deep')
+  assert.equal(modeIndicator.dataset.status, 'ready')
+
+  input.value = 'issue 1'
+  app.selectedIndex = 3
+  app.pageIndex = 1
+
+  const backwardEvent = dispatchKeydown(input, 'Tab', { shiftKey: true })
+  await settle()
+
+  assert.equal(backwardEvent.defaultPrevented, true)
+  assert.equal(input.value, 'issue 1')
+  assert.equal(app.searchMode, 'recent')
+  assert.equal(app.deep, false)
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
+  assert.deepEqual(historyCalls, [
+    { text: '', startTime: 0, maxResults: 100_000 },
+    { text: '', startTime: now - 90 * 24 * 60 * 60 * 1_000, maxResults: 10_000 },
+  ])
+  assert.equal(modeIndicator.dataset.mode, 'recent')
+  assert.equal(modeIndicator.dataset.status, 'ready')
+})
+
+test('clicking the mode indicator cycles to the next mode instead of relying on the legacy deep-search fallback', async () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  document.body.append(modeIndicator)
+  const input = document.querySelector('#search-input')
+  input.value = 'issue 2'
+  const deepSearchButton = document.querySelector('#deep-search-button')
+  deepSearchButton.hidden = false
+  const historyCalls = []
+  const chromeApi = {
+    history: {
+      async search(query) {
+        historyCalls.push(query)
+        return [historyEntry(query.startTime === 0 ? 2 : 1)]
+      },
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.selectedIndex = 4
+  app.pageIndex = 2
+  app.bindEvents()
+
+  const clickEvent = { type: 'click', bubbles: true, metaKey: false, ctrlKey: false }
+  modeIndicator.dispatchEvent(clickEvent)
+  await settle()
+
+  assert.equal(input.value, 'issue 2')
+  assert.equal(app.searchMode, 'deep')
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
+  assert.deepEqual(historyCalls, [{ text: '', startTime: 0, maxResults: 100_000 }])
+  assert.equal(modeIndicator.textContent, 'mode: deep')
+  assert.equal(modeIndicator.dataset.mode, 'deep')
+  assert.equal(modeIndicator.dataset.status, 'ready')
+  assert.equal(deepSearchButton.hidden, true)
+})
+
+test('result navigation i returns to search input and leaves normal input typing to the input', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  input.value = 'github issue'
+  input.setSelectionRange(0, 0)
+  const selectedButton = appendFocusableRow(app.resultsList, { resultIndex: 0 })
+  document.activeElement = selectedButton
+  app.focusMode = 'results'
+  app.bindEvents()
+
+  const event = dispatchKeydown(selectedButton, 'i')
+
+  assert.equal(event.defaultPrevented, true)
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
+  assert.equal(input.selectionStart, input.value.length)
+  assert.equal(input.selectionEnd, input.value.length)
+})
+
+test('result navigation y copies the selected row URL without changing search focus state', async () => {
+  const document = createScryDocument()
+  const writes = []
+  const scheduledTimers = []
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({
+    document,
+    chromeApi,
+    clock: () => now,
+    windowApi: {
+      setTimeout(callback, delay) {
+        scheduledTimers.push({ callback, delay })
+        return { unref() {} }
+      },
+      blur() {},
+    },
+    navigatorApi: createClipboardNavigator(writes),
+  })
+  const firstResult = searchResult('first')
+  const secondResult = searchResult('second')
+  app.results = [firstResult, secondResult]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 1
+  app.focusMode = 'results'
+  app.renderResults = () => {
+    app.updateVisibleRows()
+  }
+  const selectedButton = appendFocusableRow(app.resultsList, { resultIndex: 1 })
+  document.activeElement = selectedButton
+  app.bindEvents()
+
+  const event = dispatchKeydown(selectedButton, 'y')
+  await settle()
+
+  assert.equal(event.defaultPrevented, true)
+  assert.deepEqual(writes, ['https://example.com/second?tab=readme'])
+  assert.deepEqual(app.copiedFeedback, {
+    key: 'result:https://example.com/second',
+    expiresAt: now + 1_200,
+  })
+  assert.equal(app.visibleRows[1].copied, true)
+  assert.equal(scheduledTimers.length, 1)
+  assert.equal(app.focusMode, 'results')
+})
+
+test('result navigation c changes a selected real row into the focused search text', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  const firstResult = searchResult('first')
+  const docsResult = {
+    ...searchResult('docs'),
+    url: 'https://example.com/docs?tab=readme#install',
+    displayUrl: 'example.com/docs?tab=readme',
+    urlHtml: 'example.com/docs?tab=readme',
+  }
+  app.results = [firstResult, docsResult]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 1
+  app.focusMode = 'results'
+  input.value = 'docs install'
+  const selectedButton = appendFocusableRow(app.resultsList, { resultIndex: 1 })
+  document.activeElement = selectedButton
+  let refreshCalls = 0
+  app.updateResults = () => {
+    refreshCalls++
+  }
+  app.bindEvents()
+
+  const event = dispatchKeydown(selectedButton, 'c')
+
+  assert.equal(event.defaultPrevented, true)
+  assert.equal(input.value, 'example.com/docs?tab=readme')
+  assert.equal(refreshCalls, 1)
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
+  assert.equal(input.selectionStart, input.value.length)
+  assert.equal(input.selectionEnd, input.value.length)
+})
+
 test('renderModeIndicator renders the active mode label/status in dedicated popup markup', () => {
   const document = createScryDocument()
   const modeIndicator = document.createElement('button')

@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 0
-updated: 2026-04-27T21:00:21.829Z
+updated: 2026-04-27T21:05:18.031Z
 
 ## Wishes
 
@@ -53,7 +53,7 @@ updated: 2026-04-27T21:00:21.829Z
 | renderResults | src/panel/app.js | 1 | pass | 275.9s |
 | renderLoading | src/panel/app.js | 1 | pass | 220.6s |
 | start | src/panel/app.js | 0 | pass | 177.8s |
-| bindEvents | src/panel/app.js | 0 | pending | - |
+| bindEvents | src/panel/app.js | 0 | pass | 286.4s |
 | handlePanelKeydown | src/panel/app.js | 0 | pending | - |
 | manifest.permissions: string[] | manifest.json | 0 | pending | - |
 | popup mode indicator/footer markup | popup.html | 0 | pending | - |
@@ -201,3 +201,6 @@ updated: 2026-04-27T21:00:21.829Z
 - 16:57:22 start: running
 - 17:00:20 start: pass (177.8s, $0.8960)
 - 17:00:21 implementer_post verification for start: pass
+- 17:00:30 bindEvents: running
+- 17:05:16 bindEvents: pass (286.4s, $1.3831)
+- 17:05:18 implementer_post verification for bindEvents: pass
