@@ -515,45 +515,147 @@ export class ScryPanelApp {
 
   renderResults() {
     const query = this.input.value.trim()
+    const mode = this.searchMode === 'recent' || this.searchMode === 'deep' || this.searchMode === 'closed'
+      ? this.searchMode
+      : this.deep
+        ? 'deep'
+        : 'recent'
+    const modeState = this.modeCache?.[mode] ?? null
+    const messages = {
+      recent: {
+        empty: 'No recent history results yet.',
+        noMatches: 'No matches in recent history.',
+        error: 'Recent history unavailable.',
+      },
+      deep: {
+        empty: 'No deep history results yet.',
+        noMatches: 'No matches in deep history.',
+        error: 'Deep history unavailable.',
+      },
+      closed: {
+        empty: 'No recently closed URLs yet.',
+        noMatches: 'No matches in recently closed URLs.',
+        error: 'Recently closed URLs unavailable.',
+      },
+    }[mode]
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;')
+
+    const copiedMarker = (row) => row?.copied
+      ? '<span class="result-copied-feedback">copied</span>'
+      : ''
+
+    const realResultHtml = (row) => {
+      const result = row?.result ?? {}
+      const meta = [result.visitsLabel, result.lastVisitedLabel]
+        .filter((part) => typeof part === 'string' && part)
+        .join(' · ')
+
+      return `
+        ${copiedMarker(row)}
+        <span class="result-url">${result.urlHtml ?? escapeHtml(result.displayUrl ?? result.url)}</span>
+        <span class="result-title">${result.titleHtml ?? escapeHtml(result.title)}</span>
+        <span class="result-meta">${escapeHtml(meta)}</span>
+      `
+    }
+
+    const typedUrlHtml = (row) => {
+      const candidate = row?.candidate ?? {}
+      const displayInput = candidate.displayInput ?? candidate.normalizedUrl ?? ''
+      const normalizedUrl = candidate.normalizedUrl ?? displayInput
+
+      return `
+        ${copiedMarker(row)}
+        <span class="result-url open-typed-url-url">${escapeHtml(displayInput)}</span>
+        <span class="result-title open-typed-url-title">Open typed URL</span>
+        <span class="result-meta open-typed-url-meta">${escapeHtml(normalizedUrl)}</span>
+      `
+    }
+
+    let visibleRows = Array.isArray(this.visibleRows) ? this.visibleRows : []
+    if (modeState?.status === 'error') {
+      const typedUrlCandidate = createTypedUrlCandidate(this.input.value)
+      visibleRows = buildVisibleRows({
+        corpusResults: [],
+        typedUrlCandidate,
+        copiedFeedback: this.copiedFeedback,
+        now: this.clock(),
+      })
+      this.visibleRows = visibleRows
+    } else if (visibleRows.length === 0) {
+      visibleRows = buildVisibleRows({
+        corpusResults: this.results,
+        typedUrlCandidate: createTypedUrlCandidate(this.input.value),
+        copiedFeedback: this.copiedFeedback,
+        now: this.clock(),
+      })
+      this.visibleRows = visibleRows
+    }
+
+    const hasRealRows = visibleRows.some((row) => row?.kind === 'result')
+
     this.message.hidden = true
     this.resultsList.innerHTML = ''
 
-    if (!this.results.length) {
-      this.showMessage(query ? (this.deep ? 'No matches in history.' : 'No matches in recent history.') : 'No history results yet.')
+    if (modeState?.status === 'error') {
+      this.showMessage(messages.error)
+    } else if (!hasRealRows) {
+      this.showMessage(query ? messages.noMatches : messages.empty)
     }
 
     this.ensureSelectedVisible()
     const fragment = this.document.createDocumentFragment()
     const start = this.pageStart()
-    const visibleResults = this.results.slice(start, start + RESULTS_PER_PAGE)
-    for (const [offset, result] of visibleResults.entries()) {
-      const index = start + offset
+    const end = start + RESULTS_PER_PAGE
+    let realRowIndex = 0
+
+    for (const [visibleRowIndex, row] of visibleRows.entries()) {
+      if (row?.kind === 'result') {
+        const currentRealRowIndex = realRowIndex
+        realRowIndex++
+        if (currentRealRowIndex < start || currentRealRowIndex >= end) continue
+      } else if (row?.kind !== 'open-typed-url') {
+        continue
+      }
+
+      const selected = visibleRowIndex === this.selectedIndex
+      const classes = ['result']
+      if (row.kind === 'open-typed-url') classes.push('result-action', 'open-typed-url')
+      if (selected) classes.push('selected')
+      if (row.copied) classes.push('copied')
+
       const item = this.document.createElement('li')
-      item.className = `result${index === this.selectedIndex ? ' selected' : ''}`
+      item.className = classes.join(' ')
 
       const button = this.document.createElement('button')
       button.type = 'button'
-      button.className = 'result-button'
-      button.dataset.resultIndex = String(index)
-      button.setAttribute('aria-current', index === this.selectedIndex ? 'true' : 'false')
-      button.innerHTML = `
-        <span class="result-url">${result.urlHtml}</span>
-        <span class="result-title">${result.titleHtml}</span>
-        <span class="result-meta">${result.visitsLabel} · ${result.lastVisitedLabel}</span>
-      `
+      button.className = row.kind === 'open-typed-url'
+        ? 'result-button open-typed-url-button'
+        : 'result-button'
+      button.dataset.resultIndex = String(visibleRowIndex)
+      button.dataset.visibleRowIndex = String(visibleRowIndex)
+      button.dataset.rowKind = row.kind
+      button.dataset.rowKey = row.key ?? ''
+      button.setAttribute('aria-current', selected ? 'true' : 'false')
+      button.setAttribute('aria-label', row.kind === 'open-typed-url'
+        ? `Open typed URL ${row.candidate?.normalizedUrl ?? ''}`.trim()
+        : `${row.result?.displayUrl ?? row.result?.url ?? row.result?.title ?? 'History result'}`)
+      button.innerHTML = row.kind === 'open-typed-url' ? typedUrlHtml(row) : realResultHtml(row)
 
       item.append(button)
       fragment.append(item)
     }
+
     this.resultsList.append(fragment)
     if (this.focusMode === 'results') this.focusSelectedResult()
 
     this.renderPagination()
-
-    this.deepSearchButton.hidden = this.deep || !query || this.results.length > 0
-    if (!this.deep && query && this.results.length === 0) {
-      this.deepSearchButton.textContent = `Deep search all history for “${query}”`
-    }
+    if (this.deepSearchButton) this.deepSearchButton.hidden = true
   }
 
   renderPagination() {

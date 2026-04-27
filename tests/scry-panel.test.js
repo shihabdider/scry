@@ -467,6 +467,140 @@ test('renderPagination preserves normal multi-page result list controls', () => 
   assert.equal(app.nextPageButton.disabled, false)
 })
 
+test('renderResults pins an Open typed URL action above the current real-result page', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 7 }, (_, index) => searchResult(`render-page-${index + 1}`))
+  app.input.value = 'typed.example/path'
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+  app.pageIndex = 1
+  app.selectedIndex = 7
+
+  app.renderResults()
+
+  const results = document.querySelector('#results')
+  assert.equal(results.childElementCount, 2)
+
+  const typedItem = results.children[0]
+  const typedButton = typedItem.children[0]
+  assert.match(typedItem.className, /\bresult\b/)
+  assert.match(typedItem.className, /\bresult-action\b/)
+  assert.match(typedItem.className, /\bopen-typed-url\b/)
+  assert.equal(typedButton.dataset.visibleRowIndex, '0')
+  assert.equal(typedButton.dataset.resultIndex, '0')
+  assert.equal(typedButton.dataset.rowKind, 'open-typed-url')
+  assert.match(typedButton.innerHTML, /Open typed URL/)
+  assert.match(typedButton.innerHTML, /typed\.example\/path/)
+
+  const realItem = results.children[1]
+  const realButton = realItem.children[0]
+  assert.match(realItem.className, /\bselected\b/)
+  assert.equal(realButton.dataset.visibleRowIndex, '7')
+  assert.equal(realButton.dataset.resultIndex, '7')
+  assert.equal(realButton.dataset.rowKind, 'result')
+  assert.match(realButton.innerHTML, new RegExp(corpusResults[6].urlHtml.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  assert.match(realButton.innerHTML, new RegExp(corpusResults[6].titleHtml.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  assert.match(realButton.innerHTML, /3 visits · now/)
+  assert.equal(app.pageStatus.textContent, 'Page 2 of 2')
+  assert.equal(app.deepSearchButton.hidden, true)
+})
+
+test('renderResults shows copied feedback inline only on the copied visible row', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const copiedResult = searchResult('copied-row')
+  app.input.value = 'typed.example/path'
+  app.results = [copiedResult]
+  app.visibleRows = buildVisibleRows({
+    corpusResults: [copiedResult],
+    typedUrlCandidate,
+    copiedFeedback: { key: 'result:https://example.com/copied-row', expiresAt: now + 1_000 },
+    now,
+  })
+  app.selectedIndex = 1
+
+  app.renderResults()
+
+  const results = document.querySelector('#results')
+  const typedItem = results.children[0]
+  const copiedItem = results.children[1]
+  assert.doesNotMatch(typedItem.className, /\bcopied\b/)
+  assert.doesNotMatch(typedItem.children[0].innerHTML, /result-copied-feedback/)
+  assert.match(copiedItem.className, /\bcopied\b/)
+  assert.match(copiedItem.children[0].innerHTML, /class="result-copied-feedback"/)
+  assert.match(copiedItem.children[0].innerHTML, />copied</)
+})
+
+test('renderResults uses mode-appropriate empty messages and keeps the old deep-search fallback hidden', () => {
+  const cases = [
+    ['recent', 'scry', 'No matches in recent history.'],
+    ['deep', 'scry', 'No matches in deep history.'],
+    ['closed', 'scry', 'No matches in recently closed URLs.'],
+    ['recent', '', 'No recent history results yet.'],
+    ['deep', '', 'No deep history results yet.'],
+    ['closed', '', 'No recently closed URLs yet.'],
+  ]
+
+  for (const [mode, query, expectedMessage] of cases) {
+    const document = createScryDocument()
+    const chromeApi = createPanelChrome([])
+    const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+    app.searchMode = mode
+    app.deep = mode === 'deep'
+    app.input.value = query
+    app.results = []
+    app.visibleRows = []
+    app.deepSearchButton.hidden = false
+
+    app.renderResults()
+
+    assert.equal(app.message.hidden, false, mode)
+    assert.equal(app.message.textContent, expectedMessage, mode)
+    assert.equal(app.resultsList.childElementCount, 0, mode)
+    assert.equal(app.deepSearchButton.hidden, true, mode)
+  }
+})
+
+test('renderResults reports active mode errors while still rendering a typed URL action row', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/error',
+    normalizedUrl: 'https://typed.example/error',
+    key: 'https://typed.example/error',
+  }
+  app.searchMode = 'closed'
+  app.modeCache = {
+    closed: { mode: 'closed', status: 'error', index: null, error: new Error('sessions unavailable'), loadedAt: null },
+  }
+  app.input.value = 'typed.example/error'
+  app.results = []
+  app.visibleRows = buildVisibleRows({ corpusResults: [], typedUrlCandidate })
+  app.deepSearchButton.hidden = false
+
+  app.renderResults()
+
+  assert.equal(app.message.hidden, false)
+  assert.equal(app.message.textContent, 'Recently closed URLs unavailable.')
+  assert.equal(app.resultsList.childElementCount, 1)
+  assert.equal(app.resultsList.children[0].children[0].dataset.rowKind, 'open-typed-url')
+  assert.equal(app.deepSearchButton.hidden, true)
+})
+
 test('ensureSelectedVisible leaves the always-visible typed URL row on the current page', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
