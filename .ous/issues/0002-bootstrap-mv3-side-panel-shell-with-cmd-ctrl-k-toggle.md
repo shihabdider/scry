@@ -1,17 +1,17 @@
 ---
 id: "0002"
-title: "Bootstrap MV3 side-panel shell with Cmd/Ctrl+K toggle"
+title: "Bootstrap MV3 popup command palette with Cmd/Ctrl+K"
 category: enhancement
 state: ready-for-human
 created: "2026-04-27T01:51:42Z"
-updated: "2026-04-27T01:58:00Z"
+updated: "2026-04-27T04:59:05Z"
 parent: "#0001 (.ous/issues/0001-build-scry-history-first-url-recall-extension.md)"
 depends_on: []
 tags: ["chrome-extension", "scry", "vertical-slice"]
 ---
 
 ## Summary
-Bootstrap the Chrome MV3 extension with a side-panel entrypoint and Cmd/Ctrl+K toggle. The slice should be loadable as an unpacked extension, open from normal pages and New Tab, focus the search UI, and handle side-panel close fallback gracefully.
+Bootstrap the Chrome MV3 extension with a popup command palette entrypoint and Cmd/Ctrl+K action shortcut. The slice should be loadable as an unpacked extension, open from normal pages and New Tab, and focus the search UI whenever Scry opens.
 
 ## Details
 
@@ -21,7 +21,7 @@ Bootstrap the Chrome MV3 extension with a side-panel entrypoint and Cmd/Ctrl+K t
 
 ## What to build
 
-Bootstrap the Chrome MV3 extension with a side-panel entrypoint and Cmd/Ctrl+K toggle. The slice should be loadable as an unpacked extension, open from normal pages and New Tab, focus the search UI, and handle side-panel close fallback gracefully.
+Bootstrap the Chrome MV3 extension with a popup command palette entrypoint and Cmd/Ctrl+K action shortcut. The slice should be loadable as an unpacked extension, open from normal pages and New Tab, and focus the search UI whenever Scry opens.
 
 ## Blocked by
 
@@ -29,10 +29,10 @@ None - can start immediately
 
 ## Acceptance Criteria
 
-- [ ] The extension can be loaded unpacked as an MV3 Chrome extension.
-- [ ] The side panel opens from a normal page and New Tab.
-- [ ] Cmd/Ctrl+K toggles the side panel open and closed where Chrome exposes the close API.
-- [ ] The side-panel search input receives focus when opened.
+- [x] The extension can be loaded unpacked as an MV3 Chrome extension.
+- [x] The popup command palette opens from a normal page and New Tab.
+- [x] Cmd/Ctrl+K opens the command palette through Chrome's action shortcut.
+- [x] The search input receives focus when the command palette opens.
 
 ## Activity
 
@@ -47,3 +47,11 @@ Created implementation slice issue.
 > *Implementation pass completed.*
 
 Implemented this slice in the greenfield Scry extension. Automated tests and syntax checks pass; Chrome manual side-panel smoke testing remains for human verification.
+
+### 2026-04-27T04:28:36Z — AI
+
+Updated shortcut semantics after QA: the primary shortcut is now open/refocus only, and close is a separate shortcut. Automated tests cover both command paths.
+
+### 2026-04-27T04:59:05Z — AI
+
+Pivoted the entrypoint from Chrome Side Panel to an action popup command palette because Chrome does not let extensions force focus into a side panel opened by shortcut. Automated manifest tests now assert the popup command palette contract.

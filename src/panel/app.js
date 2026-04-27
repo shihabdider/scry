@@ -5,18 +5,24 @@ import { fetchHistory } from '../platform/history-provider.js'
 import { loadSelectionData, saveSelectionData } from '../platform/selection-store.js'
 import { openUrl } from '../platform/tabs.js'
 
-const DEFAULT_LIMIT = 30
+const SEARCH_LIMIT = 100
+const RESULTS_PER_PAGE = 6
+const FOCUS_RETRY_DELAYS_MS = [0, 50, 150, 300, 600, 1000]
 
 export class ScryPanelApp {
-  constructor({ document, chromeApi = chrome, clock = () => Date.now() }) {
+  constructor({ document, chromeApi = chrome, clock = () => Date.now(), windowApi = globalThis.window } = {}) {
     this.document = document
     this.chromeApi = chromeApi
     this.clock = clock
+    this.windowApi = windowApi
     this.index = null
     this.deep = false
     this.loading = false
     this.results = []
     this.selectedIndex = 0
+    this.pageIndex = 0
+    this.focusMode = 'search'
+    this.focusRequestId = 0
     this.selectionData = undefined
 
     this.input = document.querySelector('#search-input')
@@ -24,11 +30,15 @@ export class ScryPanelApp {
     this.message = document.querySelector('#message')
     this.resultsList = document.querySelector('#results')
     this.deepSearchButton = document.querySelector('#deep-search-button')
+    this.pagination = document.querySelector('#pagination')
+    this.previousPageButton = document.querySelector('#previous-page-button')
+    this.pageStatus = document.querySelector('#page-status')
+    this.nextPageButton = document.querySelector('#next-page-button')
   }
 
   async start() {
     this.bindEvents()
-    this.input.focus()
+    this.focusSearch()
     this.setStatus('Loading history…')
     this.selectionData = await loadSelectionData({ chromeApi: this.chromeApi })
     await this.loadHistory({ deep: false })
@@ -37,6 +47,7 @@ export class ScryPanelApp {
   bindEvents() {
     this.input.addEventListener('input', () => {
       this.selectedIndex = 0
+      this.pageIndex = 0
       this.updateResults()
     })
 
@@ -50,6 +61,9 @@ export class ScryPanelApp {
       } else if (event.key === 'Enter') {
         event.preventDefault()
         void this.openSelected({ newTab: event.metaKey || event.ctrlKey })
+      } else if (event.key === 'Escape') {
+        event.preventDefault()
+        this.focusResults()
       }
     })
 
@@ -62,6 +76,18 @@ export class ScryPanelApp {
 
     this.deepSearchButton.addEventListener('click', () => {
       void this.loadHistory({ deep: true })
+    })
+
+    this.previousPageButton?.addEventListener('click', () => {
+      this.movePage(-1)
+    })
+
+    this.nextPageButton?.addEventListener('click', () => {
+      this.movePage(1)
+    })
+
+    this.document.addEventListener('keydown', (event) => {
+      this.handlePanelKeydown(event)
     })
   }
 
@@ -88,17 +114,118 @@ export class ScryPanelApp {
     if (!this.index) return
     this.results = searchHistory(this.index, this.input.value, {
       now: this.clock(),
-      limit: DEFAULT_LIMIT,
+      limit: SEARCH_LIMIT,
       selections: this.selectionData,
     })
     if (this.selectedIndex >= this.results.length) this.selectedIndex = Math.max(0, this.results.length - 1)
+    this.ensureSelectedVisible()
     this.renderResults()
+  }
+
+  pageCount() {
+    return Math.max(1, Math.ceil(this.results.length / RESULTS_PER_PAGE))
+  }
+
+  pageStart() {
+    return this.pageIndex * RESULTS_PER_PAGE
+  }
+
+  clampPageIndex() {
+    this.pageIndex = Math.min(Math.max(0, this.pageIndex), this.pageCount() - 1)
+  }
+
+  ensureSelectedVisible() {
+    this.clampPageIndex()
+    if (!this.results.length) return
+    const start = this.pageStart()
+    const end = start + RESULTS_PER_PAGE
+    if (this.selectedIndex < start || this.selectedIndex >= end) {
+      this.pageIndex = Math.floor(this.selectedIndex / RESULTS_PER_PAGE)
+      this.clampPageIndex()
+    }
   }
 
   moveSelection(delta) {
     if (!this.results.length) return
     this.selectedIndex = (this.selectedIndex + delta + this.results.length) % this.results.length
+    this.ensureSelectedVisible()
     this.renderResults()
+  }
+
+  movePage(delta) {
+    if (!this.results.length) return
+    const nextPage = Math.min(Math.max(0, this.pageIndex + delta), this.pageCount() - 1)
+    if (nextPage === this.pageIndex) return
+    this.pageIndex = nextPage
+    this.selectedIndex = this.pageStart()
+    this.renderResults()
+  }
+
+  handlePanelKeydown(event) {
+    if (event.target === this.input || this.focusMode !== 'results') return
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      this.leavePanelFocus()
+    } else if (event.key.toLowerCase() === 'j') {
+      event.preventDefault()
+      this.moveSelection(1)
+    } else if (event.key.toLowerCase() === 'k') {
+      event.preventDefault()
+      this.moveSelection(-1)
+    } else if (event.key.toLowerCase() === 'l') {
+      event.preventDefault()
+      this.movePage(1)
+    } else if (event.key.toLowerCase() === 'h') {
+      event.preventDefault()
+      this.movePage(-1)
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      void this.openSelected({ newTab: event.metaKey || event.ctrlKey })
+    }
+  }
+
+  focusSearch() {
+    this.focusMode = 'search'
+    const requestId = ++this.focusRequestId
+    this.input.focus({ preventScroll: true })
+    for (const delay of FOCUS_RETRY_DELAYS_MS) {
+      const timer = setTimeout(() => {
+        if (this.focusMode !== 'search' || this.focusRequestId !== requestId) return
+        this.input.focus({ preventScroll: true })
+      }, delay)
+      timer.unref?.()
+    }
+  }
+
+  cancelSearchFocusRequests() {
+    this.focusRequestId++
+  }
+
+  focusResults() {
+    this.cancelSearchFocusRequests()
+    this.focusMode = 'results'
+    this.focusSelectedResult()
+  }
+
+  focusSelectedResult() {
+    const selected = this.resultsList.querySelector(`[data-result-index="${this.selectedIndex}"]`)
+    if (selected) {
+      selected.focus()
+      return
+    }
+    this.resultsList.focus?.()
+  }
+
+  leavePanelFocus() {
+    this.cancelSearchFocusRequests()
+    this.focusMode = 'blurred'
+    this.document.activeElement?.blur?.()
+    if (this.windowApi?.close) {
+      this.windowApi.close()
+      return
+    }
+    this.windowApi?.blur?.()
   }
 
   async openSelected({ newTab }) {
@@ -115,6 +242,7 @@ export class ScryPanelApp {
     })
     await saveSelectionData(this.selectionData, { chromeApi: this.chromeApi })
     this.updateResults()
+    this.leavePanelFocus()
   }
 
   renderLoading() {
@@ -122,6 +250,7 @@ export class ScryPanelApp {
     this.resultsList.innerHTML = ''
     this.showMessage(this.deep ? 'Searching all available history. This can take a moment.' : 'Indexing recent browser history…')
     this.deepSearchButton.hidden = true
+    if (this.pagination) this.pagination.hidden = true
   }
 
   renderResults() {
@@ -133,8 +262,12 @@ export class ScryPanelApp {
       this.showMessage(query ? (this.deep ? 'No matches in history.' : 'No matches in recent history.') : 'No history results yet.')
     }
 
+    this.ensureSelectedVisible()
     const fragment = this.document.createDocumentFragment()
-    for (const [index, result] of this.results.entries()) {
+    const start = this.pageStart()
+    const visibleResults = this.results.slice(start, start + RESULTS_PER_PAGE)
+    for (const [offset, result] of visibleResults.entries()) {
+      const index = start + offset
       const item = this.document.createElement('li')
       item.className = `result${index === this.selectedIndex ? ' selected' : ''}`
 
@@ -153,11 +286,23 @@ export class ScryPanelApp {
       fragment.append(item)
     }
     this.resultsList.append(fragment)
+    if (this.focusMode === 'results') this.focusSelectedResult()
+
+    this.renderPagination()
 
     this.deepSearchButton.hidden = this.deep || !query || this.results.length > 0
     if (!this.deep && query && this.results.length === 0) {
       this.deepSearchButton.textContent = `Deep search all history for “${query}”`
     }
+  }
+
+  renderPagination() {
+    if (!this.pagination || !this.pageStatus) return
+    const pageCount = this.pageCount()
+    this.pagination.hidden = this.results.length === 0 || pageCount <= 1
+    this.pageStatus.textContent = this.results.length ? `Page ${this.pageIndex + 1} of ${pageCount}` : 'No results'
+    if (this.previousPageButton) this.previousPageButton.disabled = this.pageIndex === 0
+    if (this.nextPageButton) this.nextPageButton.disabled = this.pageIndex >= pageCount - 1
   }
 
   showMessage(text) {

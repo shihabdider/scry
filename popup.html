@@ -14,17 +14,23 @@
           <span id="status" class="status" role="status">Loading history…</span>
         </div>
         <label class="search-label" for="search-input">Search browser history</label>
-        <input id="search-input" class="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="git*skilift*issues*13" />
+        <input id="search-input" class="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="git*skilift*issues*13" autofocus />
       </header>
 
       <section id="message" class="message" hidden></section>
-      <ol id="results" class="results" aria-label="History results"></ol>
+      <ol id="results" class="results" aria-label="History results" tabindex="-1"></ol>
+
+      <nav id="pagination" class="pagination" aria-label="Result pages" hidden>
+        <button id="previous-page-button" class="page-button" type="button">h previous</button>
+        <span id="page-status" class="page-status">Page 1 of 1</span>
+        <button id="next-page-button" class="page-button" type="button">l next</button>
+      </nav>
 
       <section class="deep-search">
         <button id="deep-search-button" class="deep-search-button" type="button" hidden>Deep search all history</button>
       </section>
 
-      <footer class="footer-hints">Enter open · ⌘/Ctrl+Enter new tab · ↑↓ or Ctrl+N/P move · ⌘/Ctrl+K toggle</footer>
+      <footer class="footer-hints">⌘K open · Esc results/close · j/k move · h/l page · Enter open</footer>
     </main>
     <script type="module" src="src/panel/main.js"></script>
   </body>

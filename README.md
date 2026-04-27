@@ -1,6 +1,6 @@
 # Scry
 
-Scry is a Manifest V3 Chrome extension for history-first URL recall. It opens a Chrome Side Panel with `Ctrl+K` / `Command+K`, indexes recent browser history, and lets you reopen exact pages from remembered URL fragments such as:
+Scry is a personal Manifest V3 Chrome 147 extension for history-first URL recall. It opens a focused popup command palette with `Command+K`, indexes recent browser history, and lets you reopen exact pages from remembered URL fragments such as:
 
 ```text
 git*skilift*issues*13
@@ -20,7 +20,7 @@ The v1 product is intentionally narrow:
 2. Enable Developer Mode.
 3. Click **Load unpacked**.
 4. Select this repository directory.
-5. Open or toggle Scry with `Ctrl+K` / `Command+K`.
+5. Open Scry with `Command+K`; close the popup with `Esc` or by focusing the page.
 
 If Chrome reports a shortcut conflict, remap Scry at `chrome://extensions/shortcuts`.
 

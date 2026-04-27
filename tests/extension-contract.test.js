@@ -4,14 +4,16 @@ import { readFile } from 'node:fs/promises'
 import { readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-test('manifest exposes a Chrome side-panel history-only extension without host permissions or content scripts', async () => {
+test('manifest exposes a Chrome popup command palette for history-only recall', async () => {
   const manifest = JSON.parse(await readFile('manifest.json', 'utf8'))
 
   assert.equal(manifest.manifest_version, 3)
-  assert.equal(manifest.side_panel.default_path, 'side-panel.html')
-  assert.equal(manifest.commands['toggle-scry'].suggested_key.default, 'Ctrl+K')
-  assert.equal(manifest.commands['toggle-scry'].suggested_key.mac, 'Command+K')
-  assert.deepEqual([...manifest.permissions].sort(), ['history', 'sidePanel', 'storage', 'tabs'].sort())
+  assert.equal(manifest.minimum_chrome_version, '147')
+  assert.equal(manifest.action.default_popup, 'popup.html')
+  assert.equal(manifest.commands._execute_action.suggested_key.default, 'Ctrl+K')
+  assert.equal(manifest.commands._execute_action.suggested_key.mac, 'Command+K')
+  assert.deepEqual([...manifest.permissions].sort(), ['history', 'storage', 'tabs'].sort())
+  assert.equal('side_panel' in manifest, false)
   assert.equal('host_permissions' in manifest, false)
   assert.equal('content_scripts' in manifest, false)
   assert.equal('options_page' in manifest, false)

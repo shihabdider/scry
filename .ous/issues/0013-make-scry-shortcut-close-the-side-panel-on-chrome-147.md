@@ -2,9 +2,9 @@
 id: "0013"
 title: "Make Scry shortcut close the side panel on Chrome 147"
 category: bug
-state: ready-for-agent
+state: wontfix
 created: "2026-04-27T03:37:45Z"
-updated: "2026-04-27T03:42:29Z"
+updated: "2026-04-27T04:17:34Z"
 parent: "#0002 (.ous/issues/0002-bootstrap-mv3-side-panel-shell-with-cmd-ctrl-k-toggle.md)"
 depends_on: []
 tags: ["chrome-extension", "side-panel", "shortcut", "qa"]
@@ -12,7 +12,7 @@ tags: ["chrome-extension", "side-panel", "shortcut", "qa"]
 
 ## Summary
 
-Pressing Scry's advertised keyboard shortcut again does not close the Scry side panel on the user's Chrome 147 install, even though Scry presents the shortcut as a toggle.
+Closed as obsolete after QA clarified that Command+K should not be the close path; dedicated close behavior is tracked in #0017.
 
 ## Details
 
@@ -22,11 +22,11 @@ Pressing Scry's advertised keyboard shortcut again does not close the Scry side 
 
 ## What's wrong
 
-Once the Scry side panel is open, Ctrl+K / Command+K is expected to close it. In practice, the side panel does not close from the shortcut on the user's Chrome 147 install. Chrome 147 supports the official side-panel close API and open/close events, so this should be treated as a local toggle-behavior bug rather than an older-Chrome compatibility problem.
+The initial report included shortcut close failure, but QA clarified that Command+K does close the Scry side panel on the user's Chrome 147 install. QA then clarified the desired model: Command+K should open/refocus only, and close should move to a separate shortcut.
 
 ## What I expected
 
-The same assigned Scry shortcut closes an open Scry side panel in the current window on Google Chrome 147.0.7727.101.
+The close behavior should be handled by a dedicated close shortcut instead of the open/refocus shortcut.
 
 ## Steps to reproduce
 
@@ -45,9 +45,7 @@ Chrome's MV3 docs say side panels can be opened from a keyboard shortcut in Chro
 
 ## Acceptance Criteria
 
-- [ ] Pressing the assigned Scry shortcut closes an open Scry side panel in the current window on Chrome 147.
-- [ ] Scry's open/close state stays correct when the panel is opened or closed by the extension action, shortcut, or Chrome side-panel UI.
-- [ ] User-facing shortcut/toggle documentation reflects the personal Chrome 147 target instead of promising broader version support.
+- [x] Close the obsolete toggle-close issue in favor of #0017.
 
 ## Activity
 
@@ -60,3 +58,11 @@ Filed from QA report that Ctrl+K / Command+K does not close the Scry side panel.
 ### 2026-04-27T03:42:29Z — AI
 
 User clarified the only target environment is Google Chrome 147.0.7727.101 on macOS arm64. Narrowed this issue to Chrome 147 toggle behavior; older Chrome fallback is no longer in scope.
+
+### 2026-04-27T04:05:34Z — AI
+
+User clarified that Command+K does close the Scry side panel when it is already open. Marked the close-specific issue done; the remaining shortcut problem is open-only and tracked in #0012.
+
+### 2026-04-27T04:17:34Z — AI
+
+User clarified that Command+K should no longer close the side panel. Marked this issue wontfix/obsolete; #0017 tracks adding a separate close shortcut.
