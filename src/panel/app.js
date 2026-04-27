@@ -2,7 +2,7 @@ import { parseQuery } from '../core/query.js'
 import { buildVisibleRows } from '../core/rows.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
-import { createModeCache } from '../core/search-modes.js'
+import { createModeCache, modeIndicatorModel } from '../core/search-modes.js'
 import { fetchHistory } from '../platform/history-provider.js'
 import { loadSelectionData, saveSelectionData } from '../platform/selection-store.js'
 import { fetchRecentlyClosed, flattenClosedSessions } from '../platform/sessions-provider.js'
@@ -181,7 +181,26 @@ export class ScryPanelApp {
   }
 
   renderModeIndicator() {
-    throw new Error('not implemented: renderModeIndicator')
+    const state = this.modeCache?.[this.searchMode] ?? null
+    const model = modeIndicatorModel(this.searchMode, state)
+
+    if (this.status) this.setStatus(model.statusText)
+    if (this.deepSearchButton) this.deepSearchButton.hidden = true
+
+    const indicator = this.document.querySelector('#mode-indicator')
+    if (!indicator) return model
+
+    indicator.hidden = false
+    indicator.textContent = model.label
+    indicator.dataset.mode = model.mode
+    indicator.dataset.status = model.status
+    indicator.dataset.clickable = String(model.clickable)
+    indicator.disabled = !model.clickable
+    indicator.title = model.statusText
+    indicator.setAttribute('aria-disabled', model.clickable ? 'false' : 'true')
+    indicator.setAttribute('aria-label', `${model.label}; ${model.statusText}`)
+
+    return model
   }
 
   updateVisibleRows() {

@@ -340,6 +340,81 @@ test('ensureSearchModeReady stores mode-local errors without breaking other mode
   assert.equal(app.index, app.modeCache.recent.index)
 })
 
+test('renderModeIndicator renders the active mode label/status in dedicated popup markup', () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  modeIndicator.hidden = true
+  document.body.append(modeIndicator)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const deepSearchButton = document.querySelector('#deep-search-button')
+  deepSearchButton.hidden = false
+  deepSearchButton.textContent = 'Deep search all history'
+  app.searchMode = 'deep'
+  app.modeCache = {
+    deep: {
+      mode: 'deep',
+      status: 'ready',
+      index: { entries: [{}, {}] },
+      error: null,
+      loadedAt: now,
+    },
+  }
+
+  app.renderModeIndicator()
+
+  assert.equal(modeIndicator.hidden, false)
+  assert.equal(modeIndicator.textContent, 'mode: deep')
+  assert.equal(modeIndicator.dataset.mode, 'deep')
+  assert.equal(modeIndicator.dataset.status, 'ready')
+  assert.equal(modeIndicator.dataset.clickable, 'true')
+  assert.equal(modeIndicator.disabled, false)
+  assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
+  assert.equal(modeIndicator.getAttribute('aria-label'), 'mode: deep; 2 deep history URLs')
+  assert.equal(modeIndicator.title, '2 deep history URLs')
+  assert.equal(document.querySelector('#status').textContent, '2 deep history URLs')
+  assert.equal(deepSearchButton.hidden, true)
+  assert.equal(deepSearchButton.textContent, 'Deep search all history')
+})
+
+test('renderModeIndicator is safe before popup mode-indicator markup exists', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.searchMode = 'closed'
+  app.modeCache = {
+    closed: {
+      mode: 'closed',
+      status: 'error',
+      index: null,
+      error: new Error('sessions unavailable'),
+      loadedAt: null,
+    },
+  }
+
+  assert.equal(document.querySelector('#mode-indicator'), null)
+  assert.doesNotThrow(() => app.renderModeIndicator())
+
+  assert.equal(document.querySelector('#status').textContent, 'Recently closed URLs unavailable')
+  assert.equal(document.querySelector('#deep-search-button').hidden, true)
+})
+
+test('renderModeIndicator falls back to the active mode idle status before cache initialization', () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  document.body.append(modeIndicator)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  app.renderModeIndicator()
+
+  assert.equal(modeIndicator.textContent, 'mode: recent')
+  assert.equal(modeIndicator.dataset.status, 'idle')
+  assert.equal(document.querySelector('#status').textContent, 'Recent history not loaded')
+})
+
 test('command palette keeps trying to focus search while Chrome is finishing popup open', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2)])
