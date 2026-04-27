@@ -57,7 +57,41 @@ const TIER = {
  */
 
 export function collectExactPhraseEvidence(entry, exactPhrases) {
-  throw new Error('not implemented: collectExactPhraseEvidence')
+  const normalizeFieldText = (value) => String(value ?? '').replace(/\s+/g, ' ').trim()
+  const fields = [
+    { name: 'displayUrl', text: normalizeFieldText(entry?.displayUrl) },
+    { name: 'title', text: normalizeFieldText(entry?.title) },
+  ]
+  const evidence = []
+
+  for (const phrase of exactPhrases ?? []) {
+    const matchText = String(phrase?.matchText ?? '')
+    const needle = phrase?.caseSensitive ? matchText : matchText.toLowerCase()
+    let match = null
+
+    for (const field of fields) {
+      const haystack = phrase?.caseSensitive ? field.text : field.text.toLowerCase()
+      const position = haystack.indexOf(needle)
+      if (position === -1) continue
+
+      match = { phrase, field: field.name, position }
+      break
+    }
+
+    if (!match) return { matched: false, evidence: [], qualityTuple: [] }
+    evidence.push(match)
+  }
+
+  const totalPosition = evidence.reduce((sum, match) => sum + match.position, 0)
+
+  return {
+    matched: true,
+    evidence,
+    qualityTuple: [
+      evidence.filter((match) => match.field === 'displayUrl').length,
+      totalPosition === 0 ? 0 : -totalPosition,
+    ],
+  }
 }
 
 export function compareQuoteEvidence(a, b) {

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { formatAge, highlightText } from '../src/core/format.js'
 import { normalizeExactPhrase } from '../src/core/query.js'
 import { recordSelection } from '../src/core/selection-learning.js'
-import { buildHistoryIndex, searchHistory } from '../src/core/search.js'
+import { buildHistoryIndex, collectExactPhraseEvidence, searchHistory } from '../src/core/search.js'
 import { middleTruncate } from '../src/core/url.js'
 
 const now = Date.parse('2026-04-27T00:00:00Z')
@@ -42,6 +42,122 @@ test('exact phrase normalization treats empty quoted phrases as case-insensitive
     rawText: '   ',
     matchText: '',
     caseSensitive: false,
+  })
+})
+
+test('exact phrase evidence matches display URL punctuation with field and normalized position', () => {
+  const entry = indexOf([
+    {
+      url: 'https://github.com/mskilab-org/repo/issues/13?tab=pull_requests',
+      title: 'Issue 13',
+      visitCount: 1,
+      lastVisitTime: now,
+    },
+  ]).entries[0]
+  const phrase = normalizeExactPhrase('mskilab-org/repo/issues/13?tab=pull_requests')
+
+  const result = collectExactPhraseEvidence(entry, [phrase])
+
+  assert.equal(result.matched, true)
+  assert.deepEqual(result.evidence, [{ phrase, field: 'displayUrl', position: 11 }])
+})
+
+test('exact phrase evidence collapses field whitespace but preserves punctuation', () => {
+  const entry = indexOf([
+    {
+      url: 'https://example.com/pull-requests',
+      title: 'Pull   requests:\nreview\tqueue',
+      visitCount: 1,
+      lastVisitTime: now,
+    },
+  ]).entries[0]
+
+  assert.deepEqual(collectExactPhraseEvidence(entry, [normalizeExactPhrase('pull requests: review queue')]).evidence, [
+    { phrase: normalizeExactPhrase('pull requests: review queue'), field: 'title', position: 0 },
+  ])
+  assert.deepEqual(collectExactPhraseEvidence(entry, [normalizeExactPhrase('pull requests review queue')]), {
+    matched: false,
+    evidence: [],
+    qualityTuple: [],
+  })
+})
+
+test('exact phrase evidence follows smart-case matching rules', () => {
+  const entry = indexOf([
+    {
+      url: 'https://example.com/actions',
+      title: 'GitHub Actions dashboard',
+      visitCount: 1,
+      lastVisitTime: now,
+    },
+  ]).entries[0]
+
+  assert.deepEqual(collectExactPhraseEvidence(entry, [normalizeExactPhrase('github actions')]).evidence, [
+    { phrase: normalizeExactPhrase('github actions'), field: 'title', position: 0 },
+  ])
+  assert.deepEqual(collectExactPhraseEvidence(entry, [normalizeExactPhrase('github Actions')]), {
+    matched: false,
+    evidence: [],
+    qualityTuple: [],
+  })
+})
+
+test('exact phrase evidence requires every phrase as a hard filter', () => {
+  const entry = indexOf([
+    {
+      url: 'https://example.com/docs',
+      title: 'Release notes alpha',
+      visitCount: 1,
+      lastVisitTime: now,
+    },
+  ]).entries[0]
+
+  assert.deepEqual(
+    collectExactPhraseEvidence(entry, [
+      normalizeExactPhrase('example.com/docs'),
+      normalizeExactPhrase('release notes'),
+      normalizeExactPhrase('missing phrase'),
+    ]),
+    { matched: false, evidence: [], qualityTuple: [] },
+  )
+})
+
+test('exact phrase evidence prefers display URL over title and records earliest field position', () => {
+  const entry = indexOf([
+    {
+      url: 'https://example.com/alpha/path/alpha',
+      title: 'alpha appears earlier in the title',
+      visitCount: 1,
+      lastVisitTime: now,
+    },
+  ]).entries[0]
+  const phrase = normalizeExactPhrase('alpha')
+
+  const result = collectExactPhraseEvidence(entry, [phrase])
+
+  assert.deepEqual(result.evidence, [{ phrase, field: 'displayUrl', position: 12 }])
+  assert.deepEqual(result.qualityTuple, [1, -12])
+})
+
+test('exact phrase evidence ignores raw URL fragments outside display URL and title', () => {
+  const entry = {
+    url: 'https://example.com/docs#secret phrase',
+    displayUrl: 'example.com/docs',
+    title: 'Visible page',
+  }
+
+  assert.deepEqual(collectExactPhraseEvidence(entry, [normalizeExactPhrase('secret phrase')]), {
+    matched: false,
+    evidence: [],
+    qualityTuple: [],
+  })
+})
+
+test('exact phrase evidence vacuously matches when there are no exact phrases', () => {
+  assert.deepEqual(collectExactPhraseEvidence({ displayUrl: 'example.com', title: 'Example' }, []), {
+    matched: true,
+    evidence: [],
+    qualityTuple: [0, 0],
   })
 })
 

@@ -2,14 +2,14 @@
 
 phase: 2
 layer: 4
-updated: 2026-04-27T18:44:49.372Z
+updated: 2026-04-27T18:48:40.029Z
 
 ## Wishes
 
 | wish | file | layer | status | time |
 |------|------|-------|--------|------|
 | normalizeExactPhrase | src/core/query.js | 4 | pass | 110.0s |
-| collectExactPhraseEvidence | src/core/search.js | 4 | pending | - |
+| collectExactPhraseEvidence | src/core/search.js | 4 | pass | 220.4s |
 | compareQuoteEvidence | src/core/search.js | 4 | pending | - |
 | toResult | src/core/search.js | 4 | pending | - |
 | createTypedUrlCandidate | src/core/url.js | 4 | pending | - |
@@ -66,3 +66,6 @@ updated: 2026-04-27T18:44:49.372Z
 - 14:42:58 normalizeExactPhrase: running
 - 14:44:48 normalizeExactPhrase: pass (110.0s, $0.5573)
 - 14:44:49 implementer_post verification for normalizeExactPhrase: pass
+- 14:44:57 collectExactPhraseEvidence: running
+- 14:48:38 collectExactPhraseEvidence: pass (220.4s, $0.9538)
+- 14:48:40 implementer_post verification for collectExactPhraseEvidence: pass
