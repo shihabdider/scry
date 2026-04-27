@@ -111,6 +111,51 @@ test('command palette keeps trying to focus search while Chrome is finishing pop
   assert.ok(focusAttempts >= 3)
 })
 
+test('focusSearch enters search mode, focuses the input, and places the cursor at the query end', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  input.value = 'github issue'
+  input.setSelectionRange(2, 2)
+  app.focusMode = 'results'
+
+  app.focusSearch()
+
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
+  assert.equal(input.selectionStart, input.value.length)
+  assert.equal(input.selectionEnd, input.value.length)
+})
+
+test('focusSearch is safe when cursor placement is unavailable', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  input.value = 'scry'
+  input.setSelectionRange = undefined
+
+  assert.doesNotThrow(() => app.focusSearch())
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
+})
+
+test('typing i in search input is not intercepted as a mode shortcut', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  app.bindEvents()
+  app.focusSearch()
+
+  const event = dispatchKeydown(input, 'i')
+
+  assert.equal(event.defaultPrevented, false)
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
+})
+
 test('Escape moves from search entry to result navigation, then closes or leaves the command palette', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2)])

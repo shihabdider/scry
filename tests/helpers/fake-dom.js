@@ -13,6 +13,8 @@ export class FakeElement {
     this.className = ''
     this.type = ''
     this.id = ''
+    this.selectionStart = 0
+    this.selectionEnd = 0
     this._innerHTML = ''
   }
 
@@ -77,6 +79,11 @@ export class FakeElement {
 
   focus() {
     if (this.ownerDocument) this.ownerDocument.activeElement = this
+  }
+
+  setSelectionRange(start, end) {
+    this.selectionStart = start
+    this.selectionEnd = end
   }
 
   blur() {

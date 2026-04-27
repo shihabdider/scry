@@ -225,11 +225,23 @@ export class ScryPanelApp {
   focusSearch() {
     this.focusMode = 'search'
     const requestId = ++this.focusRequestId
-    this.input.focus({ preventScroll: true })
+    const focusInputAtEnd = () => {
+      this.input.focus({ preventScroll: true })
+      if (typeof this.input.setSelectionRange !== 'function') return
+
+      const cursorPosition = this.input.value.length
+      try {
+        this.input.setSelectionRange(cursorPosition, cursorPosition)
+      } catch {
+        // Some input-like elements do not support text selection.
+      }
+    }
+
+    focusInputAtEnd()
     for (const delay of FOCUS_RETRY_DELAYS_MS) {
       const timer = setTimeout(() => {
         if (this.focusMode !== 'search' || this.focusRequestId !== requestId) return
-        this.input.focus({ preventScroll: true })
+        focusInputAtEnd()
       }, delay)
       timer.unref?.()
     }
