@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { rowEditableText, rowOpenUrl, rowSelectionLearningKey } from '../src/core/rows.js'
+import { isCopiedFeedbackVisible, rowEditableText, rowOpenUrl, rowSelectionLearningKey } from '../src/core/rows.js'
 
 test('rowOpenUrl returns the real corpus result URL', () => {
   const row = {
@@ -177,5 +177,99 @@ test('rowEditableText returns null for null or malformed rows', () => {
 
   for (const row of malformedRows) {
     assert.equal(rowEditableText(row), null)
+  }
+})
+
+test('isCopiedFeedbackVisible returns true for a matching unexpired real result row key', () => {
+  const row = {
+    kind: 'result',
+    key: 'result:https://example.com/docs',
+    copied: false,
+    result: {
+      key: 'https://example.com/docs',
+      url: 'https://example.com/docs',
+      displayUrl: 'example.com/docs',
+    },
+  }
+
+  assert.equal(
+    isCopiedFeedbackVisible(row, { key: 'result:https://example.com/docs', expiresAt: 2_200 }, 1_000),
+    true,
+  )
+})
+
+test('isCopiedFeedbackVisible returns true for a matching unexpired synthetic typed URL row key', () => {
+  const row = {
+    kind: 'open-typed-url',
+    key: 'open-typed-url:https://typed.example/path',
+    copied: false,
+    candidate: {
+      displayInput: 'typed.example/path',
+      normalizedUrl: 'https://typed.example/path',
+      key: 'https://typed.example/path',
+    },
+  }
+
+  assert.equal(
+    isCopiedFeedbackVisible(row, { key: 'open-typed-url:https://typed.example/path', expiresAt: 2_200 }, 1_000),
+    true,
+  )
+})
+
+test('isCopiedFeedbackVisible returns false for mismatched or inner URL keys', () => {
+  const realRow = {
+    kind: 'result',
+    key: 'result:https://example.com/docs',
+    copied: false,
+    result: { key: 'https://example.com/docs' },
+  }
+  const typedUrlRow = {
+    kind: 'open-typed-url',
+    key: 'open-typed-url:https://typed.example/path',
+    copied: false,
+    candidate: { key: 'https://typed.example/path' },
+  }
+
+  assert.equal(isCopiedFeedbackVisible(realRow, { key: 'result:https://example.com/other', expiresAt: 2_200 }, 1_000), false)
+  assert.equal(isCopiedFeedbackVisible(realRow, { key: 'https://example.com/docs', expiresAt: 2_200 }, 1_000), false)
+  assert.equal(isCopiedFeedbackVisible(typedUrlRow, { key: 'https://typed.example/path', expiresAt: 2_200 }, 1_000), false)
+})
+
+test('isCopiedFeedbackVisible returns false when feedback has expired', () => {
+  const row = {
+    kind: 'result',
+    key: 'result:https://example.com/docs',
+    copied: false,
+    result: { key: 'https://example.com/docs' },
+  }
+
+  assert.equal(isCopiedFeedbackVisible(row, { key: row.key, expiresAt: 1_200 }, 1_200), false)
+  assert.equal(isCopiedFeedbackVisible(row, { key: row.key, expiresAt: 1_200 }, 1_201), false)
+})
+
+test('isCopiedFeedbackVisible returns false for missing or malformed rows and feedback', () => {
+  const row = {
+    kind: 'result',
+    key: 'result:https://example.com/docs',
+    copied: false,
+    result: { key: 'https://example.com/docs' },
+  }
+  const activeFeedback = { key: row.key, expiresAt: 2_200 }
+
+  const cases = [
+    [null, activeFeedback],
+    [undefined, activeFeedback],
+    [{}, activeFeedback],
+    [{ kind: 'result', key: '', copied: false, result: { key: '' } }, { key: '', expiresAt: 2_200 }],
+    [{ kind: 'result', key: 42, copied: false, result: { key: 42 } }, { key: 42, expiresAt: 2_200 }],
+    [row, null],
+    [row, undefined],
+    [row, {}],
+    [row, { key: row.key }],
+    [row, { key: row.key, expiresAt: '2200' }],
+  ]
+
+  for (const [visibleRow, copiedFeedback] of cases) {
+    assert.equal(isCopiedFeedbackVisible(visibleRow, copiedFeedback, 1_000), false)
   }
 })

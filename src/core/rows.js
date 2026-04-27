@@ -57,5 +57,17 @@ export function rowEditableText(row) {
 }
 
 export function isCopiedFeedbackVisible(row, copiedFeedback, now = Date.now()) {
-  throw new Error('not implemented: isCopiedFeedbackVisible')
+  const isVisibleRowKind = row?.kind === 'result' || row?.kind === 'open-typed-url'
+  if (!isVisibleRowKind) return false
+
+  const rowKey = row.key
+  const feedbackKey = copiedFeedback?.key
+  const expiresAt = copiedFeedback?.expiresAt
+
+  if (typeof rowKey !== 'string' || !rowKey) return false
+  if (typeof feedbackKey !== 'string' || !feedbackKey) return false
+  if (typeof expiresAt !== 'number' || !Number.isFinite(expiresAt)) return false
+  if (typeof now !== 'number' || !Number.isFinite(now)) return false
+
+  return rowKey === feedbackKey && now < expiresAt
 }
