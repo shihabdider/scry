@@ -25,7 +25,33 @@
  */
 
 export function buildVisibleRows({ corpusResults = [], typedUrlCandidate = null, copiedFeedback = null } = {}) {
-  throw new Error('not implemented: buildVisibleRows')
+  const rows = []
+
+  if (typedUrlCandidate) {
+    const typedUrlRow = {
+      kind: 'open-typed-url',
+      key: `open-typed-url:${typedUrlCandidate.key}`,
+      candidate: typedUrlCandidate,
+    }
+    rows.push({
+      ...typedUrlRow,
+      copied: isCopiedFeedbackVisible(typedUrlRow, copiedFeedback),
+    })
+  }
+
+  for (const result of corpusResults ?? []) {
+    const resultRow = {
+      kind: 'result',
+      key: `result:${result.key}`,
+      result,
+    }
+    rows.push({
+      ...resultRow,
+      copied: isCopiedFeedbackVisible(resultRow, copiedFeedback),
+    })
+  }
+
+  return rows
 }
 
 export function rowOpenUrl(row) {

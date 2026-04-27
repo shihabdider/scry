@@ -1,7 +1,137 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { isCopiedFeedbackVisible, rowEditableText, rowOpenUrl, rowSelectionLearningKey } from '../src/core/rows.js'
+import { buildVisibleRows, isCopiedFeedbackVisible, rowEditableText, rowOpenUrl, rowSelectionLearningKey } from '../src/core/rows.js'
+
+test('buildVisibleRows returns no rows for empty/default input', () => {
+  assert.deepEqual(buildVisibleRows(), [])
+  assert.deepEqual(buildVisibleRows({ corpusResults: [] }), [])
+})
+
+test('buildVisibleRows wraps real corpus results without changing their content', () => {
+  const firstResult = {
+    key: 'https://example.com/docs',
+    url: 'https://example.com/docs?tab=readme',
+    displayUrl: 'example.com/docs?tab=readme',
+    title: 'Example docs',
+    visitCount: 3,
+    visitsLabel: '3 visits',
+    lastVisitTime: 0,
+    lastVisitedLabel: 'now',
+    urlHtml: 'example.com/docs?tab=readme',
+    titleHtml: 'Example docs',
+    debug: {},
+  }
+  const secondResult = {
+    key: 'https://scry.test/issues',
+    url: 'https://scry.test/issues',
+    displayUrl: 'scry.test/issues',
+    title: 'Scry issues',
+    visitCount: 1,
+    visitsLabel: '1 visit',
+    lastVisitTime: 0,
+    lastVisitedLabel: 'now',
+    urlHtml: 'scry.test/issues',
+    titleHtml: 'Scry issues',
+    debug: {},
+  }
+
+  const rows = buildVisibleRows({ corpusResults: [firstResult, secondResult] })
+
+  assert.deepEqual(rows, [
+    { kind: 'result', key: 'result:https://example.com/docs', result: firstResult, copied: false },
+    { kind: 'result', key: 'result:https://scry.test/issues', result: secondResult, copied: false },
+  ])
+  assert.equal(rows[0].result, firstResult)
+  assert.equal(rows[1].result, secondResult)
+})
+
+test('buildVisibleRows pins a synthetic typed URL row before real result rows', () => {
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const matchingCorpusResult = {
+    key: 'https://typed.example/path',
+    url: 'https://typed.example/path',
+    displayUrl: 'typed.example/path',
+    title: 'Visited typed URL',
+    visitCount: 2,
+    visitsLabel: '2 visits',
+    lastVisitTime: 0,
+    lastVisitedLabel: 'now',
+    urlHtml: 'typed.example/path',
+    titleHtml: 'Visited typed URL',
+    debug: {},
+  }
+
+  const rows = buildVisibleRows({ corpusResults: [matchingCorpusResult], typedUrlCandidate })
+
+  assert.equal(rows.length, 2)
+  assert.deepEqual(rows[0], {
+    kind: 'open-typed-url',
+    key: 'open-typed-url:https://typed.example/path',
+    candidate: typedUrlCandidate,
+    copied: false,
+  })
+  assert.equal(rows[0].candidate, typedUrlCandidate)
+  assert.equal(rowOpenUrl(rows[0]), 'https://typed.example/path')
+  assert.equal(rowSelectionLearningKey(rows[0]), null)
+  assert.equal(rowEditableText(rows[0]), null)
+  assert.deepEqual(rows[1], {
+    kind: 'result',
+    key: 'result:https://typed.example/path',
+    result: matchingCorpusResult,
+    copied: false,
+  })
+  assert.equal(rows[1].result, matchingCorpusResult)
+})
+
+test('buildVisibleRows includes copied feedback visibility per row key', () => {
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResult = {
+    key: 'https://example.com/docs',
+    url: 'https://example.com/docs',
+    displayUrl: 'example.com/docs',
+    title: 'Example docs',
+    visitCount: 3,
+    visitsLabel: '3 visits',
+    lastVisitTime: 0,
+    lastVisitedLabel: 'now',
+    urlHtml: 'example.com/docs',
+    titleHtml: 'Example docs',
+    debug: {},
+  }
+
+  const typedCopiedRows = buildVisibleRows({
+    corpusResults: [corpusResult],
+    typedUrlCandidate,
+    copiedFeedback: { key: 'open-typed-url:https://typed.example/path', expiresAt: 9_999_999_999_999 },
+  })
+  assert.equal(typedCopiedRows[0].copied, true)
+  assert.equal(typedCopiedRows[1].copied, false)
+
+  const resultCopiedRows = buildVisibleRows({
+    corpusResults: [corpusResult],
+    typedUrlCandidate,
+    copiedFeedback: { key: 'result:https://example.com/docs', expiresAt: 9_999_999_999_999 },
+  })
+  assert.equal(resultCopiedRows[0].copied, false)
+  assert.equal(resultCopiedRows[1].copied, true)
+
+  const expiredRows = buildVisibleRows({
+    corpusResults: [corpusResult],
+    typedUrlCandidate,
+    copiedFeedback: { key: 'open-typed-url:https://typed.example/path', expiresAt: 1 },
+  })
+  assert.equal(expiredRows[0].copied, false)
+  assert.equal(expiredRows[1].copied, false)
+})
 
 test('rowOpenUrl returns the real corpus result URL', () => {
   const row = {
