@@ -558,11 +558,18 @@ export class ScryPanelApp {
 
   renderPagination() {
     if (!this.pagination || !this.pageStatus) return
+
+    const resultCount = Array.isArray(this.visibleRows) && this.visibleRows.length > 0
+      ? this.visibleRows.filter((row) => row?.kind === 'result').length
+      : this.results.length
     const pageCount = this.pageCount()
-    this.pagination.hidden = this.results.length === 0 || pageCount <= 1
-    this.pageStatus.textContent = this.results.length ? `Page ${this.pageIndex + 1} of ${pageCount}` : 'No results'
-    if (this.previousPageButton) this.previousPageButton.disabled = this.pageIndex === 0
-    if (this.nextPageButton) this.nextPageButton.disabled = this.pageIndex >= pageCount - 1
+    const rawPageIndex = Number.isFinite(this.pageIndex) ? Math.trunc(this.pageIndex) : 0
+    const pageIndex = Math.min(Math.max(0, rawPageIndex), pageCount - 1)
+
+    this.pagination.hidden = resultCount === 0 || pageCount <= 1
+    this.pageStatus.textContent = resultCount ? `Page ${pageIndex + 1} of ${pageCount}` : 'No results'
+    if (this.previousPageButton) this.previousPageButton.disabled = pageIndex === 0
+    if (this.nextPageButton) this.nextPageButton.disabled = pageIndex >= pageCount - 1
   }
 
   showMessage(text) {

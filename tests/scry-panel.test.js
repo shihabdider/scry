@@ -388,6 +388,85 @@ test('clampPageIndex normalizes invalid numeric page indexes consistently with p
   assert.equal(app.pageStart(), 0)
 })
 
+test('renderPagination hides controls when only a synthetic typed URL row is visible', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  app.results = []
+  app.visibleRows = buildVisibleRows({ corpusResults: [], typedUrlCandidate })
+
+  app.renderPagination()
+
+  assert.equal(app.pagination.hidden, true)
+  assert.equal(app.pageStatus.textContent, 'No results')
+  assert.equal(app.previousPageButton.disabled, true)
+  assert.equal(app.nextPageButton.disabled, true)
+})
+
+test('renderPagination hides controls for one real-result page when a typed URL row is pinned', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 6 }, (_, index) => searchResult(`pagination-boundary-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+
+  app.renderPagination()
+
+  assert.equal(app.pagination.hidden, true)
+  assert.equal(app.pageStatus.textContent, 'Page 1 of 1')
+  assert.equal(app.previousPageButton.disabled, true)
+  assert.equal(app.nextPageButton.disabled, true)
+})
+
+test('renderPagination derives labels and visibility from visible real corpus rows', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 7 }, (_, index) => searchResult(`visible-pagination-${index + 1}`))
+  app.results = []
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+  app.pageIndex = 1
+
+  app.renderPagination()
+
+  assert.equal(app.pagination.hidden, false)
+  assert.equal(app.pageStatus.textContent, 'Page 2 of 2')
+  assert.equal(app.previousPageButton.disabled, false)
+  assert.equal(app.nextPageButton.disabled, true)
+})
+
+test('renderPagination preserves normal multi-page result list controls', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const corpusResults = Array.from({ length: 7 }, (_, index) => searchResult(`normal-pagination-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults })
+
+  app.renderPagination()
+
+  assert.equal(app.pagination.hidden, false)
+  assert.equal(app.pageStatus.textContent, 'Page 1 of 2')
+  assert.equal(app.previousPageButton.disabled, true)
+  assert.equal(app.nextPageButton.disabled, false)
+})
+
 test('ensureSelectedVisible leaves the always-visible typed URL row on the current page', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
