@@ -366,11 +366,31 @@ export class ScryPanelApp {
   }
 
   movePage(delta) {
-    if (!this.results.length) return
+    const visibleRows = Array.isArray(this.visibleRows) && this.visibleRows.length > 0
+      ? this.visibleRows
+      : null
+    const hasVisibleResults = visibleRows?.some((row) => row?.kind === 'result') ?? false
+    if (!hasVisibleResults && !this.results.length) return
+
     const nextPage = Math.min(Math.max(0, this.pageIndex + delta), this.pageCount() - 1)
     if (nextPage === this.pageIndex) return
+
     this.pageIndex = nextPage
-    this.selectedIndex = this.pageStart()
+    const firstResultIndex = this.pageStart()
+    if (visibleRows) {
+      let resultIndex = 0
+      for (const [visibleIndex, row] of visibleRows.entries()) {
+        if (row?.kind !== 'result') continue
+        if (resultIndex === firstResultIndex) {
+          this.selectedIndex = visibleIndex
+          this.renderResults()
+          return
+        }
+        resultIndex++
+      }
+    }
+
+    this.selectedIndex = firstResultIndex
     this.renderResults()
   }
 

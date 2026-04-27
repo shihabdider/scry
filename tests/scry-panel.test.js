@@ -445,6 +445,95 @@ test('ensureSelectedVisible preserves legacy selected result pagination without 
   assert.equal(app.pageIndex, 0)
 })
 
+test('movePage selects the first visible real result when a typed URL row is pinned', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 13 }, (_, index) => searchResult(`paged-visible-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+  app.pageIndex = 0
+  app.selectedIndex = 0
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  app.movePage(1)
+
+  assert.equal(app.pageIndex, 1)
+  assert.equal(app.selectedIndex, 7)
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[7])
+  assert.equal(app.visibleRows[7].result, corpusResults[6])
+  assert.equal(renderCalls, 1)
+
+  app.movePage(-1)
+
+  assert.equal(app.pageIndex, 0)
+  assert.equal(app.selectedIndex, 1)
+  assert.equal(app.selectedVisibleRow(), app.visibleRows[1])
+  assert.equal(app.visibleRows[1].result, corpusResults[0])
+  assert.equal(renderCalls, 2)
+})
+
+test('movePage preserves legacy result indexes when no typed URL row is present', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const corpusResults = Array.from({ length: 13 }, (_, index) => searchResult(`legacy-page-move-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = []
+  app.pageIndex = 0
+  app.selectedIndex = 0
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  app.movePage(1)
+
+  assert.equal(app.pageIndex, 1)
+  assert.equal(app.selectedIndex, 6)
+  assert.deepEqual(app.selectedVisibleRow(), {
+    kind: 'result',
+    key: 'result:https://example.com/legacy-page-move-7',
+    result: corpusResults[6],
+    copied: false,
+  })
+  assert.equal(renderCalls, 1)
+})
+
+test('movePage ignores a pinned typed URL row when deciding whether another page exists', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 6 }, (_, index) => searchResult(`single-real-page-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+  app.pageIndex = 0
+  app.selectedIndex = 0
+  let renderCalls = 0
+  app.renderResults = () => {
+    renderCalls++
+  }
+
+  app.movePage(1)
+
+  assert.equal(app.pageIndex, 0)
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(renderCalls, 0)
+})
+
 test('moveSelection wraps through the full visible row union when a typed URL row is pinned', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
