@@ -320,7 +320,8 @@ export class ScryPanelApp {
   }
 
   clampPageIndex() {
-    this.pageIndex = Math.min(Math.max(0, this.pageIndex), this.pageCount() - 1)
+    const rawPageIndex = Number.isFinite(this.pageIndex) ? Math.trunc(this.pageIndex) : 0
+    this.pageIndex = Math.min(Math.max(0, rawPageIndex), this.pageCount() - 1)
   }
 
   ensureSelectedVisible() {

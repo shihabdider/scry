@@ -310,6 +310,72 @@ test('pageCount falls back to legacy results and keeps a one-page minimum', () =
   assert.equal(app.pageCount(), 1)
 })
 
+test('clampPageIndex clamps to real corpus result pages and ignores a pinned typed URL row', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const corpusResults = Array.from({ length: 7 }, (_, index) => searchResult(`clamped-page-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
+
+  app.pageIndex = 99
+  app.clampPageIndex()
+  assert.equal(app.pageIndex, 1)
+
+  app.pageIndex = -4
+  app.clampPageIndex()
+  assert.equal(app.pageIndex, 0)
+
+  app.results = corpusResults.slice(0, 6)
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results, typedUrlCandidate })
+  app.pageIndex = 1
+  app.clampPageIndex()
+  assert.equal(app.pageIndex, 0)
+})
+
+test('clampPageIndex preserves one-page minimum when only a synthetic typed URL row is visible', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  app.results = []
+  app.visibleRows = buildVisibleRows({ corpusResults: [], typedUrlCandidate })
+
+  app.pageIndex = 42
+  app.clampPageIndex()
+
+  assert.equal(app.pageIndex, 0)
+  assert.equal(app.pageCount(), 1)
+})
+
+test('clampPageIndex normalizes invalid numeric page indexes consistently with pageStart', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const corpusResults = Array.from({ length: 13 }, (_, index) => searchResult(`normalized-page-${index + 1}`))
+  app.results = corpusResults
+  app.visibleRows = buildVisibleRows({ corpusResults })
+
+  app.pageIndex = 1.75
+  app.clampPageIndex()
+  assert.equal(app.pageIndex, 1)
+  assert.equal(app.pageStart(), 6)
+
+  app.pageIndex = Number.NaN
+  app.clampPageIndex()
+  assert.equal(app.pageIndex, 0)
+  assert.equal(app.pageStart(), 0)
+})
+
 // Compatibility: callers can use selectedVisibleRow before updateVisibleRows is wired in.
 test('selectedVisibleRow wraps legacy result state when visible rows are not populated yet', () => {
   const document = createScryDocument()
