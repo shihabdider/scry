@@ -40,7 +40,12 @@ export function createModeCache() {
 }
 
 export function cycleSearchMode(currentMode, { direction = 1 } = {}) {
-  throw new Error('not implemented: cycleSearchMode')
+  const currentIndex = SEARCH_MODES.indexOf(currentMode)
+  if (currentIndex === -1) return DEFAULT_SEARCH_MODE
+
+  const step = direction < 0 ? -1 : 1
+  const nextIndex = (currentIndex + step + SEARCH_MODES.length) % SEARCH_MODES.length
+  return SEARCH_MODES[nextIndex]
 }
 
 export function modeIndicatorModel(mode, state) {

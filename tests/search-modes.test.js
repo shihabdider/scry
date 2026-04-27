@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createModeCache } from '../src/core/search-modes.js'
+import { createModeCache, cycleSearchMode } from '../src/core/search-modes.js'
 
 test('createModeCache initializes one idle state for each search mode', () => {
   const cache = createModeCache()
@@ -37,4 +37,22 @@ test('createModeCache returns independent mutable popup-session cache slots', ()
     deep: { mode: 'deep', status: 'idle', index: null, error: null, loadedAt: null },
     closed: { mode: 'closed', status: 'idle', index: null, error: null, loadedAt: null },
   })
+})
+
+test('cycleSearchMode cycles forward through recent, deep, closed', () => {
+  assert.equal(cycleSearchMode('recent'), 'deep')
+  assert.equal(cycleSearchMode('deep'), 'closed')
+  assert.equal(cycleSearchMode('closed'), 'recent')
+})
+
+test('cycleSearchMode cycles backward through recent, closed, deep', () => {
+  assert.equal(cycleSearchMode('recent', { direction: -1 }), 'closed')
+  assert.equal(cycleSearchMode('closed', { direction: -1 }), 'deep')
+  assert.equal(cycleSearchMode('deep', { direction: -1 }), 'recent')
+})
+
+test('cycleSearchMode defaults invalid current modes to recent', () => {
+  assert.equal(cycleSearchMode('archived'), 'recent')
+  assert.equal(cycleSearchMode(undefined), 'recent')
+  assert.equal(cycleSearchMode(null, { direction: -1 }), 'recent')
 })
