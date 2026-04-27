@@ -2,7 +2,7 @@
 
 phase: 2
 layer: 2
-updated: 2026-04-27T20:02:02.754Z
+updated: 2026-04-27T20:05:29.779Z
 
 ## Wishes
 
@@ -37,7 +37,7 @@ updated: 2026-04-27T20:02:02.754Z
 | recordSelection | src/core/selection-learning.js | 2 | pass | 165.9s |
 | updateVisibleRows | src/panel/app.js | 2 | pass | 109.8s |
 | copySelectedRow | src/panel/app.js | 2 | pass | 260.6s |
-| changeSelectedRowToSearch | src/panel/app.js | 2 | pending | - |
+| changeSelectedRowToSearch | src/panel/app.js | 2 | pass | 200.8s |
 | switchSearchMode | src/panel/app.js | 2 | pending | - |
 | loadHistory | src/panel/app.js | 2 | pending | - |
 | openSelected | src/panel/app.js | 2 | pending | - |
@@ -148,3 +148,6 @@ updated: 2026-04-27T20:02:02.754Z
 - 15:57:40 copySelectedRow: running
 - 16:02:01 copySelectedRow: pass (260.6s, $1.5330)
 - 16:02:02 implementer_post verification for copySelectedRow: pass
+- 16:02:07 changeSelectedRowToSearch: running
+- 16:05:28 changeSelectedRowToSearch: pass (200.8s, $0.8007)
+- 16:05:29 implementer_post verification for changeSelectedRowToSearch: pass

@@ -1,5 +1,5 @@
 import { parseQuery } from '../core/query.js'
-import { buildVisibleRows, rowOpenUrl } from '../core/rows.js'
+import { buildVisibleRows, rowEditableText, rowOpenUrl } from '../core/rows.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
@@ -259,7 +259,12 @@ export class ScryPanelApp {
   }
 
   changeSelectedRowToSearch() {
-    throw new Error('not implemented: changeSelectedRowToSearch')
+    const editableText = rowEditableText(this.selectedVisibleRow())
+    if (!editableText) return
+
+    this.input.value = editableText
+    this.focusSearch()
+    this.updateResults()
   }
 
   updateResults() {

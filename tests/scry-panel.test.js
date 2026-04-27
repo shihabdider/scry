@@ -386,6 +386,98 @@ test('copySelectedRow is a no-op when no selected row has a copyable URL', async
   assert.equal(renderCalls, 0)
 })
 
+test('changeSelectedRowToSearch edits the search box to the selected real result display URL and refreshes immediately', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  const firstResult = searchResult('first')
+  const docsResult = {
+    ...searchResult('docs'),
+    url: 'https://example.com/docs?tab=readme#install',
+    displayUrl: 'example.com/docs?tab=readme',
+    urlHtml: 'example.com/docs?tab=readme',
+  }
+  app.results = [firstResult, docsResult]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 1
+  input.value = 'docs install'
+  input.setSelectionRange(0, 0)
+  app.focusMode = 'results'
+  let refreshCalls = 0
+  let refreshedQuery = null
+  app.updateResults = () => {
+    refreshCalls++
+    refreshedQuery = input.value
+  }
+
+  app.changeSelectedRowToSearch()
+
+  assert.equal(input.value, 'example.com/docs?tab=readme')
+  assert.equal(refreshCalls, 1)
+  assert.equal(refreshedQuery, 'example.com/docs?tab=readme')
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
+  assert.equal(input.selectionStart, input.value.length)
+  assert.equal(input.selectionEnd, input.value.length)
+})
+
+test('changeSelectedRowToSearch is a no-op for the synthetic typed URL row', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  const activeElement = document.createElement('button')
+  input.value = 'typed.example/path#fragment'
+  input.setSelectionRange(2, 4)
+  app.results = [searchResult('visited')]
+  app.updateVisibleRows()
+  app.selectedIndex = 0
+  app.focusMode = 'results'
+  document.activeElement = activeElement
+  let refreshCalls = 0
+  app.updateResults = () => {
+    refreshCalls++
+  }
+
+  app.changeSelectedRowToSearch()
+
+  assert.equal(input.value, 'typed.example/path#fragment')
+  assert.equal(refreshCalls, 0)
+  assert.equal(app.focusMode, 'results')
+  assert.equal(document.activeElement, activeElement)
+  assert.equal(input.selectionStart, 2)
+  assert.equal(input.selectionEnd, 4)
+})
+
+test('changeSelectedRowToSearch is a no-op when no visible row is selected', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  const activeElement = document.createElement('button')
+  input.value = 'keep this query'
+  input.setSelectionRange(1, 3)
+  app.results = [searchResult('only')]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 42
+  app.focusMode = 'results'
+  document.activeElement = activeElement
+  let refreshCalls = 0
+  app.updateResults = () => {
+    refreshCalls++
+  }
+
+  app.changeSelectedRowToSearch()
+
+  assert.equal(input.value, 'keep this query')
+  assert.equal(refreshCalls, 0)
+  assert.equal(app.focusMode, 'results')
+  assert.equal(document.activeElement, activeElement)
+  assert.equal(input.selectionStart, 1)
+  assert.equal(input.selectionEnd, 3)
+})
+
 test('mode switch reset returns selection and pagination to the top while keeping the query', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
