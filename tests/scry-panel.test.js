@@ -97,6 +97,24 @@ function appendFocusableRow(resultsList, dataset = {}) {
   return button
 }
 
+function createTimerApi() {
+  const timers = []
+  return {
+    timers,
+    setTimeout(callback, delay) {
+      const timer = { callback, delay, cleared: false, unref() {} }
+      timers.push(timer)
+      return timer
+    },
+    clearTimeout(timer) {
+      timer.cleared = true
+    },
+    run(timer) {
+      if (!timer.cleared) timer.callback()
+    },
+  }
+}
+
 test('updateVisibleRows pins a typed URL candidate above corpus results and selection follows visible row order', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
@@ -981,6 +999,59 @@ test('updateResults searches the active cached mode index and rebuilds visible r
   assert.equal(app.visibleRows[0].kind, 'result')
   assert.equal(app.visibleRows[0].result, app.results[0])
   assert.equal(renderCalls, 1)
+})
+
+test('input events debounce result refresh while resetting navigation immediately', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const timerApi = createTimerApi()
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { ...timerApi, blur() {} } })
+  const input = document.querySelector('#search-input')
+  app.selectedIndex = 4
+  app.pageIndex = 2
+  let refreshCalls = 0
+  app.updateResults = () => {
+    refreshCalls++
+  }
+  app.bindEvents()
+
+  input.value = 'docs'
+  dispatchInput(input)
+  input.value = 'docs install'
+  dispatchInput(input)
+
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
+  assert.equal(refreshCalls, 0)
+  assert.equal(timerApi.timers.length, 2)
+  assert.equal(timerApi.timers[0].cleared, true)
+
+  timerApi.run(timerApi.timers[0])
+  assert.equal(refreshCalls, 0)
+
+  timerApi.run(timerApi.timers[1])
+  assert.equal(refreshCalls, 1)
+})
+
+test('search input Enter flushes a pending URL refresh before opening the typed URL row', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const timerApi = createTimerApi()
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { ...timerApi, blur() {} } })
+  const input = document.querySelector('#search-input')
+  app.bindEvents()
+
+  input.value = 'typed.example/path#fragment'
+  dispatchInput(input)
+  const event = dispatchKeydown(input, 'Enter')
+  await settle()
+
+  assert.equal(event.defaultPrevented, true)
+  assert.equal(timerApi.timers.length, 1)
+  assert.equal(timerApi.timers[0].cleared, true)
+  assert.deepEqual(chromeApi.tabs.opened, [
+    { url: 'https://typed.example/path', active: true },
+  ])
 })
 
 test('updateResults safely renders an active mode with no index and keeps URL-like input as a typed row', () => {
@@ -2343,6 +2414,23 @@ test('focusSearch enters search mode, focuses the input, and places the cursor a
   assert.equal(document.activeElement, input)
   assert.equal(input.selectionStart, input.value.length)
   assert.equal(input.selectionEnd, input.value.length)
+})
+
+test('focusSearch retries do not keep forcing the cursor to the end once the input is focused', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  input.value = 'example.com/docs?tab=readme'
+  app.focusMode = 'results'
+
+  app.focusSearch()
+  input.setSelectionRange(7, 7)
+  await wait(80)
+
+  assert.equal(document.activeElement, input)
+  assert.equal(input.selectionStart, 7)
+  assert.equal(input.selectionEnd, 7)
 })
 
 test('focusSearch is safe when cursor placement is unavailable', () => {

@@ -12,6 +12,7 @@ import { writeClipboardText } from '../platform/clipboard.js'
 
 const SEARCH_LIMIT = 100
 const RESULTS_PER_PAGE = 6
+const INPUT_UPDATE_DEBOUNCE_MS = 80
 const FOCUS_RETRY_DELAYS_MS = [0, 50, 150, 300, 600, 1000]
 const COPY_FEEDBACK_DURATION_MS = 1_200
 
@@ -34,6 +35,7 @@ export class ScryPanelApp {
     this.visibleRows = []
     this.copiedFeedback = null
     this.focusRequestId = 0
+    this.inputResultsUpdateRequest = null
     this.selectionData = undefined
 
     this.input = document.querySelector('#search-input')
@@ -63,24 +65,29 @@ export class ScryPanelApp {
     this.input.addEventListener('input', () => {
       this.selectedIndex = 0
       this.pageIndex = 0
-      this.updateResults()
+      this.scheduleInputResultsUpdate()
     })
 
     this.input.addEventListener('keydown', (event) => {
       if (event.key === 'Tab') {
         event.preventDefault()
+        this.flushPendingInputResultsUpdate()
         void this.switchSearchMode(cycleSearchMode(this.searchMode, { direction: event.shiftKey ? -1 : 1 }))
       } else if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
         event.preventDefault()
+        this.flushPendingInputResultsUpdate()
         this.moveSelection(1)
       } else if (event.key === 'ArrowUp' || (event.ctrlKey && event.key.toLowerCase() === 'p')) {
         event.preventDefault()
+        this.flushPendingInputResultsUpdate()
         this.moveSelection(-1)
       } else if (event.key === 'Enter') {
         event.preventDefault()
+        this.flushPendingInputResultsUpdate()
         void this.openSelected({ newTab: true })
       } else if (event.key === 'Escape') {
         event.preventDefault()
+        this.flushPendingInputResultsUpdate()
         this.focusResults()
       }
     })
@@ -125,6 +132,7 @@ export class ScryPanelApp {
   }
 
   async activateSearchMode(mode) {
+    this.cancelPendingInputResultsUpdate()
     const ready = this.ensureSearchModeReady(mode)
     this.renderModeIndicator()
     const state = await ready
@@ -281,12 +289,49 @@ export class ScryPanelApp {
     const editableText = rowEditableText(this.selectedVisibleRow())
     if (!editableText) return
 
+    this.cancelPendingInputResultsUpdate()
     this.input.value = editableText
     this.focusSearch()
     this.updateResults()
   }
 
+  scheduleInputResultsUpdate() {
+    this.cancelPendingInputResultsUpdate()
+
+    const timerApi = typeof this.windowApi?.setTimeout === 'function' ? this.windowApi : globalThis
+    const request = { timer: null, timerApi }
+    this.inputResultsUpdateRequest = request
+
+    request.timer = timerApi.setTimeout.call(timerApi, () => {
+      if (this.inputResultsUpdateRequest !== request) return
+
+      this.inputResultsUpdateRequest = null
+      this.updateResults()
+    }, INPUT_UPDATE_DEBOUNCE_MS)
+    request.timer?.unref?.()
+  }
+
+  cancelPendingInputResultsUpdate() {
+    const request = this.inputResultsUpdateRequest
+    if (!request) return false
+
+    this.inputResultsUpdateRequest = null
+    const clearTimerApi = typeof request.timerApi?.clearTimeout === 'function' ? request.timerApi : globalThis
+    if (request.timer && typeof clearTimerApi?.clearTimeout === 'function') {
+      clearTimerApi.clearTimeout.call(clearTimerApi, request.timer)
+    }
+    return true
+  }
+
+  flushPendingInputResultsUpdate() {
+    if (!this.cancelPendingInputResultsUpdate()) return false
+
+    this.updateResults()
+    return true
+  }
+
   updateResults() {
+    this.cancelPendingInputResultsUpdate()
     let currentIndex = this.index
     if (this.modeCache) {
       const activeModeState = this.modeCache[this.searchMode] ?? null
@@ -442,8 +487,8 @@ export class ScryPanelApp {
   focusSearch() {
     this.focusMode = 'search'
     const requestId = ++this.focusRequestId
-    const focusInputAtEnd = () => {
-      this.input.focus({ preventScroll: true })
+    const inputIsFocused = () => this.document.activeElement === this.input
+    const placeCursorAtEnd = () => {
       if (typeof this.input.setSelectionRange !== 'function') return
 
       const cursorPosition = this.input.value.length
@@ -453,11 +498,16 @@ export class ScryPanelApp {
         // Some input-like elements do not support text selection.
       }
     }
+    const focusInputAtEnd = () => {
+      this.input.focus({ preventScroll: true })
+      placeCursorAtEnd()
+    }
 
     focusInputAtEnd()
     for (const delay of FOCUS_RETRY_DELAYS_MS) {
       const timer = setTimeout(() => {
         if (this.focusMode !== 'search' || this.focusRequestId !== requestId) return
+        if (inputIsFocused()) return
         focusInputAtEnd()
       }, delay)
       timer.unref?.()
@@ -495,6 +545,7 @@ export class ScryPanelApp {
   }
 
   leavePanelFocus() {
+    this.cancelPendingInputResultsUpdate()
     this.cancelSearchFocusRequests()
     this.focusMode = 'blurred'
     this.document.activeElement?.blur?.()
