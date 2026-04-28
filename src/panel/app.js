@@ -78,7 +78,7 @@ export class ScryPanelApp {
         this.moveSelection(-1)
       } else if (event.key === 'Enter') {
         event.preventDefault()
-        void this.openSelected({ newTab: event.metaKey || event.ctrlKey })
+        void this.openSelected({ newTab: true })
       } else if (event.key === 'Escape') {
         event.preventDefault()
         this.focusResults()
@@ -435,7 +435,7 @@ export class ScryPanelApp {
       this.movePage(-1)
     } else if (event.key === 'Enter') {
       event.preventDefault()
-      void this.openSelected({ newTab: event.metaKey || event.ctrlKey })
+      void this.openSelected({ newTab: true })
     }
   }
 

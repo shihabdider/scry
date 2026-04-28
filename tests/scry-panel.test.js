@@ -2486,6 +2486,32 @@ test('result navigation shortcuts are ignored outside result navigation mode', (
   assert.equal(document.activeElement, selectedButton)
 })
 
+test('unmodified Enter in the search input opens the selected result in a new active tab and closes the command palette', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2)])
+  const windowApi = {
+    closeCalls: 0,
+    close() {
+      this.closeCalls++
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi })
+
+  await app.start()
+  const input = document.querySelector('#search-input')
+  assert.equal(document.activeElement, input)
+  const selectedUrl = app.selectedVisibleRow().result.url
+
+  dispatchKeydown(input, 'Enter')
+  await settle()
+
+  assert.deepEqual(chromeApi.tabs.opened, [
+    { url: selectedUrl, active: true },
+  ])
+  assert.deepEqual(chromeApi.tabs.updated, [])
+  assert.equal(windowApi.closeCalls, 1)
+})
+
 test('Escape moves from search entry to result navigation, then keeps the selected result actionable', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2)])
@@ -2516,11 +2542,15 @@ test('Escape moves from search entry to result navigation, then keeps the select
   assert.equal(document.activeElement?.dataset.resultIndex, '0')
   assert.equal(windowApi.blurCalls, 0)
   assert.equal(windowApi.closeCalls, 0)
+  const selectedUrl = app.selectedVisibleRow().result.url
 
   dispatchKeydown(document.activeElement, 'Enter')
   await settle()
 
-  assert.equal(chromeApi.tabs.updated.length, 1)
+  assert.deepEqual(chromeApi.tabs.opened, [
+    { url: selectedUrl, active: true },
+  ])
+  assert.deepEqual(chromeApi.tabs.updated, [])
   assert.equal(windowApi.closeCalls, 1)
 })
 
@@ -2551,7 +2581,7 @@ test('results are paged and h/l move between pages in result navigation mode', a
   assert.equal(results.children[0].children[0].dataset.resultIndex, firstPageFirstIndex)
 })
 
-test('j/k navigate results and Enter opens the selected result then closes the command palette', async () => {
+test('j/k navigate results and unmodified Enter opens the selected result in a new active tab then closes the command palette', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
   const windowApi = {
@@ -2573,11 +2603,15 @@ test('j/k navigate results and Enter opens the selected result then closes the c
 
   dispatchKeydown(document.activeElement, 'k')
   assert.equal(document.activeElement?.dataset.resultIndex, '0')
+  const selectedUrl = app.selectedVisibleRow().result.url
 
   dispatchKeydown(document.activeElement, 'Enter')
   await settle()
 
-  assert.equal(chromeApi.tabs.updated.length, 1)
+  assert.deepEqual(chromeApi.tabs.opened, [
+    { url: selectedUrl, active: true },
+  ])
+  assert.deepEqual(chromeApi.tabs.updated, [])
   assert.equal(document.activeElement, null)
   assert.equal(windowApi.closeCalls, 1)
 })
