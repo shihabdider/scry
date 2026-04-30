@@ -30,8 +30,8 @@ test('popup exposes explicit mode controls without a visible legacy deep-search 
   assert.doesNotMatch(modeIndicator, /\bhidden\b/i)
   assert.match(modeIndicator, /\bdata-mode="recent"/i)
   assert.match(modeIndicator, /\bdata-status="idle"/i)
-  assert.match(modeIndicator, /\baria-label="mode: recent; Recent history not loaded"/i)
-  assert.match(html, />mode: recent<\/button>/i)
+  assert.match(modeIndicator, /\baria-label="\[recent\]; Recent history not loaded"/i)
+  assert.match(html, />\[recent\]<\/button>/i)
 
   assert.match(deepSearchButton, /^<button\b/i)
   assert.match(deepSearchButton, /\bhidden\b/i)

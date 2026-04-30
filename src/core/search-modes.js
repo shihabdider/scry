@@ -29,7 +29,8 @@ export const DEFAULT_SEARCH_MODE = 'recent'
  * @property {SearchMode} mode Active mode.
  * @property {ModeLoadStatus} status Active mode load status.
  * @property {boolean} clickable Whether clicking should cycle to the next mode.
- * @property {string} [modeSwitchHint] Compact adjacent hint for changing modes, for example "Tab/Shift+Tab".
+ * @property {string} modeSwitchHint Compact adjacent hint for changing modes, for example "Tab/Shift+Tab".
+ * @property {string} statusText Accessible/status text for the active mode.
  */
 
 /**
@@ -94,10 +95,11 @@ export function modeIndicatorModel(mode, state) {
   }[activeMode]
 
   return {
-    label: `mode: ${activeMode}`,
+    label: `[${activeMode}]`,
     mode: activeMode,
     status,
     clickable: true,
+    modeSwitchHint: 'Tab/Shift+Tab',
     statusText: text[status] ?? text.idle,
   }
 }

@@ -79,6 +79,8 @@ Use data-definition-driven stubbing because this is JavaScript and the relevant 
 
 - 2026-04-30T04:48:22Z — user chose to start fresh and implement issues `0021`, `0024`, `0025`, `0026`, and `0027`.
 - 2026-04-30T04:48:22Z — user confirmed the Phase 0 understanding with `go`.
+- 2026-04-30T04:55:42Z — stubber completed 11 wishes across 4 layers and flagged expected assertion changes for new mode order, Escape-close behavior, and integrated/no-footer UI hints.
+- 2026-04-30T04:56:00Z — user approved proceeding to Phase 2 with the flagged assertion changes.
 
 ### Look Back
 

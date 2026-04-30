@@ -636,14 +636,14 @@ test('renderLoading marks the mode indicator as loading for the active mode', ()
   app.renderLoading()
 
   assert.equal(modeIndicator.hidden, false)
-  assert.equal(modeIndicator.textContent, 'mode: closed')
+  assert.equal(modeIndicator.textContent, '[closed]')
   assert.equal(modeIndicator.dataset.mode, 'closed')
   assert.equal(modeIndicator.dataset.status, 'loading')
   assert.equal(modeIndicator.dataset.clickable, 'true')
   assert.equal(modeIndicator.disabled, false)
   assert.equal(modeIndicator.title, 'Loading recently closed URLs…')
   assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
-  assert.equal(modeIndicator.getAttribute('aria-label'), 'mode: closed; Loading recently closed URLs…')
+  assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; Loading recently closed URLs…')
   assert.equal(app.status.textContent, 'Loading recently closed URLs…')
 })
 
@@ -2028,11 +2028,23 @@ test('Tab and Shift+Tab in the search input cycle modes while preserving the que
   const input = document.querySelector('#search-input')
   input.value = 'issue 2'
   const historyCalls = []
+  const recentlyClosedCalls = []
   const chromeApi = {
     history: {
       async search(query) {
         historyCalls.push(query)
-        return [historyEntry(query.startTime === 0 ? 2 : 1)]
+        return [historyEntry(1)]
+      },
+    },
+    sessions: {
+      async getRecentlyClosed() {
+        recentlyClosedCalls.push('getRecentlyClosed')
+        return [
+          {
+            lastModified: now / 1_000 - 60,
+            tab: { url: 'https://closed.example/issue-2', title: 'Closed issue 2' },
+          },
+        ]
       },
     },
   }
@@ -2046,12 +2058,13 @@ test('Tab and Shift+Tab in the search input cycle modes while preserving the que
 
   assert.equal(forwardEvent.defaultPrevented, true)
   assert.equal(input.value, 'issue 2')
-  assert.equal(app.searchMode, 'deep')
-  assert.equal(app.deep, true)
+  assert.equal(app.searchMode, 'closed')
+  assert.equal(app.deep, false)
   assert.equal(app.selectedIndex, 0)
   assert.equal(app.pageIndex, 0)
-  assert.deepEqual(historyCalls, [{ text: '', startTime: 0, maxResults: 100_000 }])
-  assert.equal(modeIndicator.dataset.mode, 'deep')
+  assert.deepEqual(historyCalls, [])
+  assert.deepEqual(recentlyClosedCalls, ['getRecentlyClosed'])
+  assert.equal(modeIndicator.dataset.mode, 'closed')
   assert.equal(modeIndicator.dataset.status, 'ready')
 
   input.value = 'issue 1'
@@ -2068,9 +2081,9 @@ test('Tab and Shift+Tab in the search input cycle modes while preserving the que
   assert.equal(app.selectedIndex, 0)
   assert.equal(app.pageIndex, 0)
   assert.deepEqual(historyCalls, [
-    { text: '', startTime: 0, maxResults: 100_000 },
     { text: '', startTime: now - 90 * 24 * 60 * 60 * 1_000, maxResults: 10_000 },
   ])
+  assert.deepEqual(recentlyClosedCalls, ['getRecentlyClosed'])
   assert.equal(modeIndicator.dataset.mode, 'recent')
   assert.equal(modeIndicator.dataset.status, 'ready')
 })
@@ -2085,11 +2098,23 @@ test('clicking the mode indicator cycles to the next mode instead of relying on 
   const deepSearchButton = document.querySelector('#deep-search-button')
   deepSearchButton.hidden = false
   const historyCalls = []
+  const recentlyClosedCalls = []
   const chromeApi = {
     history: {
       async search(query) {
         historyCalls.push(query)
-        return [historyEntry(query.startTime === 0 ? 2 : 1)]
+        return [historyEntry(1)]
+      },
+    },
+    sessions: {
+      async getRecentlyClosed() {
+        recentlyClosedCalls.push('getRecentlyClosed')
+        return [
+          {
+            lastModified: now / 1_000 - 60,
+            tab: { url: 'https://closed.example/issue-2', title: 'Closed issue 2' },
+          },
+        ]
       },
     },
   }
@@ -2103,12 +2128,14 @@ test('clicking the mode indicator cycles to the next mode instead of relying on 
   await settle()
 
   assert.equal(input.value, 'issue 2')
-  assert.equal(app.searchMode, 'deep')
+  assert.equal(app.searchMode, 'closed')
+  assert.equal(app.deep, false)
   assert.equal(app.selectedIndex, 0)
   assert.equal(app.pageIndex, 0)
-  assert.deepEqual(historyCalls, [{ text: '', startTime: 0, maxResults: 100_000 }])
-  assert.equal(modeIndicator.textContent, 'mode: deep')
-  assert.equal(modeIndicator.dataset.mode, 'deep')
+  assert.deepEqual(historyCalls, [])
+  assert.deepEqual(recentlyClosedCalls, ['getRecentlyClosed'])
+  assert.equal(modeIndicator.textContent, '[closed]')
+  assert.equal(modeIndicator.dataset.mode, 'closed')
   assert.equal(modeIndicator.dataset.status, 'ready')
   assert.equal(deepSearchButton.hidden, true)
 })
@@ -2240,13 +2267,13 @@ test('renderModeIndicator renders the active mode label/status in dedicated popu
   app.renderModeIndicator()
 
   assert.equal(modeIndicator.hidden, false)
-  assert.equal(modeIndicator.textContent, 'mode: deep')
+  assert.equal(modeIndicator.textContent, '[deep]')
   assert.equal(modeIndicator.dataset.mode, 'deep')
   assert.equal(modeIndicator.dataset.status, 'ready')
   assert.equal(modeIndicator.dataset.clickable, 'true')
   assert.equal(modeIndicator.disabled, false)
   assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
-  assert.equal(modeIndicator.getAttribute('aria-label'), 'mode: deep; 2 deep history URLs')
+  assert.equal(modeIndicator.getAttribute('aria-label'), '[deep]; 2 deep history URLs')
   assert.equal(modeIndicator.title, '2 deep history URLs')
   assert.equal(document.querySelector('#status').textContent, '2 deep history URLs')
   assert.equal(deepSearchButton.hidden, true)
@@ -2285,7 +2312,7 @@ test('renderModeIndicator falls back to the active mode idle status before cache
 
   app.renderModeIndicator()
 
-  assert.equal(modeIndicator.textContent, 'mode: recent')
+  assert.equal(modeIndicator.textContent, '[recent]')
   assert.equal(modeIndicator.dataset.status, 'idle')
   assert.equal(document.querySelector('#status').textContent, 'Recent history not loaded')
 })
@@ -2340,7 +2367,7 @@ test('start initializes recent mode cache and renders the mode indicator before 
   assert.equal(app.modeCache.deep.status, 'idle')
   assert.equal(app.modeCache.closed.status, 'idle')
   assert.equal(modeIndicator.hidden, false)
-  assert.equal(modeIndicator.textContent, 'mode: recent')
+  assert.equal(modeIndicator.textContent, '[recent]')
   assert.equal(modeIndicator.dataset.mode, 'recent')
   assert.equal(modeIndicator.dataset.status, 'idle')
   assert.equal(document.querySelector('#status').textContent, 'Recent history not loaded')
