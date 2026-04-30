@@ -1,9 +1,9 @@
 import { parseQuery } from '../core/query.js'
-import { buildVisibleRows, rowEditableText, rowOpenUrl, rowSelectionLearningKey } from '../core/rows.js'
+import { buildVisibleRows, rowEditableText, rowOpenUrl, rowSelectionLearningKey, selectedRowActionHints } from '../core/rows.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
-import { createModeCache, cycleSearchMode, modeIndicatorModel } from '../core/search-modes.js'
+import { createModeCache, cycleSearchMode, modeIndicatorModel, searchHeaderModel } from '../core/search-modes.js'
 import { fetchHistory } from '../platform/history-provider.js'
 import { loadSelectionData, saveSelectionData } from '../platform/selection-store.js'
 import { fetchRecentlyClosed, flattenClosedSessions } from '../platform/sessions-provider.js'
@@ -245,18 +245,59 @@ export class ScryPanelApp {
   }
 
   renderModeIndicator() {
-    const state = this.modeCache?.[this.searchMode] ?? null
-    const model = modeIndicatorModel(this.searchMode, state)
+    const mode = this.activeSearchMode()
+    const state = this.modeCache?.[mode] ?? null
+    const model = modeIndicatorModel(mode, state)
 
-    if (this.status) this.setStatus(model.statusText)
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
 
-    this.renderModeIndicatorElement(model)
+    this.renderSearchHeader()
     return model
   }
 
   renderSearchHeader() {
-    throw new Error('not implemented: renderSearchHeader')
+    const mode = this.activeSearchMode()
+    const state = this.modeCache?.[mode] ?? null
+    const model = searchHeaderModel(mode, state, { realResultCount: this.visibleResultCount() })
+
+    const before = this.document.querySelector('#search-header-before')
+    if (before) before.textContent = model.beforeMode
+
+    const after = this.document.querySelector('#search-header-after')
+    if (after) after.textContent = model.afterMode
+
+    const hint = this.document.querySelector('#mode-switch-hint')
+    if (hint) {
+      hint.textContent = model.modeSwitchHint
+      hint.hidden = !model.modeSwitchHint
+      hint.setAttribute('aria-hidden', 'true')
+    }
+
+    const resultCount = this.document.querySelector('#result-count')
+    if (resultCount) {
+      resultCount.textContent = model.realResultCountLabel
+      resultCount.setAttribute('aria-label', model.realResultCountLabel)
+    }
+
+    const searchHeader = this.document.querySelector('#search-header')
+    if (searchHeader) {
+      searchHeader.hidden = false
+      searchHeader.setAttribute('aria-label', `${model.beforeMode} ${model.mode} ${model.afterMode}; ${model.realResultCountLabel}`)
+    }
+
+    this.input?.setAttribute('aria-label', `${model.beforeMode} ${model.mode} ${model.afterMode}`)
+    if (this.status) this.setStatus(model.statusText)
+
+    this.renderModeIndicatorElement({
+      label: model.modeBadgeLabel,
+      mode: model.mode,
+      status: model.status,
+      clickable: true,
+      modeSwitchHint: model.modeSwitchHint,
+      statusText: model.statusText,
+    })
+
+    return model
   }
 
   renderModeIndicatorElement(model) {
@@ -647,7 +688,6 @@ export class ScryPanelApp {
 
     this.results = []
     this.visibleRows = []
-    if (this.status) this.setStatus(model.statusText)
     if (this.resultsList) this.resultsList.innerHTML = ''
     if (this.message) this.showMessage(messages[model.mode])
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
@@ -656,7 +696,31 @@ export class ScryPanelApp {
     if (this.previousPageButton) this.previousPageButton.disabled = true
     if (this.nextPageButton) this.nextPageButton.disabled = true
 
-    this.renderModeIndicatorElement(model)
+    const originalModeCache = this.modeCache
+    const hadOriginalModeState = Boolean(originalModeCache && Object.prototype.hasOwnProperty.call(originalModeCache, mode))
+    const originalModeState = originalModeCache?.[mode]
+    const needsTemporaryLoadingState = originalModeState?.status !== 'loading'
+
+    if (needsTemporaryLoadingState) {
+      this.modeCache ??= createModeCache()
+      this.modeCache[mode] = loadingState
+    }
+
+    try {
+      this.renderSearchHeader()
+    } finally {
+      if (needsTemporaryLoadingState) {
+        if (originalModeCache) {
+          if (hadOriginalModeState) {
+            originalModeCache[mode] = originalModeState
+          } else {
+            delete originalModeCache[mode]
+          }
+        }
+        this.modeCache = originalModeCache
+      }
+    }
+
     return model
   }
 
@@ -693,7 +757,25 @@ export class ScryPanelApp {
       ? '<span class="result-copied-feedback">copied</span>'
       : ''
 
-    const realResultHtml = (row) => {
+    const actionHintsHtml = (row, selected) => {
+      const hints = selectedRowActionHints(row, { selected })
+      if (hints.length === 0) return ''
+
+      return hints.map((hint) => {
+        const action = escapeHtml(hint.action)
+        const key = escapeHtml(hint.key)
+        const label = escapeHtml(hint.label)
+        return `<span class="result-action-hint" data-action="${action}">${key} ${label}</span>`
+      }).join(' · ')
+    }
+
+    const metaHtml = (meta, row, selected) => {
+      const escapedMeta = escapeHtml(meta)
+      const hints = actionHintsHtml(row, selected)
+      return [escapedMeta, hints].filter(Boolean).join(' · ')
+    }
+
+    const realResultHtml = (row, selected = false) => {
       const result = row?.result ?? {}
       const meta = [result.visitsLabel, result.lastVisitedLabel]
         .filter((part) => typeof part === 'string' && part)
@@ -703,11 +785,11 @@ export class ScryPanelApp {
         ${copiedMarker(row)}
         <span class="result-url">${result.urlHtml ?? escapeHtml(result.displayUrl ?? result.url)}</span>
         <span class="result-title">${result.titleHtml ?? escapeHtml(result.title)}</span>
-        <span class="result-meta">${escapeHtml(meta)}</span>
+        <span class="result-meta">${metaHtml(meta, row, selected)}</span>
       `
     }
 
-    const typedUrlHtml = (row) => {
+    const typedUrlHtml = (row, selected = false) => {
       const candidate = row?.candidate ?? {}
       const displayInput = candidate.displayInput ?? candidate.normalizedUrl ?? ''
       const normalizedUrl = candidate.normalizedUrl ?? displayInput
@@ -716,7 +798,7 @@ export class ScryPanelApp {
         ${copiedMarker(row)}
         <span class="result-url open-typed-url-url">${escapeHtml(displayInput)}</span>
         <span class="result-title open-typed-url-title">Open typed URL</span>
-        <span class="result-meta open-typed-url-meta">${escapeHtml(normalizedUrl)}</span>
+        <span class="result-meta open-typed-url-meta">${metaHtml(normalizedUrl, row, selected)}</span>
       `
     }
 
@@ -788,7 +870,7 @@ export class ScryPanelApp {
       button.setAttribute('aria-label', row.kind === 'open-typed-url'
         ? `Open typed URL ${row.candidate?.normalizedUrl ?? ''}`.trim()
         : `${row.result?.displayUrl ?? row.result?.url ?? row.result?.title ?? 'History result'}`)
-      button.innerHTML = row.kind === 'open-typed-url' ? typedUrlHtml(row) : realResultHtml(row)
+      button.innerHTML = row.kind === 'open-typed-url' ? typedUrlHtml(row, selected) : realResultHtml(row, selected)
 
       item.append(button)
       fragment.append(item)
@@ -798,6 +880,7 @@ export class ScryPanelApp {
     if (this.focusMode === 'results') this.focusSelectedResult()
 
     this.renderPagination()
+    this.renderSearchHeader()
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
   }
 

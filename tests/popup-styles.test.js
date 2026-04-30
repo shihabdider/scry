@@ -37,6 +37,22 @@ test('mode indicator keeps the sparse old-Google popup treatment', async () => {
   assertNoModernCardChrome(modeIndicator)
 })
 
+test('search header row keeps sparse styling while right-aligning the result count', async () => {
+  const css = await readFile(cssPath, 'utf8')
+  const searchHeader = ruleFor(css, '.search-header')
+  const hint = ruleFor(css, '.mode-switch-hint')
+  const count = ruleFor(css, '.result-count')
+
+  assert.match(searchHeader, /display:\s*flex\b/i)
+  assert.match(searchHeader, /align-items:\s*baseline\b/i)
+  assertMaxPx(searchHeader, 'font-size', 12)
+  assertMaxPx(hint, 'font-size', 11)
+  assert.match(count, /margin-left:\s*auto\b/i)
+  assert.match(count, /text-align:\s*right\b/i)
+  assertMaxPx(count, 'font-size', 11)
+  assertNoModernCardChrome(`${searchHeader}\n${hint}\n${count}`)
+})
+
 function ruleFor(css, selector) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = css.match(new RegExp(`(^|})\\s*${escapedSelector}\\s*\\{([^}]*)\\}`, 'm'))

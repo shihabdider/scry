@@ -97,6 +97,31 @@ function appendFocusableRow(resultsList, dataset = {}) {
   return button
 }
 
+function appendSearchHeader(document) {
+  const header = document.createElement('div')
+  header.setAttribute('id', 'search-header')
+
+  const before = document.createElement('span')
+  before.setAttribute('id', 'search-header-before')
+
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  modeIndicator.hidden = true
+
+  const after = document.createElement('span')
+  after.setAttribute('id', 'search-header-after')
+
+  const hint = document.createElement('span')
+  hint.setAttribute('id', 'mode-switch-hint')
+
+  const count = document.createElement('span')
+  count.setAttribute('id', 'result-count')
+
+  header.append(before, modeIndicator, after, hint, count)
+  document.body.append(header)
+  return { before, modeIndicator, after, hint, count }
+}
+
 function createTimerApi() {
   const timers = []
   return {
@@ -562,6 +587,56 @@ test('renderResults shows copied feedback inline only on the copied visible row'
   assert.match(copiedItem.children[0].innerHTML, />copied</)
 })
 
+test('renderResults adds selected real-row action hints to the meta line only on the selected row', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const first = searchResult('first-hintless-row')
+  const selected = searchResult('selected-real-row')
+  app.results = [first, selected]
+  app.visibleRows = buildVisibleRows({ corpusResults: [first, selected] })
+  app.selectedIndex = 1
+
+  app.renderResults()
+
+  const results = document.querySelector('#results')
+  const firstHtml = results.children[0].children[0].innerHTML
+  const selectedHtml = results.children[1].children[0].innerHTML
+
+  assert.doesNotMatch(firstHtml, /\by copy\b/)
+  assert.doesNotMatch(firstHtml, /\bc edit URL\b/)
+  assert.match(selectedHtml, /class="result-meta"[\s\S]*3 visits · now[\s\S]*y copy[\s\S]*c edit URL/)
+})
+
+test('renderResults adds only available hints to a selected typed URL row and keeps the count real-only', () => {
+  const document = createScryDocument()
+  const { count } = appendSearchHeader(document)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const typedUrlCandidate = {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  }
+  const realResult = searchResult('unselected-real-row')
+  app.input.value = 'typed.example/path'
+  app.results = [realResult]
+  app.visibleRows = buildVisibleRows({ corpusResults: [realResult], typedUrlCandidate })
+  app.selectedIndex = 0
+
+  app.renderResults()
+
+  const results = document.querySelector('#results')
+  const typedHtml = results.children[0].children[0].innerHTML
+  const realHtml = results.children[1].children[0].innerHTML
+
+  assert.match(typedHtml, /class="result-meta open-typed-url-meta"[\s\S]*https:\/\/typed\.example\/path[\s\S]*y copy/)
+  assert.doesNotMatch(typedHtml, /\bc edit URL\b/)
+  assert.doesNotMatch(realHtml, /\by copy\b/)
+  assert.doesNotMatch(realHtml, /\bc edit URL\b/)
+  assert.equal(count.textContent, '1 result')
+})
+
 test('renderResults uses mode-appropriate empty messages and keeps the old deep-search fallback hidden', () => {
   const cases = [
     ['recent', 'scry', 'No matches in recent history.'],
@@ -645,6 +720,45 @@ test('renderLoading marks the mode indicator as loading for the active mode', ()
   assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
   assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; Loading recently closed URLs…; switch mode with Tab/Shift+Tab')
   assert.equal(app.status.textContent, 'Loading recently closed URLs…')
+})
+
+test('renderLoading refreshes the integrated header with loading status after clearing stale results', () => {
+  const document = createScryDocument()
+  const { before, modeIndicator, after, hint, count } = appendSearchHeader(document)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.searchMode = 'deep'
+  app.results = [searchResult('stale')]
+  app.visibleRows = buildVisibleRows({ corpusResults: [searchResult('stale'), searchResult('older')] })
+  app.resultsList.append(document.createElement('li'))
+  count.textContent = '2 results'
+
+  const model = app.renderLoading()
+
+  assert.deepEqual(model, {
+    label: '[deep]',
+    mode: 'deep',
+    status: 'loading',
+    clickable: true,
+    modeSwitchHint: 'Tab/Shift+Tab',
+    statusText: 'Loading deep history…',
+  })
+  assert.equal(app.results.length, 0)
+  assert.equal(app.visibleRows.length, 0)
+  assert.equal(app.resultsList.childElementCount, 0)
+  assert.equal(before.textContent, 'Search')
+  assert.equal(modeIndicator.hidden, false)
+  assert.equal(modeIndicator.textContent, '[deep]')
+  assert.equal(modeIndicator.dataset.status, 'loading')
+  assert.equal(modeIndicator.getAttribute('aria-label'), '[deep]; Loading deep history…; switch mode with Tab/Shift+Tab')
+  assert.equal(after.textContent, 'history')
+  assert.equal(hint.textContent, 'Tab/Shift+Tab')
+  assert.equal(hint.hidden, false)
+  assert.equal(count.textContent, 'No results')
+  assert.equal(count.getAttribute('aria-label'), 'No results')
+  assert.equal(document.querySelector('#search-header').getAttribute('aria-label'), 'Search deep history; No results')
+  assert.equal(document.querySelector('#search-input').getAttribute('aria-label'), 'Search deep history')
+  assert.equal(app.status.textContent, 'Loading deep history…')
 })
 
 test('renderResults reports active mode errors while still rendering a typed URL action row', () => {
@@ -2276,6 +2390,87 @@ test('result navigation c changes a selected real row into the focused search te
   assert.equal(document.activeElement, input)
   assert.equal(input.selectionStart, input.value.length)
   assert.equal(input.selectionEnd, input.value.length)
+})
+
+test('renderSearchHeader renders a sparse Search [mode] history row with hint and real result count', () => {
+  const document = createScryDocument()
+  const { before, modeIndicator, after, hint, count } = appendSearchHeader(document)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.searchMode = 'closed'
+  app.modeCache = {
+    closed: {
+      mode: 'closed',
+      status: 'ready',
+      index: { entries: [{}, {}] },
+      error: null,
+      loadedAt: now,
+    },
+  }
+  app.visibleRows = buildVisibleRows({
+    corpusResults: [searchResult('first'), searchResult('second')],
+    typedUrlCandidate: {
+      displayInput: 'typed.example/path',
+      normalizedUrl: 'https://typed.example/path',
+      key: 'https://typed.example/path',
+    },
+  })
+
+  const model = app.renderSearchHeader()
+
+  assert.equal(before.textContent, 'Search')
+  assert.equal(modeIndicator.hidden, false)
+  assert.equal(modeIndicator.textContent, '[closed]')
+  assert.equal(after.textContent, 'history')
+  assert.equal(hint.textContent, 'Tab/Shift+Tab')
+  assert.equal(count.textContent, '2 results')
+  assert.equal(document.querySelector('#search-input').getAttribute('aria-label'), 'Search closed history')
+  assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; 2 recently closed URLs; switch mode with Tab/Shift+Tab')
+  assert.equal(document.querySelector('#status').textContent, '2 recently closed URLs')
+  assert.deepEqual(model, {
+    beforeMode: 'Search',
+    modeBadgeLabel: '[closed]',
+    mode: 'closed',
+    afterMode: 'history',
+    modeSwitchHint: 'Tab/Shift+Tab',
+    realResultCount: 2,
+    realResultCountLabel: '2 results',
+    status: 'ready',
+    statusText: '2 recently closed URLs',
+  })
+})
+
+test('renderResults updates the header count from real rows and excludes the Open typed URL action', () => {
+  const document = createScryDocument()
+  const { count } = appendSearchHeader(document)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.searchMode = 'recent'
+  app.modeCache = {
+    recent: {
+      mode: 'recent',
+      status: 'ready',
+      index: { entries: [{}, {}] },
+      error: null,
+      loadedAt: now,
+    },
+  }
+  app.input.value = 'typed.example/path'
+  app.results = [searchResult('first')]
+  app.visibleRows = []
+
+  app.renderResults()
+
+  assert.equal(count.textContent, '1 result')
+  assert.equal(app.resultsList.childElementCount, 2, 'renders the synthetic action plus one real result')
+
+  app.results = []
+  app.visibleRows = []
+
+  app.renderResults()
+
+  assert.equal(count.textContent, 'No results')
+  assert.equal(app.resultsList.childElementCount, 1, 'renders only the synthetic typed URL action')
 })
 
 test('renderModeIndicatorElement renders a bracket badge with status datasets and a switch-hint label', () => {

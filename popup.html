@@ -11,11 +11,16 @@
       <header class="scry-header">
         <div class="brand-line">
           <h1>Scry</h1>
-          <button id="mode-indicator" class="mode-indicator" type="button" data-mode="recent" data-status="idle" data-clickable="true" aria-label="[recent]; Recent history not loaded" title="Recent history not loaded">[recent]</button>
           <span id="status" class="status" role="status">Loading history…</span>
         </div>
-        <label class="search-label" for="search-input">Search browser history</label>
-        <input id="search-input" class="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="git*skilift*issues*13" autofocus />
+        <div id="search-header" class="search-header" aria-label="Search recent history; No results">
+          <span id="search-header-before" class="search-header-text">Search</span>
+          <button id="mode-indicator" class="mode-indicator" type="button" data-mode="recent" data-status="idle" data-clickable="true" aria-label="[recent]; Recent history not loaded" title="Recent history not loaded">[recent]</button>
+          <span id="search-header-after" class="search-header-text">history</span>
+          <span id="mode-switch-hint" class="mode-switch-hint" aria-hidden="true">Tab/Shift+Tab</span>
+          <span id="result-count" class="result-count" aria-live="polite" aria-label="No results">No results</span>
+        </div>
+        <input id="search-input" class="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="git*skilift*issues*13" aria-label="Search recent history" autofocus />
       </header>
 
       <section id="message" class="message" hidden></section>

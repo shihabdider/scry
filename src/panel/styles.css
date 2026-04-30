@@ -89,11 +89,33 @@ h1 {
   cursor: default;
 }
 
-.search-label {
+.search-header {
+  align-items: baseline;
   color: #222;
-  display: block;
+  display: flex;
   font-size: 12px;
+  gap: 4px;
   margin-bottom: 3px;
+}
+
+.search-header-text {
+  white-space: nowrap;
+}
+
+.mode-switch-hint {
+  color: #777;
+  font-size: 11px;
+  margin-left: 2px;
+  white-space: nowrap;
+}
+
+.result-count {
+  color: #666;
+  font-size: 11px;
+  margin-left: auto;
+  min-width: 56px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .search-input {

@@ -38,6 +38,20 @@ test('popup exposes explicit mode controls without a visible legacy deep-search 
   assert.match(deepSearchButton, /\baria-hidden="true"/i)
 })
 
+test('popup uses a compact search header row instead of the legacy standalone label', async () => {
+  const html = await readFile('popup.html', 'utf8')
+  const searchHeader = elementHtmlWithId(html, 'search-header')
+  const searchInput = tagWithId(html, 'search-input')
+
+  assert.match(searchHeader, /id="search-header-before"[\s\S]*>\s*Search\s*</i)
+  assert.match(searchHeader, /id="mode-indicator"[\s\S]*>\s*\[recent\]\s*<\/button>/i)
+  assert.match(searchHeader, /id="search-header-after"[\s\S]*>\s*history\s*</i)
+  assert.match(searchHeader, /id="mode-switch-hint"[\s\S]*>\s*Tab\/Shift\+Tab\s*</i)
+  assert.match(searchHeader, /id="result-count"[\s\S]*>\s*No results\s*</i)
+  assert.match(searchInput, /\baria-label="Search recent history"/i)
+  assert.doesNotMatch(html, />\s*Search browser history\s*</i)
+})
+
 test('popup footer documents mode switching, result actions, and non-closing result Escape', async () => {
   const html = await readFile('popup.html', 'utf8')
   const footerText = textForElementWithClass(html, 'footer', 'footer-hints')
@@ -66,6 +80,13 @@ function tagWithId(source, id) {
   const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = source.match(new RegExp(`<[a-z0-9-]+\\b[^>]*\\bid="${escapedId}"[^>]*>`, 'i'))
   assert.ok(match, `expected #${id} markup`)
+  return match[0]
+}
+
+function elementHtmlWithId(source, id) {
+  const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = source.match(new RegExp(`<([a-z0-9-]+)\\b[^>]*\\bid="${escapedId}"[^>]*>[\\s\\S]*?<\\/\\1>`, 'i'))
+  assert.ok(match, `expected #${id} element markup`)
   return match[0]
 }
 
