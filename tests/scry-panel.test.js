@@ -2157,8 +2157,44 @@ test('result navigation i returns to search input and leaves normal input typing
   assert.equal(event.defaultPrevented, true)
   assert.equal(app.focusMode, 'search')
   assert.equal(document.activeElement, input)
+  assert.equal(input.value, 'github issue')
   assert.equal(input.selectionStart, input.value.length)
   assert.equal(input.selectionEnd, input.value.length)
+})
+
+test('result navigation slash returns to search input without changing the query or selected row actions', () => {
+  const document = createScryDocument()
+  const writes = []
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({
+    document,
+    chromeApi,
+    clock: () => now,
+    windowApi: { blur() {} },
+    navigatorApi: createClipboardNavigator(writes),
+  })
+  const input = document.querySelector('#search-input')
+  app.results = [searchResult('first')]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 0
+  input.value = 'github issue'
+  input.setSelectionRange(0, 0)
+  const selectedButton = appendFocusableRow(app.resultsList, { resultIndex: 0 })
+  document.activeElement = selectedButton
+  app.focusMode = 'results'
+  app.bindEvents()
+
+  const event = dispatchKeydown(selectedButton, '/')
+
+  assert.equal(event.defaultPrevented, true)
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
+  assert.equal(input.value, 'github issue')
+  assert.equal(input.selectionStart, input.value.length)
+  assert.equal(input.selectionEnd, input.value.length)
+  assert.deepEqual(chromeApi.tabs.opened, [])
+  assert.deepEqual(chromeApi.tabs.updated, [])
+  assert.deepEqual(writes, [])
 })
 
 test('result navigation y copies the selected row URL without changing search focus state', async () => {
@@ -2598,6 +2634,21 @@ test('typing i in search input is not intercepted as a mode shortcut', () => {
   assert.equal(document.activeElement, input)
 })
 
+test('typing slash in search input is not intercepted as a mode shortcut', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  app.bindEvents()
+  app.focusSearch()
+
+  const event = dispatchKeydown(input, '/')
+
+  assert.equal(event.defaultPrevented, false)
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
+})
+
 test('result navigation shortcuts are ignored when the search input is focused', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
@@ -2664,8 +2715,9 @@ test('unmodified Enter in the search input opens the selected result in a new ac
   assert.equal(windowApi.closeCalls, 1)
 })
 
-test('Escape moves from search entry to result navigation, then keeps the selected result actionable', async () => {
+test('Escape moves from search entry to result navigation, then result Escape closes without row actions', async () => {
   const document = createScryDocument()
+  const writes = []
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2)])
   const windowApi = {
     blurCalls: 0,
@@ -2673,7 +2725,13 @@ test('Escape moves from search entry to result navigation, then keeps the select
     blur() { this.blurCalls++ },
     close() { this.closeCalls++ },
   }
-  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi })
+  const app = new ScryPanelApp({
+    document,
+    chromeApi,
+    clock: () => now,
+    windowApi,
+    navigatorApi: createClipboardNavigator(writes),
+  })
 
   await app.start()
   const input = document.querySelector('#search-input')
@@ -2685,25 +2743,43 @@ test('Escape moves from search entry to result navigation, then keeps the select
 
   assert.equal(searchEscape.defaultPrevented, true)
   assert.equal(app.focusMode, 'results')
+  assert.equal(input.value, 'scry')
   assert.equal(document.activeElement?.dataset.resultIndex, '0')
 
   const resultEscape = dispatchKeydown(document.activeElement, 'Escape')
 
   assert.equal(resultEscape.defaultPrevented, true)
-  assert.equal(app.focusMode, 'results')
-  assert.equal(document.activeElement?.dataset.resultIndex, '0')
+  assert.equal(app.focusMode, 'blurred')
+  assert.equal(document.activeElement, null)
   assert.equal(windowApi.blurCalls, 0)
-  assert.equal(windowApi.closeCalls, 0)
-  const selectedUrl = app.selectedVisibleRow().result.url
-
-  dispatchKeydown(document.activeElement, 'Enter')
-  await settle()
-
-  assert.deepEqual(chromeApi.tabs.opened, [
-    { url: selectedUrl, active: true },
-  ])
-  assert.deepEqual(chromeApi.tabs.updated, [])
   assert.equal(windowApi.closeCalls, 1)
+  assert.equal(input.value, 'scry')
+  assert.deepEqual(chromeApi.tabs.opened, [])
+  assert.deepEqual(chromeApi.tabs.updated, [])
+  assert.deepEqual(writes, [])
+})
+
+test('Escape from result navigation falls back to window blur when close is unavailable', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const windowApi = {
+    blurCalls: 0,
+    blur() { this.blurCalls++ },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi })
+  app.focusMode = 'results'
+  app.results = []
+  app.visibleRows = []
+  app.selectedIndex = 0
+  app.resultsList.focus()
+  app.bindEvents()
+
+  const event = dispatchKeydown(app.resultsList, 'Escape')
+
+  assert.equal(event.defaultPrevented, true)
+  assert.equal(app.focusMode, 'blurred')
+  assert.equal(document.activeElement, null)
+  assert.equal(windowApi.blurCalls, 1)
 })
 
 test('results are paged and h/l move between pages in result navigation mode', async () => {

@@ -493,35 +493,39 @@ export class ScryPanelApp {
     if (this.focusMode !== 'results') return
     if (event.target === this.input || this.document.activeElement === this.input) return
 
-    const key = typeof event.key === 'string' ? event.key.toLowerCase() : ''
+    const command = resultNavigationCommandForKey(event)
+    if (command === 'ignore') return
 
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      this.focusSelectedResult()
-    } else if (key === 'i') {
-      event.preventDefault()
-      this.focusSearch()
-    } else if (key === 'y') {
-      event.preventDefault()
-      void this.copySelectedRow()
-    } else if (key === 'c') {
-      event.preventDefault()
-      this.changeSelectedRowToSearch()
-    } else if (key === 'j') {
-      event.preventDefault()
-      this.moveSelection(1)
-    } else if (key === 'k') {
-      event.preventDefault()
-      this.moveSelection(-1)
-    } else if (key === 'l') {
-      event.preventDefault()
-      this.movePage(1)
-    } else if (key === 'h') {
-      event.preventDefault()
-      this.movePage(-1)
-    } else if (event.key === 'Enter') {
-      event.preventDefault()
-      void this.openSelected({ newTab: true })
+    event.preventDefault()
+
+    switch (command) {
+      case 'focusSearch':
+        this.focusSearch()
+        break
+      case 'leavePanelFocus':
+        this.leavePanelFocus()
+        break
+      case 'copySelected':
+        void this.copySelectedRow()
+        break
+      case 'editSelectedUrl':
+        this.changeSelectedRowToSearch()
+        break
+      case 'moveNext':
+        this.moveSelection(1)
+        break
+      case 'movePrevious':
+        this.moveSelection(-1)
+        break
+      case 'nextPage':
+        this.movePage(1)
+        break
+      case 'previousPage':
+        this.movePage(-1)
+        break
+      case 'openSelected':
+        void this.openSelected({ newTab: true })
+        break
     }
   }
 
