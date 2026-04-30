@@ -643,7 +643,7 @@ test('renderLoading marks the mode indicator as loading for the active mode', ()
   assert.equal(modeIndicator.disabled, false)
   assert.equal(modeIndicator.title, 'Loading recently closed URLs…')
   assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
-  assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; Loading recently closed URLs…')
+  assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; Loading recently closed URLs…; switch mode with Tab/Shift+Tab')
   assert.equal(app.status.textContent, 'Loading recently closed URLs…')
 })
 
@@ -2278,6 +2278,62 @@ test('result navigation c changes a selected real row into the focused search te
   assert.equal(input.selectionEnd, input.value.length)
 })
 
+test('renderModeIndicatorElement renders a bracket badge with status datasets and a switch-hint label', () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  modeIndicator.hidden = true
+  document.body.append(modeIndicator)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  app.renderModeIndicatorElement({
+    label: '[closed]',
+    mode: 'closed',
+    status: 'loading',
+    clickable: true,
+    modeSwitchHint: 'Tab/Shift+Tab',
+    statusText: 'Loading recently closed URLs…',
+  })
+
+  assert.equal(modeIndicator.hidden, false)
+  assert.equal(modeIndicator.textContent, '[closed]')
+  assert.equal(modeIndicator.dataset.mode, 'closed')
+  assert.equal(modeIndicator.dataset.status, 'loading')
+  assert.equal(modeIndicator.dataset.clickable, 'true')
+  assert.equal(modeIndicator.disabled, false)
+  assert.equal(modeIndicator.title, 'Loading recently closed URLs…')
+  assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
+  assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; Loading recently closed URLs…; switch mode with Tab/Shift+Tab')
+})
+
+test('renderModeIndicatorElement disables non-clickable badges without announcing a switch hint', () => {
+  const document = createScryDocument()
+  const modeIndicator = document.createElement('button')
+  modeIndicator.setAttribute('id', 'mode-indicator')
+  document.body.append(modeIndicator)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  app.renderModeIndicatorElement({
+    label: '[deep]',
+    mode: 'deep',
+    status: 'error',
+    clickable: false,
+    modeSwitchHint: 'Tab/Shift+Tab',
+    statusText: 'Deep history unavailable',
+  })
+
+  assert.equal(modeIndicator.textContent, '[deep]')
+  assert.equal(modeIndicator.dataset.mode, 'deep')
+  assert.equal(modeIndicator.dataset.status, 'error')
+  assert.equal(modeIndicator.dataset.clickable, 'false')
+  assert.equal(modeIndicator.disabled, true)
+  assert.equal(modeIndicator.title, 'Deep history unavailable')
+  assert.equal(modeIndicator.getAttribute('aria-disabled'), 'true')
+  assert.equal(modeIndicator.getAttribute('aria-label'), '[deep]; Deep history unavailable')
+})
+
 test('renderModeIndicator renders the active mode label/status in dedicated popup markup', () => {
   const document = createScryDocument()
   const modeIndicator = document.createElement('button')
@@ -2309,7 +2365,7 @@ test('renderModeIndicator renders the active mode label/status in dedicated popu
   assert.equal(modeIndicator.dataset.clickable, 'true')
   assert.equal(modeIndicator.disabled, false)
   assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
-  assert.equal(modeIndicator.getAttribute('aria-label'), '[deep]; 2 deep history URLs')
+  assert.equal(modeIndicator.getAttribute('aria-label'), '[deep]; 2 deep history URLs; switch mode with Tab/Shift+Tab')
   assert.equal(modeIndicator.title, '2 deep history URLs')
   assert.equal(document.querySelector('#status').textContent, '2 deep history URLs')
   assert.equal(deepSearchButton.hidden, true)

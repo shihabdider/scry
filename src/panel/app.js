@@ -263,6 +263,11 @@ export class ScryPanelApp {
     const indicator = this.document.querySelector('#mode-indicator')
     if (!indicator) return
 
+    const switchHint = model.clickable && model.modeSwitchHint
+      ? `switch mode with ${model.modeSwitchHint}`
+      : ''
+    const ariaLabel = [model.label, model.statusText, switchHint].filter(Boolean).join('; ')
+
     indicator.hidden = false
     indicator.textContent = model.label
     indicator.dataset.mode = model.mode
@@ -271,7 +276,7 @@ export class ScryPanelApp {
     indicator.disabled = !model.clickable
     indicator.title = model.statusText
     indicator.setAttribute('aria-disabled', model.clickable ? 'false' : 'true')
-    indicator.setAttribute('aria-label', `${model.label}; ${model.statusText}`)
+    indicator.setAttribute('aria-label', ariaLabel)
   }
 
   updateVisibleRows() {
