@@ -3180,6 +3180,35 @@ test('Escape from result navigation falls back to window blur when close is unav
   assert.equal(windowApi.blurCalls, 1)
 })
 
+test('double Escape leaves the panel even when there are no visible result rows', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const windowApi = {
+    closeCalls: 0,
+    close() { this.closeCalls++ },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi })
+
+  await app.start()
+  const input = document.querySelector('#search-input')
+  assert.equal(document.activeElement, input)
+  assert.equal(app.visibleRows.length, 0)
+
+  const searchEscape = dispatchKeydown(input, 'Escape')
+
+  assert.equal(searchEscape.defaultPrevented, true)
+  assert.equal(app.focusMode, 'results')
+  assert.equal(document.activeElement, app.resultsList)
+  assert.equal(app.visibleRows.length, 0)
+
+  const resultEscape = dispatchKeydown(app.resultsList, 'Escape')
+
+  assert.equal(resultEscape.defaultPrevented, true)
+  assert.equal(app.focusMode, 'blurred')
+  assert.equal(document.activeElement, null)
+  assert.equal(windowApi.closeCalls, 1)
+})
+
 test('results are paged and h/l move between pages in result navigation mode', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome(Array.from({ length: 12 }, (_, index) => historyEntry(index + 1)))

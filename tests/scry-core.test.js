@@ -667,7 +667,7 @@ test('empty query can sort by pure recency for closed URL mode callers', () => {
   assert.equal(results[0].debug.mode, 'recency')
 })
 
-test('ordered URL recall finds a visited GitHub issue from remembered fragments', () => {
+test('space-separated URL fragments find a visited GitHub issue from remembered fragments', () => {
   const index = indexOf([
     {
       url: 'https://github.com/shihabdider/skilift/issues/13',
@@ -683,10 +683,34 @@ test('ordered URL recall finds a visited GitHub issue from remembered fragments'
     },
   ])
 
-  const results = searchHistory(index, 'git*skilift*issues*13', { now })
+  const results = searchHistory(index, 'git skilift issues 13', { now })
 
   assert.equal(results[0].url, 'https://github.com/shihabdider/skilift/issues/13')
   assert.equal(results[0].debug.orderedUrlCoverage, 4)
+})
+
+test('starred URL fragments remain tolerated for backward compatibility', () => {
+  const index = indexOf([
+    {
+      url: 'https://github.com/shihabdider/skilift/issues/13',
+      title: 'Fix launcher ranking · shihabdider/skilift',
+      visitCount: 8,
+      lastVisitTime: now - 2 * 60 * 60 * 1000,
+    },
+    {
+      url: 'https://github.com/shihabdider/skitools/issues/13',
+      title: 'A similar repo',
+      visitCount: 40,
+      lastVisitTime: now - 10 * 60 * 1000,
+    },
+  ])
+
+  const spaceSeparatedResults = searchHistory(index, 'git skilift issues 13', { now })
+  const starredResults = searchHistory(index, 'git*skilift*issues*13', { now })
+
+  assert.equal(starredResults[0].url, 'https://github.com/shihabdider/skilift/issues/13')
+  assert.equal(starredResults[0].url, spaceSeparatedResults[0].url)
+  assert.equal(starredResults[0].debug.orderedUrlCoverage, 4)
 })
 
 test('constrained abbreviation matching supports gh*issu without an alias table', () => {

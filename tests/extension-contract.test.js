@@ -55,6 +55,8 @@ test('popup uses a compact search header row instead of the legacy standalone la
 test('popup omits the footer key-hint line and promotes space-separated search fragments', async () => {
   const html = await readFile('popup.html', 'utf8')
   const searchInput = tagWithId(html, 'search-input')
+  const previousPageButton = elementHtmlWithId(html, 'previous-page-button')
+  const nextPageButton = elementHtmlWithId(html, 'next-page-button')
   const placeholder = attributeValue(searchInput, 'placeholder')
 
   assert.doesNotMatch(html, /<footer\b[^>]*\bclass="[^"]*\bfooter-hints\b[^"]*"[^>]*>/i)
@@ -62,9 +64,18 @@ test('popup omits the footer key-hint line and promotes space-separated search f
     assert.doesNotMatch(footerText, /⌘K|\bEsc\b|j\/k|h\/l|\bEnter\b/i)
   }
 
+  assert.match(previousPageButton, />\s*h\s+previous\s*<\/button>/i)
+  assert.match(nextPageButton, />\s*l\s+next\s*<\/button>/i)
   assert.match(placeholder, /\bgit skilift issues 13\b/i)
   assert.doesNotMatch(placeholder, /\*/)
   assert.match(placeholder, /(?:\bi\b|\/).*search|search.*(?:\bi\b|\/)/i)
+})
+
+test('README product examples use space-separated URL fragments without starred syntax', async () => {
+  const readme = await readFile('README.md', 'utf8')
+
+  assert.match(readme, /```text\s+git skilift issues 13\s+```/i)
+  assert.doesNotMatch(readme, /git\*skilift\*issues\*13/i)
 })
 
 test('source does not include external network calls', async () => {
