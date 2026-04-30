@@ -87,3 +87,4 @@ Use data-definition-driven stubbing because this is JavaScript and the relevant 
 - Phase 3 abstractor extracted shared `escapeHtml` usage into `src/core/format.js` import reuse and `modeIndicatorModelFromHeaderModel` in `src/panel/app.js`.
 - HtDP status updates for class-method wishes were repaired after wrapper regressions; source/test verification remained clean.
 - Final acceptance audit found and fixed remaining static footer/star-placeholder/README copy gaps for issues 0025 and 0027.
+- Final test audit removed stubber TODO acceptance tests after adding/confirming real coverage; `npm test` now reports 0 todo tests.
