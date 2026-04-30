@@ -25,7 +25,31 @@ const COPY_FEEDBACK_DURATION_MS = 1_200
  */
 
 export function resultNavigationCommandForKey(event) {
-  throw new Error('not implemented: resultNavigationCommandForKey')
+  const key = typeof event?.key === 'string' ? event.key.toLowerCase() : ''
+
+  switch (key) {
+    case 'i':
+    case '/':
+      return 'focusSearch'
+    case 'escape':
+      return 'leavePanelFocus'
+    case 'y':
+      return 'copySelected'
+    case 'c':
+      return 'editSelectedUrl'
+    case 'j':
+      return 'moveNext'
+    case 'k':
+      return 'movePrevious'
+    case 'l':
+      return 'nextPage'
+    case 'h':
+      return 'previousPage'
+    case 'enter':
+      return 'openSelected'
+    default:
+      return 'ignore'
+  }
 }
 
 export class ScryPanelApp {
