@@ -52,16 +52,19 @@ test('popup uses a compact search header row instead of the legacy standalone la
   assert.doesNotMatch(html, />\s*Search browser history\s*</i)
 })
 
-test('popup footer documents mode switching, result actions, and non-closing result Escape', async () => {
+test('popup omits the footer key-hint line and promotes space-separated search fragments', async () => {
   const html = await readFile('popup.html', 'utf8')
-  const footerText = textForElementWithClass(html, 'footer', 'footer-hints')
+  const searchInput = tagWithId(html, 'search-input')
+  const placeholder = attributeValue(searchInput, 'placeholder')
 
-  assert.match(footerText, /\btab\b.*\bmode\b/i)
-  assert.match(footerText, /\bi\b.*\bsearch\b/i)
-  assert.match(footerText, /\by\b.*\bcopy\b/i)
-  assert.match(footerText, /\bc\b.*\b(change|edit)\b/i)
-  assert.match(footerText, /\besc\b.*\b(result|row)\b/i)
-  assert.match(footerText, /(stays open|stay open|not close|non-closing|keeps? .*open)/i)
+  assert.doesNotMatch(html, /<footer\b[^>]*\bclass="[^"]*\bfooter-hints\b[^"]*"[^>]*>/i)
+  for (const footerText of textForElements(html, 'footer')) {
+    assert.doesNotMatch(footerText, /⌘K|\bEsc\b|j\/k|h\/l|\bEnter\b/i)
+  }
+
+  assert.match(placeholder, /\bgit skilift issues 13\b/i)
+  assert.doesNotMatch(placeholder, /\*/)
+  assert.match(placeholder, /(?:\bi\b|\/).*search|search.*(?:\bi\b|\/)/i)
 })
 
 test('source does not include external network calls', async () => {
@@ -90,12 +93,17 @@ function elementHtmlWithId(source, id) {
   return match[0]
 }
 
-function textForElementWithClass(source, tagName, className) {
+function attributeValue(tagSource, name) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = tagSource.match(new RegExp(`\\b${escapedName}="([^"]*)"`, 'i'))
+  assert.ok(match, `expected ${name} attribute`)
+  return match[1]
+}
+
+function textForElements(source, tagName) {
   const escapedTag = tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const escapedClass = className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const match = source.match(new RegExp(`<${escapedTag}\\b[^>]*\\bclass="[^"]*\\b${escapedClass}\\b[^"]*"[^>]*>([\\s\\S]*?)<\\/${escapedTag}>`, 'i'))
-  assert.ok(match, `expected .${className} ${tagName} markup`)
-  return match[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const matches = source.matchAll(new RegExp(`<${escapedTag}\\b[^>]*>([\\s\\S]*?)<\\/${escapedTag}>`, 'gi'))
+  return [...matches].map((match) => match[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
 }
 
 function listFiles(root, predicate) {

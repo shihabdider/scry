@@ -3,7 +3,7 @@
 Scry is a personal Manifest V3 Chrome extension for history-first URL recall. It opens a focused popup command palette with `Command+K`, indexes recent browser history, and lets you reopen exact pages from remembered URL fragments such as:
 
 ```text
-git*skilift*issues*13
+git skilift issues 13
 ```
 
 The v1 product is intentionally narrow:
