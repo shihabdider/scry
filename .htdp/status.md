@@ -1,8 +1,8 @@
 # Status
 
 phase: 2
-layer: 3
-updated: 2026-04-30T05:07:27.202Z
+layer: 2
+updated: 2026-04-30T05:10:39.767Z
 
 ## Wishes
 
@@ -11,7 +11,7 @@ updated: 2026-04-30T05:07:27.202Z
 | modeIndicatorModel | src/core/search-modes.js | 3 | pass | 287.5s |
 | resultNavigationCommandForKey | src/panel/app.js | 3 | pass | 130.6s |
 | selectedRowActionHints | src/core/rows.js | 3 | pass | 144.4s |
-| searchHeaderModel | src/core/search-modes.js | 2 | pending | - |
+| searchHeaderModel | src/core/search-modes.js | 2 | pass | 168.5s |
 | ScryPanelApp.handlePanelKeydown(event: KeyboardEvent): void | src/panel/app.js | 2 | pending | - |
 | ScryPanelApp.renderModeIndicatorElement(model: ModeIndicatorModel): void | src/panel/app.js | 2 | pending | - |
 | ScryPanelApp.renderSearchHeader(): HeaderSearchContextModel | src/panel/app.js | 1 | pending | - |
@@ -34,3 +34,6 @@ updated: 2026-04-30T05:07:27.202Z
 - 01:07:24 selectedRowActionHints: pass (144.4s, $0.8274)
 - 01:07:25 implementer_post verification for selectedRowActionHints: pass
 - 01:07:27 layer 3 verification: pass
+- 01:07:49 searchHeaderModel: running
+- 01:10:38 searchHeaderModel: pass (168.5s, $1.0452)
+- 01:10:39 implementer_post verification for searchHeaderModel: pass

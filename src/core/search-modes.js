@@ -65,7 +65,25 @@ export function cycleSearchMode(currentMode, { direction = 1 } = {}) {
 }
 
 export function searchHeaderModel(mode, state, { realResultCount = 0 } = {}) {
-  throw new Error('not implemented: searchHeaderModel')
+  const indicator = modeIndicatorModel(mode, state)
+  const count = Number.isFinite(realResultCount) ? Math.max(0, Math.trunc(realResultCount)) : 0
+  const countLabel = count === 0
+    ? 'No results'
+    : count === 1
+      ? '1 result'
+      : `${count} results`
+
+  return {
+    beforeMode: 'Search',
+    modeBadgeLabel: indicator.label,
+    mode: indicator.mode,
+    afterMode: 'history',
+    modeSwitchHint: indicator.modeSwitchHint,
+    realResultCount: count,
+    realResultCountLabel: countLabel,
+    status: indicator.status,
+    statusText: indicator.statusText,
+  }
 }
 
 export function modeIndicatorModel(mode, state) {

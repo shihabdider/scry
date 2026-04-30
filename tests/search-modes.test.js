@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createModeCache, cycleSearchMode, modeIndicatorModel } from '../src/core/search-modes.js'
+import { createModeCache, cycleSearchMode, modeIndicatorModel, searchHeaderModel } from '../src/core/search-modes.js'
 
 test('createModeCache initializes one idle state for each search mode', () => {
   const cache = createModeCache()
@@ -126,4 +126,67 @@ test('modeIndicatorModel reports mode-local errors without disabling mode switch
     modeSwitchHint: 'Tab/Shift+Tab',
     statusText: 'Recently closed URLs unavailable',
   })
+})
+
+test('searchHeaderModel builds a sparse Search [mode] history model with default no-result count', () => {
+  assert.deepEqual(searchHeaderModel('recent', null), {
+    beforeMode: 'Search',
+    modeBadgeLabel: '[recent]',
+    mode: 'recent',
+    afterMode: 'history',
+    modeSwitchHint: 'Tab/Shift+Tab',
+    realResultCount: 0,
+    realResultCountLabel: 'No results',
+    status: 'idle',
+    statusText: 'Recent history not loaded',
+  })
+})
+
+test('searchHeaderModel reports singular and plural real result-count labels from caller-supplied counts', () => {
+  const readyRecent = modeState('recent', { status: 'ready', entries: [{}, {}, {}, {}, {}] })
+
+  assert.deepEqual(
+    {
+      realResultCount: searchHeaderModel('recent', readyRecent, { realResultCount: 1 }).realResultCount,
+      realResultCountLabel: searchHeaderModel('recent', readyRecent, { realResultCount: 1 }).realResultCountLabel,
+      statusText: searchHeaderModel('recent', readyRecent, { realResultCount: 1 }).statusText,
+    },
+    {
+      realResultCount: 1,
+      realResultCountLabel: '1 result',
+      statusText: '5 recent history URLs',
+    },
+  )
+
+  assert.equal(searchHeaderModel('recent', readyRecent, { realResultCount: 3 }).realResultCountLabel, '3 results')
+})
+
+test('searchHeaderModel preserves mode-specific loading and error status text', () => {
+  assert.deepEqual(
+    {
+      modeBadgeLabel: searchHeaderModel('deep', modeState('deep', { status: 'loading' })).modeBadgeLabel,
+      status: searchHeaderModel('deep', modeState('deep', { status: 'loading' })).status,
+      statusText: searchHeaderModel('deep', modeState('deep', { status: 'loading' })).statusText,
+      modeSwitchHint: searchHeaderModel('deep', modeState('deep', { status: 'loading' })).modeSwitchHint,
+    },
+    {
+      modeBadgeLabel: '[deep]',
+      status: 'loading',
+      statusText: 'Loading deep history…',
+      modeSwitchHint: 'Tab/Shift+Tab',
+    },
+  )
+
+  assert.deepEqual(
+    {
+      modeBadgeLabel: searchHeaderModel('closed', modeState('closed', { status: 'error', error: new Error('sessions unavailable') })).modeBadgeLabel,
+      status: searchHeaderModel('closed', modeState('closed', { status: 'error', error: new Error('sessions unavailable') })).status,
+      statusText: searchHeaderModel('closed', modeState('closed', { status: 'error', error: new Error('sessions unavailable') })).statusText,
+    },
+    {
+      modeBadgeLabel: '[closed]',
+      status: 'error',
+      statusText: 'Recently closed URLs unavailable',
+    },
+  )
 })
