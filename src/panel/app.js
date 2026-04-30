@@ -1,5 +1,6 @@
 import { parseQuery } from '../core/query.js'
 import { buildVisibleRows, rowEditableText, rowOpenUrl, rowSelectionLearningKey, selectedRowActionHints } from '../core/rows.js'
+import { escapeHtml } from '../core/format.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
@@ -49,6 +50,17 @@ export function resultNavigationCommandForKey(event) {
       return 'openSelected'
     default:
       return 'ignore'
+  }
+}
+
+function modeIndicatorModelFromHeaderModel(model) {
+  return {
+    label: model.modeBadgeLabel,
+    mode: model.mode,
+    status: model.status,
+    clickable: true,
+    modeSwitchHint: model.modeSwitchHint,
+    statusText: model.statusText,
   }
 }
 
@@ -248,14 +260,7 @@ export class ScryPanelApp {
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
 
     const headerModel = this.renderSearchHeader()
-    return {
-      label: headerModel.modeBadgeLabel,
-      mode: headerModel.mode,
-      status: headerModel.status,
-      clickable: true,
-      modeSwitchHint: headerModel.modeSwitchHint,
-      statusText: headerModel.statusText,
-    }
+    return modeIndicatorModelFromHeaderModel(headerModel)
   }
 
   renderSearchHeader() {
@@ -291,14 +296,7 @@ export class ScryPanelApp {
     this.input?.setAttribute('aria-label', `${model.beforeMode} ${model.mode} ${model.afterMode}`)
     if (this.status) this.setStatus(model.statusText)
 
-    this.renderModeIndicatorElement({
-      label: model.modeBadgeLabel,
-      mode: model.mode,
-      status: model.status,
-      clickable: true,
-      modeSwitchHint: model.modeSwitchHint,
-      statusText: model.statusText,
-    })
+    this.renderModeIndicatorElement(modeIndicatorModelFromHeaderModel(model))
 
     return model
   }
@@ -748,13 +746,6 @@ export class ScryPanelApp {
         error: 'Recently closed URLs unavailable.',
       },
     }[mode]
-
-    const escapeHtml = (value) => String(value ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;')
 
     const copiedMarker = (row) => row?.copied
       ? '<span class="result-copied-feedback">copied</span>'

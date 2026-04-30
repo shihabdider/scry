@@ -1,8 +1,8 @@
 # Status
 
-phase: 2
-layer: 0
-updated: 2026-04-30T06:10:20.280Z
+phase: 3
+layer: 2
+updated: 2026-04-30T06:16:27.026Z
 
 ## Wishes
 
@@ -12,13 +12,13 @@ updated: 2026-04-30T06:10:20.280Z
 | resultNavigationCommandForKey | src/panel/app.js | 3 | pass | 130.6s |
 | selectedRowActionHints | src/core/rows.js | 3 | pass | 144.4s |
 | searchHeaderModel | src/core/search-modes.js | 2 | pass | 168.5s |
-| ScryPanelApp.handlePanelKeydown(event: KeyboardEvent): void | src/panel/app.js | 2 | pass | 0.0s |
-| ScryPanelApp.renderModeIndicatorElement(model: ModeIndicatorModel): void | src/panel/app.js | 2 | pass | 317.1s |
-| ScryPanelApp.renderSearchHeader(): HeaderSearchContextModel | src/panel/app.js | 1 | pass | 0.0s |
-| ScryPanelApp.renderResults(): void | src/panel/app.js | 1 | pass | 0.0s |
-| ScryPanelApp.renderLoading(): ModeIndicatorModel | src/panel/app.js | 1 | pass | 0.0s |
-| ScryPanelApp.renderModeIndicator(): ModeIndicatorModel | src/panel/app.js | 0 | pass | 0.0s |
-| ScryPanelApp.updateResults(): void | src/panel/app.js | 0 | pass | 0.0s |
+| ScryPanelApp.handlePanelKeydown(event: KeyboardEvent): void | src/panel/app.js | 2 | pending | - |
+| ScryPanelApp.renderModeIndicatorElement(model: ModeIndicatorModel): void | src/panel/app.js | 2 | pending | - |
+| ScryPanelApp.renderSearchHeader(): HeaderSearchContextModel | src/panel/app.js | 1 | pending | - |
+| ScryPanelApp.renderResults(): void | src/panel/app.js | 1 | pending | - |
+| ScryPanelApp.renderLoading(): ModeIndicatorModel | src/panel/app.js | 1 | pending | - |
+| ScryPanelApp.renderModeIndicator(): ModeIndicatorModel | src/panel/app.js | 0 | pending | - |
+| ScryPanelApp.updateResults(): void | src/panel/app.js | 0 | pending | - |
 
 ## Log
 
@@ -37,17 +37,5 @@ updated: 2026-04-30T06:10:20.280Z
 - 01:07:49 searchHeaderModel: running
 - 01:10:38 searchHeaderModel: pass (168.5s, $1.0452)
 - 01:10:39 implementer_post verification for searchHeaderModel: pass
-- 05:22:11 ScryPanelApp.handlePanelKeydown(event: KeyboardEvent): void: pass (verified existing implementation)
-- 05:22:11 implementer_post verification for ScryPanelApp.handlePanelKeydown(event: KeyboardEvent): void: pass
-- 05:25:05 ScryPanelApp.renderModeIndicatorElement(model: ModeIndicatorModel): void: pass (317.1s, $1.8327)
-- 05:26:37 implementer_post verification for ScryPanelApp.renderModeIndicatorElement(model: ModeIndicatorModel): void: pass
-- 05:47:40 ScryPanelApp.renderSearchHeader(): HeaderSearchContextModel: pass (verified existing implementation)
-- 05:47:40 implementer_post verification for ScryPanelApp.renderSearchHeader(): HeaderSearchContextModel: pass
-- 01:52:31 ScryPanelApp.renderResults(): void: pass (verified existing implementation)
-- 01:52:31 implementer_post verification for ScryPanelApp.renderResults(): void: pass
-- 05:54:30 ScryPanelApp.renderLoading(): ModeIndicatorModel: pass (verified existing implementation)
-- 05:54:30 implementer_post verification for ScryPanelApp.renderLoading(): ModeIndicatorModel: pass
-- 06:05:39 ScryPanelApp.renderModeIndicator(): ModeIndicatorModel: pass (verified existing implementation)
-- 06:05:39 implementer_post verification for ScryPanelApp.renderModeIndicator(): ModeIndicatorModel: pass
-- 06:10:20 ScryPanelApp.updateResults(): void: pass (verified existing implementation)
-- 06:10:20 implementer_post verification for ScryPanelApp.updateResults(): void: pass
+- 02:16:25 abstractor pass
+- 02:16:27 abstractor_post verification: pass
