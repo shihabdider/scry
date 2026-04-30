@@ -1115,6 +1115,100 @@ test('updateResults searches the active cached mode index and rebuilds visible r
   assert.equal(renderCalls, 1)
 })
 
+test('updateResults refreshes the header count from rebuilt active-mode visible rows', () => {
+  const document = createScryDocument()
+  const { count } = appendSearchHeader(document)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  const recentIndex = buildHistoryIndex([
+    {
+      url: 'https://closed.example/match?stale=one',
+      title: 'Stale recent match one',
+      visitCount: 10,
+      lastVisitTime: now,
+    },
+    {
+      url: 'https://closed.example/match?stale=two',
+      title: 'Stale recent match two',
+      visitCount: 9,
+      lastVisitTime: now - 1_000,
+    },
+  ], { now })
+  const closedIndex = buildHistoryIndex([
+    {
+      url: 'https://closed.example/match',
+      title: 'Closed tab match',
+      visitCount: 1,
+      lastVisitTime: now,
+    },
+  ], { now })
+  app.modeCache = {
+    recent: { mode: 'recent', status: 'ready', index: recentIndex, error: null, loadedAt: now },
+    deep: { mode: 'deep', status: 'idle', index: null, error: null, loadedAt: null },
+    closed: { mode: 'closed', status: 'ready', index: closedIndex, error: null, loadedAt: now },
+  }
+  app.searchMode = 'closed'
+  app.index = recentIndex
+  app.visibleRows = buildVisibleRows({ corpusResults: [searchResult('stale'), searchResult('older')] })
+  app.selectedIndex = 9
+  count.textContent = '2 results'
+  input.value = 'closed.example/match'
+
+  app.updateResults()
+
+  assert.equal(app.index, closedIndex)
+  assert.equal(app.results.length, 1)
+  assert.equal(app.results[0].url, 'https://closed.example/match')
+  assert.equal(app.visibleRows.length, 2)
+  assert.equal(app.visibleRows[0].kind, 'open-typed-url')
+  assert.equal(app.visibleRows[1].kind, 'result')
+  assert.equal(count.textContent, '1 result')
+  assert.equal(app.selectedIndex, 1)
+})
+
+test('updateResults refreshes the header to no real results when the active mode has only a typed URL row', () => {
+  const document = createScryDocument()
+  const { count } = appendSearchHeader(document)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  const staleIndex = buildHistoryIndex([
+    {
+      url: 'https://stale.example/path',
+      title: 'Stale result',
+      visitCount: 5,
+      lastVisitTime: now,
+    },
+  ], { now })
+  app.modeCache = {
+    recent: { mode: 'recent', status: 'ready', index: staleIndex, error: null, loadedAt: now },
+    deep: { mode: 'deep', status: 'idle', index: null, error: null, loadedAt: null },
+    closed: { mode: 'closed', status: 'error', index: null, error: new Error('sessions unavailable'), loadedAt: null },
+  }
+  app.searchMode = 'closed'
+  app.index = staleIndex
+  app.results = [searchResult('stale')]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 4
+  count.textContent = '1 result'
+  input.value = 'typed-only.example/path#fragment'
+
+  app.updateResults()
+
+  assert.equal(app.index, null)
+  assert.deepEqual(app.results, [])
+  assert.equal(app.visibleRows.length, 1)
+  assert.equal(app.visibleRows[0].kind, 'open-typed-url')
+  assert.deepEqual(app.visibleRows[0].candidate, {
+    displayInput: 'typed-only.example/path',
+    normalizedUrl: 'https://typed-only.example/path',
+    key: 'https://typed-only.example/path',
+  })
+  assert.equal(count.textContent, 'No results')
+  assert.equal(app.selectedIndex, 0)
+})
+
 test('updateResults sorts closed mode empty-query results by most recent first', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
@@ -2565,6 +2659,59 @@ test('renderModeIndicator renders the active mode label/status in dedicated popu
   assert.equal(document.querySelector('#status').textContent, '2 deep history URLs')
   assert.equal(deepSearchButton.hidden, true)
   assert.equal(deepSearchButton.textContent, 'Deep search all history')
+})
+
+test('renderModeIndicator coordinates the integrated header row, badge, count, and status', () => {
+  const document = createScryDocument()
+  const { before, modeIndicator, after, hint, count } = appendSearchHeader(document)
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const deepSearchButton = document.querySelector('#deep-search-button')
+  deepSearchButton.hidden = false
+  app.searchMode = 'closed'
+  app.modeCache = {
+    closed: {
+      mode: 'closed',
+      status: 'ready',
+      index: { entries: [{}, {}, {}] },
+      error: null,
+      loadedAt: now,
+    },
+  }
+  app.visibleRows = buildVisibleRows({
+    corpusResults: [searchResult('first'), searchResult('second')],
+    typedUrlCandidate: {
+      displayInput: 'typed.example/path',
+      normalizedUrl: 'https://typed.example/path',
+      key: 'https://typed.example/path',
+    },
+  })
+
+  const model = app.renderModeIndicator()
+
+  assert.deepEqual(model, {
+    label: '[closed]',
+    mode: 'closed',
+    status: 'ready',
+    clickable: true,
+    modeSwitchHint: 'Tab/Shift+Tab',
+    statusText: '3 recently closed URLs',
+  })
+  assert.equal(before.textContent, 'Search')
+  assert.equal(modeIndicator.hidden, false)
+  assert.equal(modeIndicator.textContent, '[closed]')
+  assert.equal(modeIndicator.dataset.mode, 'closed')
+  assert.equal(modeIndicator.dataset.status, 'ready')
+  assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; 3 recently closed URLs; switch mode with Tab/Shift+Tab')
+  assert.equal(after.textContent, 'history')
+  assert.equal(hint.textContent, 'Tab/Shift+Tab')
+  assert.equal(hint.hidden, false)
+  assert.equal(count.textContent, '2 results')
+  assert.equal(count.getAttribute('aria-label'), '2 results')
+  assert.equal(document.querySelector('#search-header').getAttribute('aria-label'), 'Search closed history; 2 results')
+  assert.equal(document.querySelector('#search-input').getAttribute('aria-label'), 'Search closed history')
+  assert.equal(document.querySelector('#status').textContent, '3 recently closed URLs')
+  assert.equal(deepSearchButton.hidden, true)
 })
 
 test('renderModeIndicator is safe before popup mode-indicator markup exists', () => {

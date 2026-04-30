@@ -245,14 +245,17 @@ export class ScryPanelApp {
   }
 
   renderModeIndicator() {
-    const mode = this.activeSearchMode()
-    const state = this.modeCache?.[mode] ?? null
-    const model = modeIndicatorModel(mode, state)
-
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
 
-    this.renderSearchHeader()
-    return model
+    const headerModel = this.renderSearchHeader()
+    return {
+      label: headerModel.modeBadgeLabel,
+      mode: headerModel.mode,
+      status: headerModel.status,
+      clickable: true,
+      modeSwitchHint: headerModel.modeSwitchHint,
+      statusText: headerModel.statusText,
+    }
   }
 
   renderSearchHeader() {
