@@ -84,4 +84,5 @@ Use data-definition-driven stubbing because this is JavaScript and the relevant 
 
 ### Look Back
 
-- Leave empty for now.
+- Phase 3 abstractor extracted shared `escapeHtml` usage into `src/core/format.js` import reuse and `modeIndicatorModelFromHeaderModel` in `src/panel/app.js`.
+- HtDP status updates for class-method wishes were repaired after wrapper regressions; source/test verification remained clean.
