@@ -4,7 +4,8 @@ status: ready-for-agent
 type: feature
 mode: AFK
 source_prd: null
-depends_on:   - issue-0018
+depends_on:
+  - issue-0018
 remote:
   github: null
 legacy:
@@ -16,43 +17,51 @@ legacy:
   ous_tags: ["popup", "keyboard", "focus", "qa"]
 ---
 
-# Add i key to return from results to search
+# Add i and slash keys to return from results to search
 
 ## What to build
 
-Scry needs a keyboard shortcut to return from result/navigation mode back to the search input without closing and reopening the command palette.
+Scry needs direct keyboard shortcuts to return from result/navigation mode back to the search input without closing and reopening the command palette. Keep the existing `i` shortcut and add `/` as an equivalent focus-search shortcut.
 
 ## Acceptance examples
 
-- [ ] Pressing `i` in result/navigation mode focuses the search input.
-- [ ] The current query text is preserved when returning to search input.
-- [ ] Pressing `i` while the search input is focused inserts text normally.
-- [ ] The footer hint mentions `i` as the way back to search.
+- [ ] Given Scry is in result/navigation mode, when the user presses `i`, then the search input is focused and the current query text is preserved.
+- [ ] Given Scry is in result/navigation mode, when the user presses `/`, then the search input is focused and the current query text is preserved.
+- [ ] Given focus returns to the search input from `i` or `/`, then the cursor is placed at the end of the current query.
+- [ ] Given the search input is already focused, when the user types `i` or `/`, then normal text entry is unchanged.
+- [ ] Given the selected result row is focused, when the user presses `/`, then Scry does not open or copy the selected result.
 
 ## Data definition impact
 
-Not reassessed during migration. See the migrated OUS content below for original implementation notes, decisions, and acceptance criteria.
+Expected change to the focus/navigation key model: result/navigation mode should treat both `i` and `/` as `focusSearch` commands. No new persistent data is expected.
 
 ## HtDP entry note
 
-Migrated from OUS #0018 at `.ous/issues/0018-add-i-key-to-return-from-results-to-search.md`. Original state was `ready-for-agent` and category was `enhancement`.
+Implement the smallest keyboard-focus slice: add `/` alongside `i` in result/navigation mode, preserve normal text input behavior while the search box is focused, and keep this local to the popup command palette. Do not change result movement, opening, copying, or editing behavior in this issue.
 
-Use this issue as a local HtDP planning artifact. If implementation work is still required, start from the original acceptance criteria and current repository behavior rather than assuming the legacy state is still accurate.
+The migrated OUS content below is historical. Its footer-hint acceptance has been superseded by the newer UI-hint integration issue; do not reintroduce the footer just to satisfy the old text.
 
 ## Verification
 
-For code changes derived from this issue, run:
+Run:
 
 ```bash
 npm test
 npm run check
 ```
 
-Also verify any original manual or behavioral acceptance criteria preserved below.
+Expected test coverage:
+
+- `i` and `/` focus the search input from result/navigation mode.
+- The query value is preserved and the cursor lands at the end.
+- `i` and `/` still type normally when the input is focused.
+- `/` from result/navigation mode does not trigger selected-row actions.
+
+Manual check after implementation: open Scry, type a query, press `Esc` to enter result/navigation mode, then confirm both `i` and `/` return focus to the input.
 
 ## Blocked by
 
-- issue-0018 (migrated from OUS #0015)
+- issue-0018 for the underlying search/results focus lifecycle. Current repository behavior can be inspected directly because that issue is marked done.
 
 ## HtDP iterations
 
@@ -60,7 +69,9 @@ Also verify any original manual or behavioral acceptance criteria preserved belo
 
 ## Out of scope
 
-Not reassessed during migration. Preserve the original out-of-scope notes where present in the migrated OUS content below.
+- Redesigning the hint footer or placeholder text.
+- Changing `Esc`, result navigation, copy, edit, or open shortcuts.
+- Adding slash-prefixed command syntax.
 
 ## Migrated OUS frontmatter
 

@@ -1001,6 +1001,43 @@ test('updateResults searches the active cached mode index and rebuilds visible r
   assert.equal(renderCalls, 1)
 })
 
+test('updateResults sorts closed mode empty-query results by most recent first', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const input = document.querySelector('#search-input')
+  const closedIndex = buildHistoryIndex([
+    {
+      url: 'https://closed.example/recent-one-off',
+      title: 'Recent one off',
+      visitCount: 1,
+      lastVisitTime: now - 5 * 60 * 1000,
+    },
+    {
+      url: 'https://closed.example/older-recurring',
+      title: 'Older recurring',
+      visitCount: 12,
+      lastVisitTime: now - 60 * 60 * 1000,
+    },
+  ], { now })
+  app.modeCache = {
+    recent: { mode: 'recent', status: 'idle', index: null, error: null, loadedAt: null },
+    deep: { mode: 'deep', status: 'idle', index: null, error: null, loadedAt: null },
+    closed: { mode: 'closed', status: 'ready', index: closedIndex, error: null, loadedAt: now },
+  }
+  app.searchMode = 'closed'
+  input.value = ''
+  app.renderResults = () => {}
+
+  app.updateResults()
+
+  assert.deepEqual(app.results.map((result) => result.url), [
+    'https://closed.example/recent-one-off',
+    'https://closed.example/older-recurring',
+  ])
+  assert.equal(app.results[0].debug.mode, 'recency')
+})
+
 test('input events debounce result refresh while resetting navigation immediately', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])

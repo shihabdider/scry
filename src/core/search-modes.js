@@ -1,8 +1,9 @@
-export const SEARCH_MODES = Object.freeze(['recent', 'deep', 'closed'])
+export const SEARCH_MODES = Object.freeze(['recent', 'closed', 'deep'])
 export const DEFAULT_SEARCH_MODE = 'recent'
 
 /**
- * @typedef {'recent'|'deep'|'closed'} SearchMode
+ * Ordered search corpus variants. Public cycling/enumeration order is recent -> closed -> deep.
+ * @typedef {'recent'|'closed'|'deep'} SearchMode
  */
 
 /**
@@ -24,10 +25,24 @@ export const DEFAULT_SEARCH_MODE = 'recent'
 
 /**
  * @typedef {object} ModeIndicatorModel
- * @property {string} label Compact visible label, for example "mode: recent".
+ * @property {string} label Compact visible badge label, for example "[recent]".
  * @property {SearchMode} mode Active mode.
  * @property {ModeLoadStatus} status Active mode load status.
  * @property {boolean} clickable Whether clicking should cycle to the next mode.
+ * @property {string} [modeSwitchHint] Compact adjacent hint for changing modes, for example "Tab/Shift+Tab".
+ */
+
+/**
+ * @typedef {object} HeaderSearchContextModel
+ * @property {string} beforeMode Visible header text before the mode badge, normally "Search".
+ * @property {string} modeBadgeLabel Bracketed clickable active-mode label, for example "[recent]".
+ * @property {SearchMode} mode Active mode represented by the badge.
+ * @property {string} afterMode Visible header text after the mode badge, normally "history".
+ * @property {string} modeSwitchHint Hint shown on or immediately adjacent to the badge.
+ * @property {number} realResultCount Count of visible real URL result rows, excluding synthetic action rows.
+ * @property {string} realResultCountLabel Right-aligned human-readable result-count text.
+ * @property {ModeLoadStatus} status Active mode load status.
+ * @property {string} statusText Accessible/status text for the active mode.
  */
 
 export function createModeCache() {
@@ -48,6 +63,10 @@ export function cycleSearchMode(currentMode, { direction = 1 } = {}) {
   return SEARCH_MODES[nextIndex]
 }
 
+export function searchHeaderModel(mode, state, { realResultCount = 0 } = {}) {
+  throw new Error('not implemented: searchHeaderModel')
+}
+
 export function modeIndicatorModel(mode, state) {
   const activeMode = SEARCH_MODES.includes(mode) ? mode : DEFAULT_SEARCH_MODE
   const status = state?.status ?? 'idle'
@@ -60,17 +79,17 @@ export function modeIndicatorModel(mode, state) {
       ready: `${entryCount} recent history ${urlWord}`,
       error: 'Recent history unavailable',
     },
-    deep: {
-      idle: 'Deep history not loaded',
-      loading: 'Loading deep history…',
-      ready: `${entryCount} deep history ${urlWord}`,
-      error: 'Deep history unavailable',
-    },
     closed: {
       idle: 'Recently closed URLs not loaded',
       loading: 'Loading recently closed URLs…',
       ready: `${entryCount} recently closed ${urlWord}`,
       error: 'Recently closed URLs unavailable',
+    },
+    deep: {
+      idle: 'Deep history not loaded',
+      loading: 'Loading deep history…',
+      ready: `${entryCount} deep history ${urlWord}`,
+      error: 'Deep history unavailable',
     },
   }[activeMode]
 

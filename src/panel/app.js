@@ -16,6 +16,18 @@ const INPUT_UPDATE_DEBOUNCE_MS = 80
 const FOCUS_RETRY_DELAYS_MS = [0, 50, 150, 300, 600, 1000]
 const COPY_FEEDBACK_DURATION_MS = 1_200
 
+/**
+ * @typedef {'search'|'results'|'blurred'} FocusMode
+ */
+
+/**
+ * @typedef {'ignore'|'focusSearch'|'leavePanelFocus'|'copySelected'|'editSelectedUrl'|'moveNext'|'movePrevious'|'nextPage'|'previousPage'|'openSelected'} ResultNavigationCommand
+ */
+
+export function resultNavigationCommandForKey(event) {
+  throw new Error('not implemented: resultNavigationCommandForKey')
+}
+
 export class ScryPanelApp {
   constructor({ document, chromeApi = chrome, clock = () => Date.now(), windowApi = globalThis.window, navigatorApi = globalThis.navigator } = {}) {
     this.document = document
@@ -219,6 +231,10 @@ export class ScryPanelApp {
     return model
   }
 
+  renderSearchHeader() {
+    throw new Error('not implemented: renderSearchHeader')
+  }
+
   renderModeIndicatorElement(model) {
     const indicator = this.document.querySelector('#mode-indicator')
     if (!indicator) return
@@ -344,6 +360,7 @@ export class ScryPanelApp {
         now: this.clock(),
         limit: SEARCH_LIMIT,
         selections: this.selectionData,
+        emptyQuerySort: this.searchMode === 'closed' ? 'recency' : 'frecency',
       })
       : []
 

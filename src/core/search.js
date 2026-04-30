@@ -98,7 +98,11 @@ export function compareQuoteEvidence(a, b) {
   return compareTuple(a?.qualityTuple ?? [], b?.qualityTuple ?? [])
 }
 
-export function searchParsedHistory(index, parsedQuery, { now = Date.now(), limit = DEFAULT_LIMIT, selections } = {}) {
+export function searchParsedHistory(
+  index,
+  parsedQuery,
+  { now = Date.now(), limit = DEFAULT_LIMIT, selections, emptyQuerySort = 'frecency' } = {},
+) {
   const tokens = Array.isArray(parsedQuery?.unquotedTokens)
     ? parsedQuery.unquotedTokens
     : Array.isArray(parsedQuery?.tokens)
@@ -109,6 +113,13 @@ export function searchParsedHistory(index, parsedQuery, { now = Date.now(), limi
 
   if (!exactPhrases.length) {
     if (!tokens.length) {
+      if (emptyQuerySort === 'recency') {
+        return entries
+          .sort((a, b) => b.lastVisitTime - a.lastVisitTime)
+          .slice(0, limit)
+          .map((entry) => toResult(entry, { tokens, now, debug: { mode: 'recency', score: entry.lastVisitTime } }))
+      }
+
       return entries
         .map((entry) => ({ entry, score: frecencyScore(entry, now) }))
         .sort((a, b) => b.score - a.score)
@@ -400,8 +411,12 @@ export function buildHistoryIndex(rawEntries, { now = Date.now() } = {}) {
   return { builtAt: now, entries }
 }
 
-export function searchHistory(index, query, { now = Date.now(), limit = DEFAULT_LIMIT, selections } = {}) {
-  return searchParsedHistory(index, parseQuery(query), { now, limit, selections })
+export function searchHistory(
+  index,
+  query,
+  { now = Date.now(), limit = DEFAULT_LIMIT, selections, emptyQuerySort = 'frecency' } = {},
+) {
+  return searchParsedHistory(index, parseQuery(query), { now, limit, selections, emptyQuerySort })
 }
 
 export const __testing = {

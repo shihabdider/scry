@@ -635,6 +635,38 @@ test('empty query returns frecent defaults rather than pure recency or pure freq
   assert.equal(results.at(-1).url, 'https://example.com/stale-popular')
 })
 
+test('empty query can sort by pure recency for closed URL mode callers', () => {
+  const index = indexOf([
+    {
+      url: 'https://example.com/recent-one-off',
+      title: 'Recent one off',
+      visitCount: 1,
+      lastVisitTime: now - 5 * 60 * 1000,
+    },
+    {
+      url: 'https://example.com/older-recurring',
+      title: 'Older recurring',
+      visitCount: 12,
+      lastVisitTime: now - 60 * 60 * 1000,
+    },
+    {
+      url: 'https://example.com/stale-popular',
+      title: 'Stale popular',
+      visitCount: 500,
+      lastVisitTime: now - 80 * 24 * 60 * 60 * 1000,
+    },
+  ])
+
+  const results = searchHistory(index, '', { now, emptyQuerySort: 'recency' })
+
+  assert.deepEqual(results.map((result) => result.url), [
+    'https://example.com/recent-one-off',
+    'https://example.com/older-recurring',
+    'https://example.com/stale-popular',
+  ])
+  assert.equal(results[0].debug.mode, 'recency')
+})
+
 test('ordered URL recall finds a visited GitHub issue from remembered fragments', () => {
   const index = indexOf([
     {

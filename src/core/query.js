@@ -10,7 +10,7 @@ const TOKEN_PATTERN = /[a-z0-9]+/gi
 /**
  * @typedef {object} ParsedQuery
  * @property {string} raw Original query text.
- * @property {string[]} tokens Backward-compatible unquoted token list used by existing ranking.
+ * @property {string[]} tokens Backward-compatible unquoted token list used by existing ranking; space-separated URL fragments are the primary user syntax while punctuation such as `*` remains tolerated.
  * @property {string[]} unquotedTokens Tokens outside complete quoted phrases.
  * @property {ExactPhrase[]} exactPhrases Complete quoted phrases that must match exactly.
  * @property {string} key Selection-learning key derived from unquotedTokens.

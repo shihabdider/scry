@@ -19,6 +19,18 @@
  */
 
 /**
+ * @typedef {object} RowActionHint
+ * @property {'copy'|'edit-url'} action Action represented by the hint.
+ * @property {string} key Keyboard key shown to the user, for example "y" or "c".
+ * @property {string} label Human-readable action label, for example "copy" or "edit URL".
+ */
+
+/**
+ * @typedef {object} SelectedRowActionHintOptions
+ * @property {boolean} [selected] Whether this visible row is the current selected row.
+ */
+
+/**
  * @typedef {object} CopiedFeedback
  * @property {string} key Row/result/action key receiving copied feedback.
  * @property {number} expiresAt Millisecond timestamp when feedback should disappear.
@@ -52,6 +64,10 @@ export function buildVisibleRows({ corpusResults = [], typedUrlCandidate = null,
   }
 
   return rows
+}
+
+export function selectedRowActionHints(row, { selected = false } = {}) {
+  throw new Error('not implemented: selectedRowActionHints')
 }
 
 export function rowOpenUrl(row) {
