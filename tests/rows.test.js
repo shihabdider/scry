@@ -1,7 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { buildVisibleRows, isCopiedFeedbackVisible, rowEditableText, rowOpenUrl, rowSelectionLearningKey } from '../src/core/rows.js'
+import {
+  buildVisibleRows,
+  isCopiedFeedbackVisible,
+  rowEditableText,
+  rowOpenUrl,
+  rowSelectionLearningKey,
+  selectedRowActionHints,
+} from '../src/core/rows.js'
 
 test('buildVisibleRows returns no rows for empty/default input', () => {
   assert.deepEqual(buildVisibleRows(), [])
@@ -307,6 +314,80 @@ test('rowEditableText returns null for null or malformed rows', () => {
 
   for (const row of malformedRows) {
     assert.equal(rowEditableText(row), null)
+  }
+})
+
+test('selectedRowActionHints returns no hints when the row is not selected', () => {
+  const row = {
+    kind: 'result',
+    key: 'result:https://example.com/docs',
+    copied: false,
+    result: {
+      key: 'https://example.com/docs',
+      url: 'https://example.com/docs',
+      displayUrl: 'example.com/docs',
+    },
+  }
+
+  assert.deepEqual(selectedRowActionHints(row), [])
+  assert.deepEqual(selectedRowActionHints(row, { selected: false }), [])
+})
+
+test('selectedRowActionHints returns copy and edit URL hints for selected editable real result rows', () => {
+  const row = {
+    kind: 'result',
+    key: 'result:https://example.com/docs',
+    copied: false,
+    result: {
+      key: 'https://example.com/docs',
+      url: 'https://example.com/docs?tab=readme',
+      displayUrl: 'example.com/docs?tab=readme',
+    },
+  }
+
+  assert.deepEqual(selectedRowActionHints(row, { selected: true }), [
+    { action: 'copy', key: 'y', label: 'copy' },
+    { action: 'edit-url', key: 'c', label: 'edit URL' },
+  ])
+})
+
+test('selectedRowActionHints returns copy only for selected synthetic typed URL rows', () => {
+  const row = {
+    kind: 'open-typed-url',
+    key: 'open-typed-url:https://typed.example/path',
+    copied: false,
+    candidate: {
+      displayInput: 'typed.example/path',
+      normalizedUrl: 'https://typed.example/path',
+      key: 'https://typed.example/path',
+    },
+  }
+
+  assert.deepEqual(selectedRowActionHints(row, { selected: true }), [{ action: 'copy', key: 'y', label: 'copy' }])
+})
+
+test('selectedRowActionHints derives copy and edit hints independently from row capabilities', () => {
+  assert.deepEqual(selectedRowActionHints({ kind: 'result', result: { url: 'https://example.com/docs' } }, { selected: true }), [
+    { action: 'copy', key: 'y', label: 'copy' },
+  ])
+
+  assert.deepEqual(selectedRowActionHints({ kind: 'result', result: { displayUrl: 'example.com/docs' } }, { selected: true }), [
+    { action: 'edit-url', key: 'c', label: 'edit URL' },
+  ])
+})
+
+test('selectedRowActionHints returns no hints for selected null or unknown rows', () => {
+  const rows = [
+    null,
+    undefined,
+    {},
+    { kind: 'unknown', result: { url: 'https://example.com/ignore-me', displayUrl: 'example.com/ignore-me' } },
+    { kind: 'result', result: {} },
+    { kind: 'open-typed-url', candidate: {} },
+  ]
+
+  for (const row of rows) {
+    assert.deepEqual(selectedRowActionHints(row, { selected: true }), [])
   }
 })
 

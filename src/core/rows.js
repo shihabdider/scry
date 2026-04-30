@@ -67,7 +67,13 @@ export function buildVisibleRows({ corpusResults = [], typedUrlCandidate = null,
 }
 
 export function selectedRowActionHints(row, { selected = false } = {}) {
-  throw new Error('not implemented: selectedRowActionHints')
+  if (!selected) return []
+
+  const hints = []
+  if (rowOpenUrl(row)) hints.push({ action: 'copy', key: 'y', label: 'copy' })
+  if (rowEditableText(row)) hints.push({ action: 'edit-url', key: 'c', label: 'edit URL' })
+
+  return hints
 }
 
 export function rowOpenUrl(row) {
