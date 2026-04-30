@@ -81,6 +81,7 @@ Use data-definition-driven stubbing because this is JavaScript and the relevant 
 - 2026-04-30T04:48:22Z — user confirmed the Phase 0 understanding with `go`.
 - 2026-04-30T04:55:42Z — stubber completed 11 wishes across 4 layers and flagged expected assertion changes for new mode order, Escape-close behavior, and integrated/no-footer UI hints.
 - 2026-04-30T04:56:00Z — user approved proceeding to Phase 2 with the flagged assertion changes.
+- 2026-04-30T06:30:00Z — final verification item 1 failed: bracket characters were only notation for a badge, not literal label text; the right-aligned header count should be the active corpus/status total formerly shown next to the Scry title, not the current filtered visible-result count.
 
 ### Look Back
 
@@ -88,3 +89,4 @@ Use data-definition-driven stubbing because this is JavaScript and the relevant 
 - HtDP status updates for class-method wishes were repaired after wrapper regressions; source/test verification remained clean.
 - Final acceptance audit found and fixed remaining static footer/star-placeholder/README copy gaps for issues 0025 and 0027.
 - Final test audit removed stubber TODO acceptance tests after adding/confirming real coverage; `npm test` now reports 0 todo tests.
+- Human final verification corrected the badge/count interpretation: badge text should be plain mode text and header count should show active mode total/status text.

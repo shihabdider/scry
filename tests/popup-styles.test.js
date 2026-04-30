@@ -37,7 +37,7 @@ test('mode indicator keeps the sparse old-Google popup treatment', async () => {
   assertNoModernCardChrome(modeIndicator)
 })
 
-test('search header row keeps sparse styling while right-aligning the result count', async () => {
+test('search header row keeps sparse styling while right-aligning the mode status', async () => {
   const css = await readFile(cssPath, 'utf8')
   const searchHeader = ruleFor(css, '.search-header')
   const hint = ruleFor(css, '.mode-switch-hint')

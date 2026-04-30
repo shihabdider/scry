@@ -67,9 +67,9 @@ function modeState(mode, { status = 'idle', entries = null, error = null } = {})
   }
 }
 
-test('modeIndicatorModel returns bracketed clickable labels and the mode-switch hint for every search mode', () => {
+test('modeIndicatorModel returns plain clickable badge labels and the mode-switch hint for every search mode', () => {
   assert.deepEqual(modeIndicatorModel('recent', modeState('recent')), {
-    label: '[recent]',
+    label: 'recent',
     mode: 'recent',
     status: 'idle',
     clickable: true,
@@ -77,7 +77,7 @@ test('modeIndicatorModel returns bracketed clickable labels and the mode-switch 
     statusText: 'Recent history not loaded',
   })
   assert.deepEqual(modeIndicatorModel('closed', modeState('closed')), {
-    label: '[closed]',
+    label: 'closed',
     mode: 'closed',
     status: 'idle',
     clickable: true,
@@ -85,7 +85,7 @@ test('modeIndicatorModel returns bracketed clickable labels and the mode-switch 
     statusText: 'Recently closed URLs not loaded',
   })
   assert.deepEqual(modeIndicatorModel('deep', modeState('deep')), {
-    label: '[deep]',
+    label: 'deep',
     mode: 'deep',
     status: 'idle',
     clickable: true,
@@ -96,7 +96,7 @@ test('modeIndicatorModel returns bracketed clickable labels and the mode-switch 
 
 test('modeIndicatorModel treats a null state as the active mode idle badge', () => {
   assert.deepEqual(modeIndicatorModel('recent', null), {
-    label: '[recent]',
+    label: 'recent',
     mode: 'recent',
     status: 'idle',
     clickable: true,
@@ -119,7 +119,7 @@ test('modeIndicatorModel reports ready text with active corpus counts', () => {
 
 test('modeIndicatorModel reports mode-local errors without disabling mode switching', () => {
   assert.deepEqual(modeIndicatorModel('closed', modeState('closed', { status: 'error', error: new Error('sessions unavailable') })), {
-    label: '[closed]',
+    label: 'closed',
     mode: 'closed',
     status: 'error',
     clickable: true,
@@ -128,37 +128,26 @@ test('modeIndicatorModel reports mode-local errors without disabling mode switch
   })
 })
 
-test('searchHeaderModel builds a sparse Search [mode] history model with default no-result count', () => {
+test('searchHeaderModel builds a sparse Search mode history model with active-mode status text', () => {
   assert.deepEqual(searchHeaderModel('recent', null), {
     beforeMode: 'Search',
-    modeBadgeLabel: '[recent]',
+    modeBadgeLabel: 'recent',
     mode: 'recent',
     afterMode: 'history',
     modeSwitchHint: 'Tab/Shift+Tab',
-    realResultCount: 0,
-    realResultCountLabel: 'No results',
     status: 'idle',
     statusText: 'Recent history not loaded',
   })
 })
 
-test('searchHeaderModel reports singular and plural real result-count labels from caller-supplied counts', () => {
+test('searchHeaderModel uses corpus total status text instead of caller-supplied visible result counts', () => {
   const readyRecent = modeState('recent', { status: 'ready', entries: [{}, {}, {}, {}, {}] })
+  const model = searchHeaderModel('recent', readyRecent, { realResultCount: 1 })
 
-  assert.deepEqual(
-    {
-      realResultCount: searchHeaderModel('recent', readyRecent, { realResultCount: 1 }).realResultCount,
-      realResultCountLabel: searchHeaderModel('recent', readyRecent, { realResultCount: 1 }).realResultCountLabel,
-      statusText: searchHeaderModel('recent', readyRecent, { realResultCount: 1 }).statusText,
-    },
-    {
-      realResultCount: 1,
-      realResultCountLabel: '1 result',
-      statusText: '5 recent history URLs',
-    },
-  )
-
-  assert.equal(searchHeaderModel('recent', readyRecent, { realResultCount: 3 }).realResultCountLabel, '3 results')
+  assert.equal(model.statusText, '5 recent history URLs')
+  assert.equal(model.modeBadgeLabel, 'recent')
+  assert.equal('realResultCount' in model, false)
+  assert.equal('realResultCountLabel' in model, false)
 })
 
 test('searchHeaderModel preserves mode-specific loading and error status text', () => {
@@ -170,7 +159,7 @@ test('searchHeaderModel preserves mode-specific loading and error status text', 
       modeSwitchHint: searchHeaderModel('deep', modeState('deep', { status: 'loading' })).modeSwitchHint,
     },
     {
-      modeBadgeLabel: '[deep]',
+      modeBadgeLabel: 'deep',
       status: 'loading',
       statusText: 'Loading deep history…',
       modeSwitchHint: 'Tab/Shift+Tab',
@@ -184,7 +173,7 @@ test('searchHeaderModel preserves mode-specific loading and error status text', 
       statusText: searchHeaderModel('closed', modeState('closed', { status: 'error', error: new Error('sessions unavailable') })).statusText,
     },
     {
-      modeBadgeLabel: '[closed]',
+      modeBadgeLabel: 'closed',
       status: 'error',
       statusText: 'Recently closed URLs unavailable',
     },

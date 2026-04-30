@@ -266,7 +266,7 @@ export class ScryPanelApp {
   renderSearchHeader() {
     const mode = this.activeSearchMode()
     const state = this.modeCache?.[mode] ?? null
-    const model = searchHeaderModel(mode, state, { realResultCount: this.visibleResultCount() })
+    const model = searchHeaderModel(mode, state)
 
     const before = this.document.querySelector('#search-header-before')
     if (before) before.textContent = model.beforeMode
@@ -283,14 +283,16 @@ export class ScryPanelApp {
 
     const resultCount = this.document.querySelector('#result-count')
     if (resultCount) {
-      resultCount.textContent = model.realResultCountLabel
-      resultCount.setAttribute('aria-label', model.realResultCountLabel)
+      resultCount.textContent = model.statusText
+      resultCount.setAttribute('aria-label', model.statusText)
+      resultCount.setAttribute('role', 'status')
+      resultCount.setAttribute('aria-live', 'polite')
     }
 
     const searchHeader = this.document.querySelector('#search-header')
     if (searchHeader) {
       searchHeader.hidden = false
-      searchHeader.setAttribute('aria-label', `${model.beforeMode} ${model.mode} ${model.afterMode}; ${model.realResultCountLabel}`)
+      searchHeader.setAttribute('aria-label', `${model.beforeMode} ${model.mode} ${model.afterMode}; ${model.statusText}`)
     }
 
     this.input?.setAttribute('aria-label', `${model.beforeMode} ${model.mode} ${model.afterMode}`)

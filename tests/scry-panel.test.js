@@ -608,7 +608,7 @@ test('renderResults adds selected real-row action hints to the meta line only on
   assert.match(selectedHtml, /class="result-meta"[\s\S]*3 visits · now[\s\S]*y copy[\s\S]*c edit URL/)
 })
 
-test('renderResults adds only available hints to a selected typed URL row and keeps the count real-only', () => {
+test('renderResults adds only available hints to a selected typed URL row and keeps header status mode-based', () => {
   const document = createScryDocument()
   const { count } = appendSearchHeader(document)
   const chromeApi = createPanelChrome([])
@@ -634,7 +634,7 @@ test('renderResults adds only available hints to a selected typed URL row and ke
   assert.doesNotMatch(typedHtml, /\bc edit URL\b/)
   assert.doesNotMatch(realHtml, /\by copy\b/)
   assert.doesNotMatch(realHtml, /\bc edit URL\b/)
-  assert.equal(count.textContent, '1 result')
+  assert.equal(count.textContent, 'Recent history not loaded')
 })
 
 test('renderResults uses mode-appropriate empty messages and keeps the old deep-search fallback hidden', () => {
@@ -711,14 +711,14 @@ test('renderLoading marks the mode indicator as loading for the active mode', ()
   app.renderLoading()
 
   assert.equal(modeIndicator.hidden, false)
-  assert.equal(modeIndicator.textContent, '[closed]')
+  assert.equal(modeIndicator.textContent, 'closed')
   assert.equal(modeIndicator.dataset.mode, 'closed')
   assert.equal(modeIndicator.dataset.status, 'loading')
   assert.equal(modeIndicator.dataset.clickable, 'true')
   assert.equal(modeIndicator.disabled, false)
   assert.equal(modeIndicator.title, 'Loading recently closed URLs…')
   assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
-  assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; Loading recently closed URLs…; switch mode with Tab/Shift+Tab')
+  assert.equal(modeIndicator.getAttribute('aria-label'), 'closed; Loading recently closed URLs…; switch mode with Tab/Shift+Tab')
   assert.equal(app.status.textContent, 'Loading recently closed URLs…')
 })
 
@@ -736,7 +736,7 @@ test('renderLoading refreshes the integrated header with loading status after cl
   const model = app.renderLoading()
 
   assert.deepEqual(model, {
-    label: '[deep]',
+    label: 'deep',
     mode: 'deep',
     status: 'loading',
     clickable: true,
@@ -748,15 +748,17 @@ test('renderLoading refreshes the integrated header with loading status after cl
   assert.equal(app.resultsList.childElementCount, 0)
   assert.equal(before.textContent, 'Search')
   assert.equal(modeIndicator.hidden, false)
-  assert.equal(modeIndicator.textContent, '[deep]')
+  assert.equal(modeIndicator.textContent, 'deep')
   assert.equal(modeIndicator.dataset.status, 'loading')
-  assert.equal(modeIndicator.getAttribute('aria-label'), '[deep]; Loading deep history…; switch mode with Tab/Shift+Tab')
+  assert.equal(modeIndicator.getAttribute('aria-label'), 'deep; Loading deep history…; switch mode with Tab/Shift+Tab')
   assert.equal(after.textContent, 'history')
   assert.equal(hint.textContent, 'Tab/Shift+Tab')
   assert.equal(hint.hidden, false)
-  assert.equal(count.textContent, 'No results')
-  assert.equal(count.getAttribute('aria-label'), 'No results')
-  assert.equal(document.querySelector('#search-header').getAttribute('aria-label'), 'Search deep history; No results')
+  assert.equal(count.textContent, 'Loading deep history…')
+  assert.equal(count.getAttribute('aria-label'), 'Loading deep history…')
+  assert.equal(count.getAttribute('role'), 'status')
+  assert.equal(count.getAttribute('aria-live'), 'polite')
+  assert.equal(document.querySelector('#search-header').getAttribute('aria-label'), 'Search deep history; Loading deep history…')
   assert.equal(document.querySelector('#search-input').getAttribute('aria-label'), 'Search deep history')
   assert.equal(app.status.textContent, 'Loading deep history…')
 })
@@ -1115,7 +1117,7 @@ test('updateResults searches the active cached mode index and rebuilds visible r
   assert.equal(renderCalls, 1)
 })
 
-test('updateResults refreshes the header count from rebuilt active-mode visible rows', () => {
+test('updateResults refreshes the header status from rebuilt active-mode state', () => {
   const document = createScryDocument()
   const { count } = appendSearchHeader(document)
   const chromeApi = createPanelChrome([])
@@ -1163,11 +1165,11 @@ test('updateResults refreshes the header count from rebuilt active-mode visible 
   assert.equal(app.visibleRows.length, 2)
   assert.equal(app.visibleRows[0].kind, 'open-typed-url')
   assert.equal(app.visibleRows[1].kind, 'result')
-  assert.equal(count.textContent, '1 result')
+  assert.equal(count.textContent, '1 recently closed URL')
   assert.equal(app.selectedIndex, 1)
 })
 
-test('updateResults refreshes the header to no real results when the active mode has only a typed URL row', () => {
+test('updateResults refreshes the header status when the active mode has only a typed URL row', () => {
   const document = createScryDocument()
   const { count } = appendSearchHeader(document)
   const chromeApi = createPanelChrome([])
@@ -1205,7 +1207,7 @@ test('updateResults refreshes the header to no real results when the active mode
     normalizedUrl: 'https://typed-only.example/path',
     key: 'https://typed-only.example/path',
   })
-  assert.equal(count.textContent, 'No results')
+  assert.equal(count.textContent, 'Recently closed URLs unavailable')
   assert.equal(app.selectedIndex, 0)
 })
 
@@ -2342,7 +2344,7 @@ test('clicking the mode indicator cycles to the next mode instead of relying on 
   assert.equal(app.pageIndex, 0)
   assert.deepEqual(historyCalls, [])
   assert.deepEqual(recentlyClosedCalls, ['getRecentlyClosed'])
-  assert.equal(modeIndicator.textContent, '[closed]')
+  assert.equal(modeIndicator.textContent, 'closed')
   assert.equal(modeIndicator.dataset.mode, 'closed')
   assert.equal(modeIndicator.dataset.status, 'ready')
   assert.equal(deepSearchButton.hidden, true)
@@ -2486,7 +2488,7 @@ test('result navigation c changes a selected real row into the focused search te
   assert.equal(input.selectionEnd, input.value.length)
 })
 
-test('renderSearchHeader renders a sparse Search [mode] history row with hint and real result count', () => {
+test('renderSearchHeader renders a sparse Search mode history row with hint and right-aligned mode status', () => {
   const document = createScryDocument()
   const { before, modeIndicator, after, hint, count } = appendSearchHeader(document)
   const chromeApi = createPanelChrome([])
@@ -2514,27 +2516,28 @@ test('renderSearchHeader renders a sparse Search [mode] history row with hint an
 
   assert.equal(before.textContent, 'Search')
   assert.equal(modeIndicator.hidden, false)
-  assert.equal(modeIndicator.textContent, '[closed]')
+  assert.equal(modeIndicator.textContent, 'closed')
   assert.equal(after.textContent, 'history')
   assert.equal(hint.textContent, 'Tab/Shift+Tab')
-  assert.equal(count.textContent, '2 results')
+  assert.equal(count.textContent, '2 recently closed URLs')
+  assert.equal(count.getAttribute('aria-label'), '2 recently closed URLs')
+  assert.equal(count.getAttribute('role'), 'status')
+  assert.equal(count.getAttribute('aria-live'), 'polite')
   assert.equal(document.querySelector('#search-input').getAttribute('aria-label'), 'Search closed history')
-  assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; 2 recently closed URLs; switch mode with Tab/Shift+Tab')
+  assert.equal(modeIndicator.getAttribute('aria-label'), 'closed; 2 recently closed URLs; switch mode with Tab/Shift+Tab')
   assert.equal(document.querySelector('#status').textContent, '2 recently closed URLs')
   assert.deepEqual(model, {
     beforeMode: 'Search',
-    modeBadgeLabel: '[closed]',
+    modeBadgeLabel: 'closed',
     mode: 'closed',
     afterMode: 'history',
     modeSwitchHint: 'Tab/Shift+Tab',
-    realResultCount: 2,
-    realResultCountLabel: '2 results',
     status: 'ready',
     statusText: '2 recently closed URLs',
   })
 })
 
-test('renderResults updates the header count from real rows and excludes the Open typed URL action', () => {
+test('renderResults keeps the header status tied to active mode totals, not visible real rows', () => {
   const document = createScryDocument()
   const { count } = appendSearchHeader(document)
   const chromeApi = createPanelChrome([])
@@ -2555,7 +2558,7 @@ test('renderResults updates the header count from real rows and excludes the Ope
 
   app.renderResults()
 
-  assert.equal(count.textContent, '1 result')
+  assert.equal(count.textContent, '2 recent history URLs')
   assert.equal(app.resultsList.childElementCount, 2, 'renders the synthetic action plus one real result')
 
   app.results = []
@@ -2563,11 +2566,11 @@ test('renderResults updates the header count from real rows and excludes the Ope
 
   app.renderResults()
 
-  assert.equal(count.textContent, 'No results')
+  assert.equal(count.textContent, '2 recent history URLs')
   assert.equal(app.resultsList.childElementCount, 1, 'renders only the synthetic typed URL action')
 })
 
-test('renderModeIndicatorElement renders a bracket badge with status datasets and a switch-hint label', () => {
+test('renderModeIndicatorElement renders a plain badge with status datasets and a switch-hint label', () => {
   const document = createScryDocument()
   const modeIndicator = document.createElement('button')
   modeIndicator.setAttribute('id', 'mode-indicator')
@@ -2577,7 +2580,7 @@ test('renderModeIndicatorElement renders a bracket badge with status datasets an
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
 
   app.renderModeIndicatorElement({
-    label: '[closed]',
+    label: 'closed',
     mode: 'closed',
     status: 'loading',
     clickable: true,
@@ -2586,14 +2589,14 @@ test('renderModeIndicatorElement renders a bracket badge with status datasets an
   })
 
   assert.equal(modeIndicator.hidden, false)
-  assert.equal(modeIndicator.textContent, '[closed]')
+  assert.equal(modeIndicator.textContent, 'closed')
   assert.equal(modeIndicator.dataset.mode, 'closed')
   assert.equal(modeIndicator.dataset.status, 'loading')
   assert.equal(modeIndicator.dataset.clickable, 'true')
   assert.equal(modeIndicator.disabled, false)
   assert.equal(modeIndicator.title, 'Loading recently closed URLs…')
   assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
-  assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; Loading recently closed URLs…; switch mode with Tab/Shift+Tab')
+  assert.equal(modeIndicator.getAttribute('aria-label'), 'closed; Loading recently closed URLs…; switch mode with Tab/Shift+Tab')
 })
 
 test('renderModeIndicatorElement disables non-clickable badges without announcing a switch hint', () => {
@@ -2605,7 +2608,7 @@ test('renderModeIndicatorElement disables non-clickable badges without announcin
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
 
   app.renderModeIndicatorElement({
-    label: '[deep]',
+    label: 'deep',
     mode: 'deep',
     status: 'error',
     clickable: false,
@@ -2613,14 +2616,14 @@ test('renderModeIndicatorElement disables non-clickable badges without announcin
     statusText: 'Deep history unavailable',
   })
 
-  assert.equal(modeIndicator.textContent, '[deep]')
+  assert.equal(modeIndicator.textContent, 'deep')
   assert.equal(modeIndicator.dataset.mode, 'deep')
   assert.equal(modeIndicator.dataset.status, 'error')
   assert.equal(modeIndicator.dataset.clickable, 'false')
   assert.equal(modeIndicator.disabled, true)
   assert.equal(modeIndicator.title, 'Deep history unavailable')
   assert.equal(modeIndicator.getAttribute('aria-disabled'), 'true')
-  assert.equal(modeIndicator.getAttribute('aria-label'), '[deep]; Deep history unavailable')
+  assert.equal(modeIndicator.getAttribute('aria-label'), 'deep; Deep history unavailable')
 })
 
 test('renderModeIndicator renders the active mode label/status in dedicated popup markup', () => {
@@ -2648,20 +2651,20 @@ test('renderModeIndicator renders the active mode label/status in dedicated popu
   app.renderModeIndicator()
 
   assert.equal(modeIndicator.hidden, false)
-  assert.equal(modeIndicator.textContent, '[deep]')
+  assert.equal(modeIndicator.textContent, 'deep')
   assert.equal(modeIndicator.dataset.mode, 'deep')
   assert.equal(modeIndicator.dataset.status, 'ready')
   assert.equal(modeIndicator.dataset.clickable, 'true')
   assert.equal(modeIndicator.disabled, false)
   assert.equal(modeIndicator.getAttribute('aria-disabled'), 'false')
-  assert.equal(modeIndicator.getAttribute('aria-label'), '[deep]; 2 deep history URLs; switch mode with Tab/Shift+Tab')
+  assert.equal(modeIndicator.getAttribute('aria-label'), 'deep; 2 deep history URLs; switch mode with Tab/Shift+Tab')
   assert.equal(modeIndicator.title, '2 deep history URLs')
   assert.equal(document.querySelector('#status').textContent, '2 deep history URLs')
   assert.equal(deepSearchButton.hidden, true)
   assert.equal(deepSearchButton.textContent, 'Deep search all history')
 })
 
-test('renderModeIndicator coordinates the integrated header row, badge, count, and status', () => {
+test('renderModeIndicator coordinates the integrated header row, badge, right-aligned status, and hidden legacy status', () => {
   const document = createScryDocument()
   const { before, modeIndicator, after, hint, count } = appendSearchHeader(document)
   const chromeApi = createPanelChrome([])
@@ -2690,7 +2693,7 @@ test('renderModeIndicator coordinates the integrated header row, badge, count, a
   const model = app.renderModeIndicator()
 
   assert.deepEqual(model, {
-    label: '[closed]',
+    label: 'closed',
     mode: 'closed',
     status: 'ready',
     clickable: true,
@@ -2699,16 +2702,18 @@ test('renderModeIndicator coordinates the integrated header row, badge, count, a
   })
   assert.equal(before.textContent, 'Search')
   assert.equal(modeIndicator.hidden, false)
-  assert.equal(modeIndicator.textContent, '[closed]')
+  assert.equal(modeIndicator.textContent, 'closed')
   assert.equal(modeIndicator.dataset.mode, 'closed')
   assert.equal(modeIndicator.dataset.status, 'ready')
-  assert.equal(modeIndicator.getAttribute('aria-label'), '[closed]; 3 recently closed URLs; switch mode with Tab/Shift+Tab')
+  assert.equal(modeIndicator.getAttribute('aria-label'), 'closed; 3 recently closed URLs; switch mode with Tab/Shift+Tab')
   assert.equal(after.textContent, 'history')
   assert.equal(hint.textContent, 'Tab/Shift+Tab')
   assert.equal(hint.hidden, false)
-  assert.equal(count.textContent, '2 results')
-  assert.equal(count.getAttribute('aria-label'), '2 results')
-  assert.equal(document.querySelector('#search-header').getAttribute('aria-label'), 'Search closed history; 2 results')
+  assert.equal(count.textContent, '3 recently closed URLs')
+  assert.equal(count.getAttribute('aria-label'), '3 recently closed URLs')
+  assert.equal(count.getAttribute('role'), 'status')
+  assert.equal(count.getAttribute('aria-live'), 'polite')
+  assert.equal(document.querySelector('#search-header').getAttribute('aria-label'), 'Search closed history; 3 recently closed URLs')
   assert.equal(document.querySelector('#search-input').getAttribute('aria-label'), 'Search closed history')
   assert.equal(document.querySelector('#status').textContent, '3 recently closed URLs')
   assert.equal(deepSearchButton.hidden, true)
@@ -2746,7 +2751,7 @@ test('renderModeIndicator falls back to the active mode idle status before cache
 
   app.renderModeIndicator()
 
-  assert.equal(modeIndicator.textContent, '[recent]')
+  assert.equal(modeIndicator.textContent, 'recent')
   assert.equal(modeIndicator.dataset.status, 'idle')
   assert.equal(document.querySelector('#status').textContent, 'Recent history not loaded')
 })
@@ -2801,7 +2806,7 @@ test('start initializes recent mode cache and renders the mode indicator before 
   assert.equal(app.modeCache.deep.status, 'idle')
   assert.equal(app.modeCache.closed.status, 'idle')
   assert.equal(modeIndicator.hidden, false)
-  assert.equal(modeIndicator.textContent, '[recent]')
+  assert.equal(modeIndicator.textContent, 'recent')
   assert.equal(modeIndicator.dataset.mode, 'recent')
   assert.equal(modeIndicator.dataset.status, 'idle')
   assert.equal(document.querySelector('#status').textContent, 'Recent history not loaded')

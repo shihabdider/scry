@@ -25,7 +25,7 @@ export const DEFAULT_SEARCH_MODE = 'recent'
 
 /**
  * @typedef {object} ModeIndicatorModel
- * @property {string} label Compact visible badge label, for example "[recent]".
+ * @property {string} label Compact visible badge label, for example "recent".
  * @property {SearchMode} mode Active mode.
  * @property {ModeLoadStatus} status Active mode load status.
  * @property {boolean} clickable Whether clicking should cycle to the next mode.
@@ -36,14 +36,12 @@ export const DEFAULT_SEARCH_MODE = 'recent'
 /**
  * @typedef {object} HeaderSearchContextModel
  * @property {string} beforeMode Visible header text before the mode badge, normally "Search".
- * @property {string} modeBadgeLabel Bracketed clickable active-mode label, for example "[recent]".
+ * @property {string} modeBadgeLabel Plain clickable active-mode label, for example "recent".
  * @property {SearchMode} mode Active mode represented by the badge.
  * @property {string} afterMode Visible header text after the mode badge, normally "history".
  * @property {string} modeSwitchHint Hint shown on or immediately adjacent to the badge.
- * @property {number} realResultCount Count of visible real URL result rows, excluding synthetic action rows.
- * @property {string} realResultCountLabel Right-aligned human-readable result-count text.
  * @property {ModeLoadStatus} status Active mode load status.
- * @property {string} statusText Accessible/status text for the active mode.
+ * @property {string} statusText Right-aligned accessible/status text for the active mode.
  */
 
 export function createModeCache() {
@@ -65,13 +63,8 @@ export function cycleSearchMode(currentMode, { direction = 1 } = {}) {
 }
 
 export function searchHeaderModel(mode, state, { realResultCount = 0 } = {}) {
+  void realResultCount
   const indicator = modeIndicatorModel(mode, state)
-  const count = Number.isFinite(realResultCount) ? Math.max(0, Math.trunc(realResultCount)) : 0
-  const countLabel = count === 0
-    ? 'No results'
-    : count === 1
-      ? '1 result'
-      : `${count} results`
 
   return {
     beforeMode: 'Search',
@@ -79,8 +72,6 @@ export function searchHeaderModel(mode, state, { realResultCount = 0 } = {}) {
     mode: indicator.mode,
     afterMode: 'history',
     modeSwitchHint: indicator.modeSwitchHint,
-    realResultCount: count,
-    realResultCountLabel: countLabel,
     status: indicator.status,
     statusText: indicator.statusText,
   }
@@ -113,7 +104,7 @@ export function modeIndicatorModel(mode, state) {
   }[activeMode]
 
   return {
-    label: `[${activeMode}]`,
+    label: activeMode,
     mode: activeMode,
     status,
     clickable: true,
