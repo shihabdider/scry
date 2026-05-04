@@ -55,7 +55,7 @@ test('exact phrase normalization treats empty quoted phrases as case-insensitive
   })
 })
 
-test('website filter normalization preserves raw bracket contents and lowercases match text', () => {
+test('website filter normalization preserves raw filter contents and lowercases match text', () => {
   assert.deepEqual(normalizeWebsiteFilter('GitHub'), {
     rawText: 'GitHub',
     matchText: 'github',
@@ -69,7 +69,7 @@ test('website filter normalization trims outer whitespace for hostname matching'
   })
 })
 
-test('website filter normalization keeps empty bracket contents ineffective', () => {
+test('website filter normalization keeps empty filter contents ineffective', () => {
   assert.deepEqual(normalizeWebsiteFilter(' \n\t '), {
     rawText: ' \n\t ',
     matchText: '',
@@ -81,19 +81,19 @@ test('website-filter query keys preserve legacy token-only identity', () => {
   assert.equal(queryKeyWithWebsiteFilters([], []), '')
 })
 
-test('website-filter query keys distinguish bracket-filtered intent from ordinary tokens', () => {
-  assert.equal(queryKeyWithWebsiteFilters([], [normalizeWebsiteFilter('Git')]), '[git]')
+test('website-filter query keys distinguish colon-filtered intent from ordinary tokens', () => {
+  assert.equal(queryKeyWithWebsiteFilters([], [normalizeWebsiteFilter('Git')]), 'git:')
   assert.notEqual(queryKeyWithWebsiteFilters([], [normalizeWebsiteFilter('Git')]), queryKeyWithWebsiteFilters(['git'], []))
 })
 
-test('website-filter query keys use normalized stable bracket filters with ordinary tokens', () => {
+test('website-filter query keys use normalized stable colon filters with ordinary tokens', () => {
   assert.equal(
     queryKeyWithWebsiteFilters(['issues', '13'], [normalizeWebsiteFilter('Docs'), normalizeWebsiteFilter('  GitHub.COM\n')]),
-    '[docs] [github.com] issues 13',
+    'docs: github.com: issues 13',
   )
   assert.equal(
     queryKeyWithWebsiteFilters(['issues', '13'], [normalizeWebsiteFilter('  github.com\n'), normalizeWebsiteFilter('docs')]),
-    '[docs] [github.com] issues 13',
+    'docs: github.com: issues 13',
   )
 })
 
@@ -104,25 +104,47 @@ test('website filter parsing leaves ordinary query text unchanged', () => {
   })
 })
 
-test('website filter parsing removes complete bracketed filters and normalizes each filter', () => {
-  assert.deepEqual(parseWebsiteFilters('github [Git] issue [  Docs\n]'), {
-    unfilteredText: 'github  issue ',
-    websiteFilters: [normalizeWebsiteFilter('Git'), normalizeWebsiteFilter('  Docs\n')],
+test('website filter parsing removes leading colon filters and normalizes each filter', () => {
+  assert.deepEqual(parseWebsiteFilters('Git: issues 13'), {
+    unfilteredText: 'issues 13',
+    websiteFilters: [normalizeWebsiteFilter('Git')],
+  })
+  assert.deepEqual(parseWebsiteFilters('Git: Docs: issue'), {
+    unfilteredText: 'issue',
+    websiteFilters: [normalizeWebsiteFilter('Git'), normalizeWebsiteFilter('Docs')],
   })
 })
 
-test('website filter parsing treats incomplete brackets as ordinary unfiltered text', () => {
-  assert.deepEqual(parseWebsiteFilters('[git'), {
-    unfilteredText: '[git',
-    websiteFilters: [],
-  })
-  assert.deepEqual(parseWebsiteFilters('alpha [git] beta [docs'), {
-    unfilteredText: 'alpha  beta [docs',
+test('website filter parsing treats colon without query text as a filter-only search', () => {
+  assert.deepEqual(parseWebsiteFilters('git:'), {
+    unfilteredText: '',
     websiteFilters: [normalizeWebsiteFilter('git')],
   })
 })
 
-test('website filter parsing keeps unfiltered tokens separated around adjacent filters', () => {
+test('website filter parsing requires colon filters to be leading site prefixes', () => {
+  assert.deepEqual(parseWebsiteFilters('alpha git: beta'), {
+    unfilteredText: 'alpha git: beta',
+    websiteFilters: [],
+  })
+  assert.deepEqual(parseWebsiteFilters('git:issue'), {
+    unfilteredText: 'git:issue',
+    websiteFilters: [],
+  })
+})
+
+test('website filter parsing treats legacy incomplete brackets as ordinary unfiltered text', () => {
+  assert.deepEqual(parseWebsiteFilters('[git'), {
+    unfilteredText: '[git',
+    websiteFilters: [],
+  })
+  assert.deepEqual(parseWebsiteFilters('git: beta [docs'), {
+    unfilteredText: 'beta [docs',
+    websiteFilters: [normalizeWebsiteFilter('git')],
+  })
+})
+
+test('website filter parsing keeps unfiltered tokens separated around adjacent legacy filters', () => {
   assert.deepEqual(parseWebsiteFilters('alpha[git]omega'), {
     unfilteredText: 'alpha omega',
     websiteFilters: [normalizeWebsiteFilter('git')],
@@ -133,10 +155,17 @@ test('website filter parsing keeps unfiltered tokens separated around adjacent f
   })
 })
 
-test('website filter parsing omits empty normalized filters while removing complete brackets', () => {
-  assert.deepEqual(parseWebsiteFilters('alpha[  \n\t ]omega [git]'), {
-    unfilteredText: 'alpha omega ',
-    websiteFilters: [normalizeWebsiteFilter('git')],
+test('website filter parsing omits empty normalized filters while removing complete legacy brackets', () => {
+  assert.deepEqual(parseWebsiteFilters('alpha[  \n\t ]omega'), {
+    unfilteredText: 'alpha omega',
+    websiteFilters: [],
+  })
+})
+
+test('website filter parsing still accepts complete legacy bracket filters for stored keys', () => {
+  assert.deepEqual(parseWebsiteFilters('alpha [git] beta [docs]'), {
+    unfilteredText: 'alpha  beta ',
+    websiteFilters: [normalizeWebsiteFilter('git'), normalizeWebsiteFilter('docs')],
   })
 })
 
@@ -262,46 +291,57 @@ test('query parsing treats incomplete quotes as ordinary unquoted text', () => {
 })
 
 test('query parsing separates complete website filters from unquoted ranking tokens', () => {
-  assert.deepEqual(parseQuery('github [Git] issue [  Docs\n]'), {
-    raw: 'github [Git] issue [  Docs\n]',
-    tokens: ['github', 'issue'],
-    unquotedTokens: ['github', 'issue'],
+  assert.deepEqual(parseQuery('Git: Docs: issue'), {
+    raw: 'Git: Docs: issue',
+    tokens: ['issue'],
+    unquotedTokens: ['issue'],
     exactPhrases: [],
-    websiteFilters: [normalizeWebsiteFilter('Git'), normalizeWebsiteFilter('  Docs\n')],
-    key: '[docs] [git] github issue',
+    websiteFilters: [normalizeWebsiteFilter('Git'), normalizeWebsiteFilter('Docs')],
+    key: 'docs: git: issue',
   })
 })
 
-test('query parsing treats incomplete website brackets as ordinary unquoted text', () => {
-  assert.deepEqual(parseQuery('alpha [git] beta [docs'), {
-    raw: 'alpha [git] beta [docs',
-    tokens: ['alpha', 'beta', 'docs'],
-    unquotedTokens: ['alpha', 'beta', 'docs'],
+test('query parsing uses a colon after the site query for website filtering', () => {
+  assert.deepEqual(parseQuery('git: issues 13'), {
+    raw: 'git: issues 13',
+    tokens: ['issues', '13'],
+    unquotedTokens: ['issues', '13'],
     exactPhrases: [],
     websiteFilters: [normalizeWebsiteFilter('git')],
-    key: '[git] alpha beta docs',
+    key: 'git: issues 13',
   })
 })
 
-test('query parsing preserves bracket text inside complete exact phrases', () => {
-  assert.deepEqual(parseQuery('"github [Git] issue" [Docs] readme'), {
-    raw: '"github [Git] issue" [Docs] readme',
+test('query parsing treats legacy incomplete website brackets as ordinary unquoted text', () => {
+  assert.deepEqual(parseQuery('git: beta [docs'), {
+    raw: 'git: beta [docs',
+    tokens: ['beta', 'docs'],
+    unquotedTokens: ['beta', 'docs'],
+    exactPhrases: [],
+    websiteFilters: [normalizeWebsiteFilter('git')],
+    key: 'git: beta docs',
+  })
+})
+
+test('query parsing preserves colon text inside complete exact phrases', () => {
+  assert.deepEqual(parseQuery('"github Git: issue" Docs: readme'), {
+    raw: '"github Git: issue" Docs: readme',
     tokens: ['readme'],
     unquotedTokens: ['readme'],
-    exactPhrases: [normalizeExactPhrase('github [Git] issue')],
+    exactPhrases: [normalizeExactPhrase('github Git: issue')],
     websiteFilters: [normalizeWebsiteFilter('Docs')],
-    key: '[docs] readme',
+    key: 'docs: readme',
   })
 })
 
 test('query parsing preserves incomplete quote behavior while applying website filters', () => {
-  assert.deepEqual(parseQuery('github [Docs] "pull requests'), {
-    raw: 'github [Docs] "pull requests',
+  assert.deepEqual(parseQuery('Docs: github "pull requests'), {
+    raw: 'Docs: github "pull requests',
     tokens: ['github', 'pull', 'requests'],
     unquotedTokens: ['github', 'pull', 'requests'],
     exactPhrases: [],
     websiteFilters: [normalizeWebsiteFilter('Docs')],
-    key: '[docs] github pull requests',
+    key: 'docs: github pull requests',
   })
 })
 
@@ -643,7 +683,7 @@ test('website-filter-only parsed search uses empty-query ordering within the fil
     },
   ])
 
-  const results = searchParsedHistory(index, parseQuery('[git]'), { now, emptyQuerySort: 'recency' })
+  const results = searchParsedHistory(index, parseQuery('git:'), { now, emptyQuerySort: 'recency' })
 
   assert.deepEqual(
     results.map((result) => result.url),
@@ -677,7 +717,7 @@ test('website-filter parsed search preserves token ranking within matching websi
     },
   ])
 
-  const results = searchParsedHistory(index, parseQuery('[git] issues 13'), { now })
+  const results = searchParsedHistory(index, parseQuery('git: issues 13'), { now })
 
   assert.deepEqual(
     results.map((result) => result.url),
@@ -689,7 +729,7 @@ test('website-filter parsed search preserves token ranking within matching websi
   assert.deepEqual(results[0].debug.tokens, ['issues', '13'])
 })
 
-test('website-filter parsed search requires both bracket filters and exact phrases', () => {
+test('website-filter parsed search requires both colon filters and exact phrases', () => {
   const index = indexOf([
     {
       url: 'https://github.com/org/pulls',
@@ -711,7 +751,7 @@ test('website-filter parsed search requires both bracket filters and exact phras
     },
   ])
 
-  const results = searchParsedHistory(index, parseQuery('[git] "pull requests"'), { now })
+  const results = searchParsedHistory(index, parseQuery('git: "pull requests"'), { now })
 
   assert.deepEqual(results.map((result) => result.url), ['https://github.com/org/pulls'])
   assert.equal(results[0].debug.mode, 'quoted')
@@ -741,13 +781,13 @@ test('website-filter token search keeps selection learning distinct from unfilte
       issues: {
         [unfilteredUrlKey]: { count: 20, lastSelectedAt: now, selectedAt: [now] },
       },
-      '[git] issues': {
+      'git: issues': {
         [filteredUrlKey]: { count: 1, lastSelectedAt: now, selectedAt: [now] },
       },
     },
   }
 
-  const results = searchParsedHistory(index, parseQuery('[git] issues'), { now, selections })
+  const results = searchParsedHistory(index, parseQuery('git: issues'), { now, selections })
 
   assert.equal(results[0].url, 'https://github.com/acme/b/issues')
   assert.ok(results[0].debug.selectionBoost > 0)

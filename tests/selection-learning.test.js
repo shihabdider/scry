@@ -47,9 +47,9 @@ test('recordSelection learns from parsed query unquoted identity', () => {
   })
 })
 
-test('recordSelection stores bracket-filtered query strings under filter-distinct keys', () => {
+test('recordSelection stores colon-filtered query strings under filter-distinct keys', () => {
   const data = recordSelection(undefined, {
-    query: '[git] issues',
+    query: 'git: issues',
     urlKey,
     selectedAt,
   })
@@ -57,7 +57,7 @@ test('recordSelection stores bracket-filtered query strings under filter-distinc
   assert.deepEqual(data, {
     version: 1,
     aggregates: {
-      '[git] issues': {
+      'git: issues': {
         [urlKey]: learnedOnce,
       },
     },
@@ -79,7 +79,7 @@ test('recordSelection derives filter-aware keys from parsed query parts without 
   assert.deepEqual(data, {
     version: 1,
     aggregates: {
-      '[git] issues': {
+      'git: issues': {
         [urlKey]: learnedOnce,
       },
     },
@@ -183,7 +183,7 @@ test('selectionIntentKeysOverlap preserves legacy token prefix overlap for unfil
 
 test('selectionIntentKeysOverlap keeps filtered and unfiltered intents distinct', () => {
   assert.equal(
-    selectionIntentKeysOverlap({ tokens: ['git'], websiteFilters: [] }, '[git]'),
+    selectionIntentKeysOverlap({ tokens: ['git'], websiteFilters: [] }, 'git:'),
     false,
   )
   assert.equal(
@@ -199,7 +199,7 @@ test('selectionIntentKeysOverlap allows token overlap when normalized website fi
         tokens: ['iss'],
         websiteFilters: [normalizeWebsiteFilter('GitHub.COM'), normalizeWebsiteFilter('Docs')],
       },
-      '[docs] [github.com] issues',
+      'docs: github.com: issues',
     ),
     true,
   )
@@ -209,13 +209,17 @@ test('selectionIntentKeysOverlap rejects token overlap when website filter sets 
   assert.equal(
     selectionIntentKeysOverlap(
       { tokens: ['iss'], websiteFilters: [normalizeWebsiteFilter('GitHub')] },
-      '[docs] issues',
+      'docs: issues',
     ),
     false,
   )
 })
 
 test('selectionIntentKeysOverlap supports matching filter-only intents', () => {
+  assert.equal(
+    selectionIntentKeysOverlap({ tokens: [], websiteFilters: [normalizeWebsiteFilter('Git')] }, 'git:'),
+    true,
+  )
   assert.equal(
     selectionIntentKeysOverlap({ tokens: [], websiteFilters: [normalizeWebsiteFilter('Git')] }, '[git]'),
     true,
@@ -242,13 +246,13 @@ test('selectionBoost accepts parsed filter-only query intents', () => {
   const data = {
     version: 1,
     aggregates: {
-      '[git]': {
+      'git:': {
         [urlKey]: learnedOnce,
       },
     },
   }
 
-  assert.equal(selectionBoost(data, parseQuery('[git]'), urlKey, selectedAt), boostForLearnedOnce)
+  assert.equal(selectionBoost(data, parseQuery('git:'), urlKey, selectedAt), boostForLearnedOnce)
   assert.equal(
     selectionBoost(data, { tokens: [], websiteFilters: [normalizeWebsiteFilter('Git')] }, urlKey, selectedAt),
     boostForLearnedOnce,
@@ -267,13 +271,13 @@ test('selectionBoost keeps filtered and unfiltered learned intents distinct', ()
       issues: {
         [urlKey]: unfilteredHighCount,
       },
-      '[git] issues': {
+      'git: issues': {
         [urlKey]: learnedOnce,
       },
     },
   }
 
-  assert.equal(selectionBoost(data, parseQuery('[git] issues'), urlKey, selectedAt), boostForLearnedOnce)
+  assert.equal(selectionBoost(data, parseQuery('git: issues'), urlKey, selectedAt), boostForLearnedOnce)
   assert.equal(selectionBoost(data, parseQuery('issues'), urlKey, selectedAt), Math.min(12, Math.log1p(20) * 6) + 4)
 })
 
@@ -281,12 +285,12 @@ test('selectionBoost returns zero for empty intents and missing url keys', () =>
   const data = {
     version: 1,
     aggregates: {
-      '[git]': {
+      'git:': {
         [urlKey]: learnedOnce,
       },
     },
   }
 
   assert.equal(selectionBoost(data, [], urlKey, selectedAt), 0)
-  assert.equal(selectionBoost(data, parseQuery('[git]'), '', selectedAt), 0)
+  assert.equal(selectionBoost(data, parseQuery('git:'), '', selectedAt), 0)
 })

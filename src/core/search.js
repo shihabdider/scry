@@ -30,7 +30,7 @@ const TIER = {
  * @property {number} visitCount Visit count aggregate.
  * @property {number} lastVisitTime Last visit timestamp.
  * @property {object[]} segments Precomputed token segments for existing unquoted token ranking.
- * @property {import('./url.js').WebsiteNameCandidates} websiteName Website hostname/root-name candidates for bracketed website filters.
+ * @property {import('./url.js').WebsiteNameCandidates} websiteName Website hostname/root-name candidates for website filters.
  */
 
 /**

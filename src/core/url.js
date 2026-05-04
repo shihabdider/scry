@@ -23,7 +23,7 @@ const TRACKING_PARAMS = new Set([
 /**
  * @typedef {object} WebsiteNameCandidates
  * @property {string} hostname Lowercase hostname with a common leading `www` label removed when present.
- * @property {string} rootName Deterministic local root-name candidate used for bracketed website filters.
+ * @property {string} rootName Deterministic local root-name candidate used for website filters.
  * @property {string[]} labels Lowercase hostname labels available for equivalent host-label matching.
  * @property {string[]} matchCandidates Deduplicated lowercase candidates a WebsiteFilter may prefix-match.
  */

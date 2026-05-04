@@ -3,7 +3,7 @@ import { normalizeWebsiteFilterMatchText, parseQuery, parseWebsiteFilters, query
 /**
  * @typedef {object} SelectionIntentKeyParts
  * @property {string[]} tokens Ordinary unquoted query tokens participating in learned intent overlap.
- * @property {import('./query.js').WebsiteFilter[]} websiteFilters Bracketed website filters that must remain distinct from unfiltered intents.
+ * @property {import('./query.js').WebsiteFilter[]} websiteFilters Website filters that must remain distinct from unfiltered intents.
  */
 
 export function emptySelectionData() {

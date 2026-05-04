@@ -9,7 +9,7 @@ const TOKEN_PATTERN = /[a-z0-9]+/gi
 
 /**
  * @typedef {object} WebsiteFilter
- * @property {string} rawText Original text inside the complete bracket delimiters.
+ * @property {string} rawText Original text before the colon delimiter, or inside legacy bracket delimiters.
  * @property {string} matchText Lowercase token text used to match local hostname/root-name candidates.
  */
 
@@ -17,9 +17,9 @@ const TOKEN_PATTERN = /[a-z0-9]+/gi
  * @typedef {object} ParsedQuery
  * @property {string} raw Original query text.
  * @property {string[]} tokens Backward-compatible unquoted token list used by existing ranking; space-separated URL fragments are the primary user syntax while punctuation such as `*` remains tolerated.
- * @property {string[]} unquotedTokens Tokens outside complete quoted phrases and complete bracketed website filters.
+ * @property {string[]} unquotedTokens Tokens outside complete quoted phrases and website filters.
  * @property {ExactPhrase[]} exactPhrases Complete quoted phrases that must match exactly.
- * @property {WebsiteFilter[]} websiteFilters Complete bracketed website-name filters that hard-filter URL hostname/root candidates before ranking.
+ * @property {WebsiteFilter[]} websiteFilters Colon-marked website-name filters that hard-filter URL hostname/root candidates before ranking.
  * @property {string} key Selection-learning key derived from unquotedTokens and websiteFilters so filtered and unfiltered intents remain distinct.
  */
 
@@ -32,8 +32,8 @@ const TOKEN_PATTERN = /[a-z0-9]+/gi
 
 /**
  * @typedef {object} QueryWebsiteFilterParse
- * @property {string} unfilteredText Query text after removing complete bracketed website filters; incomplete brackets remain in this text for forgiving live search.
- * @property {WebsiteFilter[]} websiteFilters Complete bracketed website-name filters.
+ * @property {string} unfilteredText Query text after removing colon-marked website filters; legacy incomplete brackets remain in this text for forgiving live search.
+ * @property {WebsiteFilter[]} websiteFilters Parsed website-name filters.
  */
 
 export function tokenizeText(value) {
@@ -112,6 +112,45 @@ export function queryKey(tokens) {
 
 export function parseWebsiteFilters(query) {
   const text = String(query ?? '')
+  const colonParse = parseColonWebsiteFilters(text)
+  const legacyBracketParse = parseLegacyBracketWebsiteFilters(colonParse.unfilteredText)
+
+  return {
+    unfilteredText: legacyBracketParse.unfilteredText,
+    websiteFilters: [...colonParse.websiteFilters, ...legacyBracketParse.websiteFilters],
+  }
+}
+
+function parseColonWebsiteFilters(text) {
+  const websiteFilters = []
+  let unfilteredText = text
+
+  while (true) {
+    const parsed = splitLeadingColonWebsiteFilter(unfilteredText)
+    if (!parsed) break
+
+    if (parsed.filter.matchText) websiteFilters.push(parsed.filter)
+    unfilteredText = parsed.unfilteredText
+  }
+
+  return {
+    unfilteredText,
+    websiteFilters,
+  }
+}
+
+function splitLeadingColonWebsiteFilter(text) {
+  const match = text.match(/^(\s*)([^\s:|\/\[\]"]+):(?:\s+|$)/)
+  if (!match) return null
+
+  const rawText = match[2]
+  return {
+    filter: normalizeWebsiteFilter(rawText),
+    unfilteredText: `${match[1]}${text.slice(match[0].length)}`,
+  }
+}
+
+function parseLegacyBracketWebsiteFilters(text) {
   const websiteFilters = []
   let unfilteredText = ''
   let index = 0
@@ -136,12 +175,7 @@ export function parseWebsiteFilters(query) {
       websiteFilters.push(filter)
     }
 
-    const previousChar = unfilteredText.at(-1)
-    const nextChar = text.at(closingBracketIndex + 1)
-    if (previousChar && nextChar && !/\s/.test(previousChar) && !/\s/.test(nextChar)) {
-      unfilteredText += ' '
-    }
-
+    unfilteredText = addFilterBoundarySpaceIfNeeded(unfilteredText, text.at(closingBracketIndex + 1))
     index = closingBracketIndex + 1
   }
 
@@ -149,6 +183,14 @@ export function parseWebsiteFilters(query) {
     unfilteredText,
     websiteFilters,
   }
+}
+
+function addFilterBoundarySpaceIfNeeded(unfilteredText, nextChar) {
+  const previousChar = unfilteredText.at(-1)
+  if (previousChar && nextChar && !/\s/.test(previousChar) && !/\s/.test(nextChar)) {
+    return `${unfilteredText} `
+  }
+  return unfilteredText
 }
 
 export function normalizeWebsiteFilterMatchText(value) {
@@ -169,7 +211,7 @@ export function queryKeyWithWebsiteFilters(tokens, websiteFilters) {
     .map((filter) => normalizeWebsiteFilterMatchText(filter?.matchText))
     .filter(Boolean)
     .sort()
-    .map((matchText) => `[${matchText}]`)
+    .map((matchText) => `${matchText}:`)
 
   return [...filterParts, tokenPart].filter(Boolean).join(' ')
 }
