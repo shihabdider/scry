@@ -1,72 +1,71 @@
 ## Wish List
 
-### Layer 3 (implement first)
-- `modeIndicatorModel(mode: SearchMode, state: SearchModeState | null): ModeIndicatorModel` in `src/core/search-modes.js`
-  Purpose: Return bracketed active-mode badge labels like `[recent]`, include the mode-switch hint, and preserve active-mode status text for accessibility/status UI.
+### Layer 2 (implement first)
+- `normalizeWebsiteFilter(rawText)` in `src/core/query.js`
+  Purpose: Normalize raw complete bracket contents into a WebsiteFilter with preserved rawText and lowercase matchText suitable for hostname/root matching.
   Depends on: none
-- `resultNavigationCommandForKey(event: KeyboardEvent | { key?: string }): ResultNavigationCommand` in `src/panel/app.js`
-  Purpose: Classify result/navigation-mode keys so `i` and `/` map to focus-search, `Escape` maps to leave/close, and selected-row actions/navigation remain distinct from normal input typing.
+- `queryKeyWithWebsiteFilters(tokens, websiteFilters)` in `src/core/query.js`
+  Purpose: Build a deterministic selection-learning/debug key that preserves ordinary token identity while distinguishing bracket-filtered intents from unfiltered queries.
   Depends on: none
-- `selectedRowActionHints(row: VisibleRow | null, options?: SelectedRowActionHintOptions): RowActionHint[]` in `src/core/rows.js`
-  Purpose: Derive selected-row hints from row capabilities: show `y copy` for copyable selected rows and `c edit URL` only for selected editable real result rows.
+- `websiteNameCandidatesForHostname(hostname)` in `src/core/url.js`
+  Purpose: Derive deterministic local lowercase website hostname/root-name match candidates, ignoring common leading `www`, without public-suffix data, network calls, or lookup tables.
   Depends on: none
-
-### Layer 2
-- `searchHeaderModel(mode: SearchMode, state: SearchModeState | null, options?: { realResultCount?: number }): HeaderSearchContextModel` in `src/core/search-modes.js`
-  Purpose: Build the header model for `Search [mode] history`, the adjacent `Tab/Shift+Tab` hint, active-mode status text, and the right-aligned real URL result count.
-  Depends on: modeIndicatorModel
-- `ScryPanelApp.handlePanelKeydown(event: KeyboardEvent): void` in `src/panel/app.js`
-  Purpose: Execute result/navigation commands, including `/` and `i` focusing search with cursor-at-end behavior and `Escape` leaving/closing via `leavePanelFocus` without triggering row actions.
-  Depends on: resultNavigationCommandForKey
-- `ScryPanelApp.renderModeIndicatorElement(model: ModeIndicatorModel): void` in `src/panel/app.js`
-  Purpose: Render the mode badge with bracket label, clickability/status datasets, and accessible label/title compatible with the integrated header row.
-  Depends on: modeIndicatorModel
+- `collectWebsiteFilterEvidence(entry, websiteFilters)` in `src/core/search.js`
+  Purpose: Determine which website filters match a normalized history entry and return per-filter candidate evidence for search debug data.
+  Depends on: none
+- `selectionIntentKeyParts(parsedQuery)` in `src/core/selection-learning.js`
+  Purpose: Extract ordinary tokens and website filters from parsed query data for selection-learning storage and overlap checks.
+  Depends on: none
 
 ### Layer 1
-- `ScryPanelApp.renderSearchHeader(): HeaderSearchContextModel` in `src/panel/app.js`
-  Purpose: Render or update the sparse header row so it reads like `Search [recent] history`, shows the mode-switch hint near the badge, and right-aligns the real result count.
-  Depends on: searchHeaderModel, renderModeIndicatorElement
-- `ScryPanelApp.renderResults(): void` in `src/panel/app.js`
-  Purpose: Integrate selected-row action hints into the bottom/meta line of selected visible rows while keeping unselected rows hint-free and excluding synthetic rows from the real result count.
-  Depends on: selectedRowActionHints, renderSearchHeader
-- `ScryPanelApp.renderLoading(): ModeIndicatorModel` in `src/panel/app.js`
-  Purpose: Keep the integrated header, badge status, and result-count/status area consistent while a mode is loading and stale results are cleared.
-  Depends on: renderSearchHeader
+- `parseWebsiteFilters(query)` in `src/core/query.js`
+  Purpose: Remove only complete bracketed website filter terms from query text while leaving incomplete brackets as ordinary forgiving search text.
+  Depends on: normalizeWebsiteFilter
+- `websiteNameCandidatesForUrl(url)` in `src/core/url.js`
+  Purpose: Parse a URL locally and attach hostname/root-name website candidates used by bracketed website filters.
+  Depends on: websiteNameCandidatesForHostname
+- `entryMatchesWebsiteFilters(entry, websiteFilters)` in `src/core/search.js`
+  Purpose: Return true only when an entry satisfies every bracketed website filter, with empty filters treated as no hard filter.
+  Depends on: collectWebsiteFilterEvidence
+- `selectionIntentKeysOverlap(currentParts, storedKey)` in `src/core/selection-learning.js`
+  Purpose: Compare current query intent parts with a stored selection-learning key without allowing filtered and unfiltered intents to overlap accidentally.
+  Depends on: none
 
 ### Layer 0 (implement last)
-- `ScryPanelApp.renderModeIndicator(): ModeIndicatorModel` in `src/panel/app.js`
-  Purpose: Coordinate mode status updates with the new integrated header model wherever mode state changes, including startup, mode switches, loading, ready, and error states.
-  Depends on: renderSearchHeader, renderModeIndicatorElement
-- `ScryPanelApp.updateResults(): void` in `src/panel/app.js`
-  Purpose: Refresh search results and visible rows while preserving ranking/selection behavior and ensuring the header's real result count reflects the current active result set.
-  Depends on: renderResults, renderSearchHeader
+- `parseQuery(query)` in `src/core/query.js`
+  Purpose: Compose exact-phrase parsing with website-filter parsing so ParsedQuery exposes unquotedTokens, exactPhrases, websiteFilters, and a distinct key while preserving unbracketed behavior.
+  Depends on: parseWebsiteFilters, queryKeyWithWebsiteFilters
+- `buildHistoryIndex(rawEntries, { now = Date.now() } = {})` in `src/core/search.js`
+  Purpose: Populate each normalized history index entry with websiteName candidates alongside existing searchable segments.
+  Depends on: websiteNameCandidatesForUrl
+- `applyWebsiteFilters(entries, websiteFilters)` in `src/core/search.js`
+  Purpose: Filter normalized history entries by all complete bracketed website filters before quote filtering, ordinary token ranking, pagination, and selection boosts.
+  Depends on: entryMatchesWebsiteFilters
+- `searchParsedHistory(index, parsedQuery, { now = Date.now(), limit = DEFAULT_LIMIT, selections, emptyQuerySort = 'frecency' } = {})` in `src/core/search.js`
+  Purpose: Apply website filters as hard candidate filters, then preserve existing empty-query, token, and exact-phrase ranking within the filtered set.
+  Depends on: applyWebsiteFilters
+- `recordSelection(data, { query, tokens, urlKey, selectedAt = Date.now() })` in `src/core/selection-learning.js`
+  Purpose: Store selection-learning aggregates under query keys that include website filters when present while preserving legacy token callers.
+  Depends on: selectionIntentKeyParts, queryKeyWithWebsiteFilters
+- `selectionBoost(data, tokens, urlKey, now = Date.now())` in `src/core/selection-learning.js`
+  Purpose: Compute learned boosts using intent overlap that keeps website-filtered and unfiltered queries distinct.
+  Depends on: selectionIntentKeysOverlap
 
 ## Data Definitions Created/Modified
-- `src/core/search-modes.js`: reordered `SEARCH_MODES` to `recent`, `closed`, `deep`; updated `SearchMode` JSDoc ordering; extended `ModeIndicatorModel`; added `HeaderSearchContextModel`; added stub `searchHeaderModel`.
-- `src/core/rows.js`: added `RowActionHint` and `SelectedRowActionHintOptions` JSDoc models; added stub `selectedRowActionHints`.
-- `src/panel/app.js`: added `FocusMode` and `ResultNavigationCommand` JSDoc models; added stub `resultNavigationCommandForKey`; added stub method `ScryPanelApp.renderSearchHeader`.
-- `src/core/query.js`: clarified `ParsedQuery.tokens` documentation so space-separated URL fragments are primary while punctuation such as `*` remains tolerated.
+- `src/core/query.js`: added `WebsiteFilter` and `QueryWebsiteFilterParse` typedefs; extended `ParsedQuery` with `websiteFilters` and a filter-aware `key` contract.
+- `src/core/url.js`: added `WebsiteNameCandidates` typedef for local hostname/root-name match candidates.
+- `src/core/search.js`: added `HistoryIndexEntry` typedef with `websiteName` candidates and `WebsiteFilterEvidence` debug datum.
+- `src/core/selection-learning.js`: added `SelectionIntentKeyParts` typedef for token plus website-filter learning identity.
+- `.htdp/DSL.json`: added stable vocabulary for website filters, website name candidates, and the local-only MV3 boundary.
 
 ## Assertion Changes Flagged
-- `tests/search-modes.test.js:9`: `assert.deepEqual(Object.keys(cache), ['recent', 'deep', 'closed'])` — expected order must become `recent`, `closed`, `deep`.
-- `tests/search-modes.test.js:42-51`: `cycleSearchMode` assertions still encode `recent -> deep -> closed`; they need the new forward/reverse order.
-- `tests/scry-panel.test.js:2049-2055`: `Tab` from `recent` still expects `deep`; it needs to expect `closed` and use a closed-session fixture rather than deep-history calls.
-- `tests/scry-panel.test.js:2070-2074`: follow-up `Shift+Tab` expectations depend on the old first hop and need review after the new `recent -> closed -> deep` order.
-- `tests/scry-panel.test.js:2106-2112`: mode-badge click still expects `deep`; it needs to expect `closed` and closed-session loading/status.
-- `tests/scry-panel.test.js:2665-2669`: result-mode `Escape` currently asserts the popup stays in results mode with no close; it must assert `leavePanelFocus`/close-or-blur behavior.
-- `tests/extension-contract.test.js:33-34`: static popup mode markup still asserts `mode: recent`; it needs the bracket/header treatment.
-- `tests/extension-contract.test.js:41-50`: footer hint assertions must be removed or inverted because the footer key-hint line should be absent.
+- None
 
 ## Assumptions / Interpretations
-- I interpreted the integrated header model as separate text parts (`Search`, `[mode]`, `history`) so the existing clickable mode badge can remain the badge element.
-- I used `Tab/Shift+Tab` as the canonical hint string in the model because the issue text names those keys; the renderer may choose equivalent glyphs if tests allow it.
-- I interpreted the real result count as the current visible row set filtered to `kind === 'result'`, excluding `open-typed-url` synthetic rows.
-- I interpreted `y copy` as available for any selected row with a URL from `rowOpenUrl`, including typed-URL rows, and `c edit URL` as available only when `rowEditableText` returns text.
-- I left `ParsedQuery` behavior unchanged and only documented the primary space-separated syntax because current tokenization already tolerates spaces and `*`.
-- I added acceptance coverage as `test.todo` stubs rather than changing existing assertions in the stubber phase.
+- I interpreted bracket filter matching as prefix matching against deterministic lowercase website candidates, because `[git]` must match `github.com`, `gitter.com`, and `gitopia.com`.
+- I treated multiple website filters as conjunctive hard filters, because the requirement says one or more filters compose as hard filters.
+- I kept implementation stubs mostly uncalled so existing unbracketed query behavior and current tests remain green until the implementer fills the wishes.
 
 ## Notes
-- Added `tests/acceptance-issues-0021-0027.todo.test.js` with non-failing TODO acceptance-test stubs for all five issues.
-- `npm run check` passes after the stubs.
-- `npm test` currently fails 5 legacy assertions caused by the deliberate `SearchMode` ordering data-definition change; the failing assertion areas are listed above.
-- The worktree already had unrelated dirty changes in source/test files before this stubber pass; I did not attempt to revert or normalize them.
+- Verification run: `npm run check && npm test` passed with 215 tests.
+- Stubs currently throw if called; existing production paths do not call them yet.

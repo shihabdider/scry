@@ -1,4 +1,10 @@
-import { parseQuery, queryKey } from './query.js'
+import { normalizeWebsiteFilterMatchText, parseQuery, parseWebsiteFilters, queryKey, queryKeyWithWebsiteFilters } from './query.js'
+
+/**
+ * @typedef {object} SelectionIntentKeyParts
+ * @property {string[]} tokens Ordinary unquoted query tokens participating in learned intent overlap.
+ * @property {import('./query.js').WebsiteFilter[]} websiteFilters Bracketed website filters that must remain distinct from unfiltered intents.
+ */
 
 export function emptySelectionData() {
   return { version: 1, aggregates: {} }
@@ -19,7 +25,8 @@ export function recordSelection(data, { query, tokens, urlKey, selectedAt = Date
   const key = (() => {
     if (query && typeof query === 'object' && !Array.isArray(query)) {
       if (typeof query.key === 'string') return query.key
-      return queryKey(query.unquotedTokens ?? query.tokens)
+      const parts = selectionIntentKeyParts(query)
+      return queryKeyWithWebsiteFilters(parts.tokens, parts.websiteFilters)
     }
     if (query !== undefined) return parseQuery(query).key
     return queryKey(tokens)
@@ -46,6 +53,59 @@ export function recordSelection(data, { query, tokens, urlKey, selectedAt = Date
   }
 }
 
+export function selectionIntentKeyParts(parsedQuery) {
+  if (Array.isArray(parsedQuery)) {
+    return { tokens: parsedQuery.slice(), websiteFilters: [] }
+  }
+
+  if (!parsedQuery || typeof parsedQuery !== 'object') {
+    return { tokens: [], websiteFilters: [] }
+  }
+
+  const tokens = Array.isArray(parsedQuery.unquotedTokens)
+    ? parsedQuery.unquotedTokens
+    : Array.isArray(parsedQuery.tokens)
+      ? parsedQuery.tokens
+      : []
+  const websiteFilters = Array.isArray(parsedQuery.websiteFilters) ? parsedQuery.websiteFilters : []
+
+  return {
+    tokens: tokens.slice(),
+    websiteFilters: websiteFilters.slice(),
+  }
+}
+
+export function selectionIntentKeysOverlap(currentParts, storedKey) {
+  if (typeof storedKey !== 'string') return false
+
+  const normalizedFilterSet = (websiteFilters) => [
+    ...new Set(
+      (Array.isArray(websiteFilters) ? websiteFilters : [])
+        .map((filter) => normalizeWebsiteFilterMatchText(filter?.matchText))
+        .filter(Boolean),
+    ),
+  ].sort()
+
+  const storedFilterParse = parseWebsiteFilters(storedKey)
+  const storedParts = {
+    tokens: storedFilterParse.unfilteredText.split(/\s+/).filter(Boolean),
+    websiteFilters: storedFilterParse.websiteFilters,
+  }
+
+  const currentTokens = Array.isArray(currentParts?.tokens) ? currentParts.tokens : []
+  const currentFilters = normalizedFilterSet(currentParts?.websiteFilters)
+  const storedFilters = normalizedFilterSet(storedParts.websiteFilters)
+
+  if (currentFilters.length || storedFilters.length) {
+    if (currentFilters.length !== storedFilters.length) return false
+    for (let i = 0; i < currentFilters.length; i++) {
+      if (currentFilters[i] !== storedFilters[i]) return false
+    }
+  }
+
+  return tokenPatternsOverlap(currentTokens, storedParts.tokens)
+}
+
 function tokenPatternsOverlap(aTokens, bTokens) {
   if (aTokens.length !== bTokens.length) return false
   for (let i = 0; i < aTokens.length; i++) {
@@ -58,16 +118,14 @@ function tokenPatternsOverlap(aTokens, bTokens) {
 
 export function selectionBoost(data, tokens, urlKey, now = Date.now()) {
   const normalized = normalizeSelectionData(data)
-  const currentTokens = tokens ?? []
-  if (!currentTokens.length || !urlKey) return 0
+  const currentParts = selectionIntentKeyParts(tokens)
+  if ((!currentParts.tokens.length && !currentParts.websiteFilters.length) || !urlKey) return 0
 
   let boost = 0
   for (const [storedKey, byUrl] of Object.entries(normalized.aggregates)) {
     const aggregate = byUrl?.[urlKey]
     if (!aggregate) continue
-
-    const storedTokens = storedKey.split(' ').filter(Boolean)
-    if (!tokenPatternsOverlap(currentTokens, storedTokens)) continue
+    if (!selectionIntentKeysOverlap(currentParts, storedKey)) continue
 
     const countBoost = Math.min(12, Math.log1p(Number(aggregate.count) || 0) * 6)
     const ageDays = Math.max(0, (now - (Number(aggregate.lastSelectedAt) || 0)) / 86_400_000)

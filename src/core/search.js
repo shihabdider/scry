@@ -1,7 +1,7 @@
 import { formatAge, formatVisits, highlightText } from './format.js'
-import { isNumericToken, parseQuery } from './query.js'
+import { isNumericToken, normalizeWebsiteFilterMatchText, parseQuery } from './query.js'
 import { selectionBoost } from './selection-learning.js'
-import { buildSegments, middleTruncate, normalizeHistoryUrl } from './url.js'
+import { buildSegments, middleTruncate, normalizeHistoryUrl, websiteNameCandidatesForUrl } from './url.js'
 
 const DEFAULT_LIMIT = 30
 const URL_FIELDS = new Set(['host', 'path'])
@@ -22,9 +22,27 @@ const TIER = {
 }
 
 /**
+ * @typedef {object} HistoryIndexEntry
+ * @property {string} key Normalized URL key.
+ * @property {string} url Full normalized navigable URL.
+ * @property {string} displayUrl Display URL used for result rendering and phrase evidence.
+ * @property {string} title Result title.
+ * @property {number} visitCount Visit count aggregate.
+ * @property {number} lastVisitTime Last visit timestamp.
+ * @property {object[]} segments Precomputed token segments for existing unquoted token ranking.
+ * @property {import('./url.js').WebsiteNameCandidates} websiteName Website hostname/root-name candidates for bracketed website filters.
+ */
+
+/**
  * @typedef {object} HistoryIndex
  * @property {number} builtAt Millisecond timestamp when this in-memory index was built.
- * @property {object[]} entries Normalized URL entries with precomputed searchable segments.
+ * @property {HistoryIndexEntry[]} entries Normalized URL entries with precomputed searchable segments and website-name candidates.
+ */
+
+/**
+ * @typedef {object} WebsiteFilterEvidence
+ * @property {import('./query.js').WebsiteFilter} filter Website filter that matched.
+ * @property {string} candidate Host/root candidate that satisfied the filter.
  */
 
 /**
@@ -98,6 +116,37 @@ export function compareQuoteEvidence(a, b) {
   return compareTuple(a?.qualityTuple ?? [], b?.qualityTuple ?? [])
 }
 
+export function collectWebsiteFilterEvidence(entry, websiteFilters) {
+  const candidates = Array.isArray(entry?.websiteName?.matchCandidates)
+    ? entry.websiteName.matchCandidates.map(normalizeWebsiteFilterMatchText).filter(Boolean)
+    : []
+  const evidence = []
+
+  for (const filter of websiteFilters ?? []) {
+    const matchText = normalizeWebsiteFilterMatchText(filter?.matchText)
+    if (!matchText) continue
+
+    const candidate = candidates.find((candidate) => candidate.startsWith(matchText))
+    if (!candidate) return { matched: false, evidence: [] }
+
+    evidence.push({ filter, candidate })
+  }
+
+  return { matched: true, evidence }
+}
+
+export function entryMatchesWebsiteFilters(entry, websiteFilters) {
+  return collectWebsiteFilterEvidence(entry, websiteFilters).matched
+}
+
+export function applyWebsiteFilters(entries, websiteFilters) {
+  const allEntries = entries ?? []
+  const hasActiveFilter = (websiteFilters ?? []).some((filter) => normalizeWebsiteFilterMatchText(filter?.matchText))
+  if (!hasActiveFilter) return allEntries
+
+  return allEntries.filter((entry) => entryMatchesWebsiteFilters(entry, websiteFilters))
+}
+
 export function searchParsedHistory(
   index,
   parsedQuery,
@@ -109,7 +158,17 @@ export function searchParsedHistory(
       ? parsedQuery.tokens
       : []
   const exactPhrases = Array.isArray(parsedQuery?.exactPhrases) ? parsedQuery.exactPhrases : []
-  const entries = [...(index?.entries ?? [])]
+  const websiteFilters = Array.isArray(parsedQuery?.websiteFilters) ? parsedQuery.websiteFilters : []
+  const hasWebsiteFilters = websiteFilters.some((filter) => normalizeWebsiteFilterMatchText(filter?.matchText))
+  const entries = [...applyWebsiteFilters(index?.entries ?? [], websiteFilters)]
+  const selectionIntent = parsedQuery && typeof parsedQuery === 'object' && !Array.isArray(parsedQuery) ? parsedQuery : { tokens, websiteFilters }
+  const debugWithWebsiteFilters = (entry, debug) =>
+    hasWebsiteFilters
+      ? {
+          ...debug,
+          websiteFilterEvidence: collectWebsiteFilterEvidence(entry, websiteFilters),
+        }
+      : debug
 
   if (!exactPhrases.length) {
     if (!tokens.length) {
@@ -117,29 +176,31 @@ export function searchParsedHistory(
         return entries
           .sort((a, b) => b.lastVisitTime - a.lastVisitTime)
           .slice(0, limit)
-          .map((entry) => toResult(entry, { tokens, now, debug: { mode: 'recency', score: entry.lastVisitTime } }))
+          .map((entry) =>
+            toResult(entry, {
+              tokens,
+              now,
+              debug: debugWithWebsiteFilters(entry, { mode: 'recency', score: entry.lastVisitTime }),
+            }),
+          )
       }
 
       return entries
         .map((entry) => ({ entry, score: frecencyScore(entry, now) }))
         .sort((a, b) => b.score - a.score)
         .slice(0, limit)
-        .map(({ entry, score }) => toResult(entry, { tokens, now, debug: { mode: 'frecency', score } }))
+        .map(({ entry, score }) => toResult(entry, { tokens, now, debug: debugWithWebsiteFilters(entry, { mode: 'frecency', score }) }))
     }
 
     return entries
       .map((entry) => {
-        const rank = rankTupleFor(entry, tokens, selections, now)
+        const rank = rankTupleFor(entry, tokens, selections, now, selectionIntent)
         return rank ? { entry, rank } : null
       })
       .filter(Boolean)
-      .sort((a, b) => {
-        const tuple = compareTuple(a.rank.tuple, b.rank.tuple)
-        if (tuple !== 0) return tuple
-        return a.entry.displayUrl.localeCompare(b.entry.displayUrl)
-      })
+      .sort(compareRankedEntryMatches())
       .slice(0, limit)
-      .map(({ entry, rank }) => toResult(entry, { tokens, now, debug: rank.debug }))
+      .map(({ entry, rank }) => toResult(entry, { tokens, now, debug: debugWithWebsiteFilters(entry, rank.debug) }))
   }
 
   const quoteMatches = entries
@@ -168,31 +229,25 @@ export function searchParsedHistory(
         toResult(entry, {
           tokens,
           now,
-          debug: { mode: 'quoted', quoteEvidence, score, frecencyScore: score },
+          debug: debugWithWebsiteFilters(entry, { mode: 'quoted', quoteEvidence, score, frecencyScore: score }),
         }),
       )
   }
 
   return quoteMatches
     .map(({ entry, quoteEvidence }) => {
-      const rank = rankTupleFor(entry, tokens, selections, now)
+      const rank = rankTupleFor(entry, tokens, selections, now, selectionIntent)
       if (!rank) return null
       return { entry, quoteEvidence, rank }
     })
     .filter(Boolean)
-    .sort((a, b) => {
-      const tuple = compareTuple(a.rank.tuple, b.rank.tuple)
-      if (tuple !== 0) return tuple
-      const quote = compareQuoteEvidence(a.quoteEvidence, b.quoteEvidence)
-      if (quote !== 0) return quote
-      return a.entry.displayUrl.localeCompare(b.entry.displayUrl)
-    })
+    .sort(compareRankedEntryMatches((a, b) => compareQuoteEvidence(a.quoteEvidence, b.quoteEvidence)))
     .slice(0, limit)
     .map(({ entry, quoteEvidence, rank }) =>
       toResult(entry, {
         tokens,
         now,
-        debug: { ...rank.debug, mode: 'mixed', quoteEvidence },
+        debug: debugWithWebsiteFilters(entry, { ...rank.debug, mode: 'mixed', quoteEvidence }),
       }),
     )
 }
@@ -292,7 +347,7 @@ function frecencyScore(entry, now) {
   return recent + frequency
 }
 
-function rankTupleFor(entry, tokens, selections, now) {
+function rankTupleFor(entry, tokens, selections, now, selectionIntent = tokens) {
   const matches = tokens.map((token) => bestTokenMatch(entry, token))
   const coverage = matches.filter(Boolean).length
   if (coverage === 0) return null
@@ -303,7 +358,7 @@ function rankTupleFor(entry, tokens, selections, now) {
   const exactSegmentCount = matches.filter((match) => match?.tier === TIER.exact && URL_FIELDS.has(match.field)).length
   const urlChosenCount = matches.filter((match) => match && URL_FIELDS.has(match.field)).length
   const queryOnlyPenalty = matches.some((match) => match?.field === 'query') ? -1 : 0
-  const selection = selectionBoost(selections, tokens, entry.key, now)
+  const selection = selectionBoost(selections, selectionIntent, entry.key, now)
 
   return {
     tuple: [
@@ -339,6 +394,20 @@ function rankTupleFor(entry, tokens, selections, now) {
       usageScore: usageScore(entry, now),
       selectionBoost: selection,
     },
+  }
+}
+
+function compareRankedEntryMatches(...tieBreakers) {
+  return (a, b) => {
+    const tuple = compareTuple(a.rank.tuple, b.rank.tuple)
+    if (tuple !== 0) return tuple
+
+    for (const tieBreaker of tieBreakers) {
+      const result = tieBreaker(a, b)
+      if (result !== 0) return result
+    }
+
+    return a.entry.displayUrl.localeCompare(b.entry.displayUrl)
   }
 }
 
@@ -405,6 +474,7 @@ export function buildHistoryIndex(rawEntries, { now = Date.now() } = {}) {
   const entries = Array.from(byUrl.values()).map((entry) => ({
     ...entry,
     segments: buildSegments(entry.url, entry.title),
+    websiteName: websiteNameCandidatesForUrl(entry.url),
   }))
 
   entries.sort((a, b) => b.lastVisitTime - a.lastVisitTime)

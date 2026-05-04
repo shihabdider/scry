@@ -20,6 +20,14 @@ const TRACKING_PARAMS = new Set([
  * @property {string} key Stable normalized URL key; typed rows do not use it for selection learning.
  */
 
+/**
+ * @typedef {object} WebsiteNameCandidates
+ * @property {string} hostname Lowercase hostname with a common leading `www` label removed when present.
+ * @property {string} rootName Deterministic local root-name candidate used for bracketed website filters.
+ * @property {string[]} labels Lowercase hostname labels available for equivalent host-label matching.
+ * @property {string[]} matchCandidates Deduplicated lowercase candidates a WebsiteFilter may prefix-match.
+ */
+
 function isTrackingParam(name) {
   const lower = name.toLowerCase()
   return lower.startsWith('utm_') || TRACKING_PARAMS.has(lower)
@@ -177,6 +185,54 @@ export function buildSegments(url, title = '') {
   }
 
   return segments
+}
+
+export function websiteNameCandidatesForUrl(url) {
+  let parsed
+  try {
+    parsed = new URL(String(url ?? ''))
+  } catch {
+    return websiteNameCandidatesForHostname('')
+  }
+
+  return websiteNameCandidatesForHostname(parsed.hostname)
+}
+
+export function websiteNameCandidatesForHostname(hostname) {
+  const text = String(hostname ?? '').trim().toLowerCase().replace(/\.+$/g, '')
+  const labels = text.split('.').filter(Boolean)
+  if (labels[0] === 'www' && labels.length > 1) labels.shift()
+
+  const normalizedHostname = labels.join('.')
+  if (!normalizedHostname) {
+    return {
+      hostname: '',
+      rootName: '',
+      labels: [],
+      matchCandidates: [],
+    }
+  }
+
+  const rootName = isOpaqueHost(normalizedHostname) || labels.length === 1 ? normalizedHostname : labels.at(-2)
+  const candidates = [rootName, normalizedHostname]
+
+  if (!isOpaqueHost(normalizedHostname) && labels.length > 1) {
+    for (let index = 0; index < labels.length - 1; index++) {
+      candidates.push(labels.slice(index).join('.'))
+    }
+    candidates.push(...labels.slice(0, -1))
+  }
+
+  return {
+    hostname: normalizedHostname,
+    rootName,
+    labels,
+    matchCandidates: [...new Set(candidates.filter(Boolean))],
+  }
+
+  function isOpaqueHost(host) {
+    return host.includes(':') || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)
+  }
 }
 
 export function middleTruncate(value, maxLength = 96) {

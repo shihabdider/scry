@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "description": "A living glossary for stable project-specific vocabulary shared by humans and HtDP agents.",
+  "entries": [
+    {
+      "term": "website filter",
+      "section": "Concepts / Nouns",
+      "definition": "A complete bracketed query term such as `[git]` that hard-filters Scry results by local hostname/root-name candidates before ordinary token and exact-phrase ranking.",
+      "aliases": ["bracketed website-name filter", "bracket filter"]
+    },
+    {
+      "term": "website name candidates",
+      "section": "Concepts / Nouns",
+      "definition": "Deterministic local lowercase hostname/root labels used to match website filters, ignoring a common leading `www` label and avoiding public-suffix, network, or lookup-table dependencies.",
+      "aliases": ["hostname/root-name candidates", "site/root-name candidates"]
+    },
+    {
+      "term": "local-only MV3 boundary",
+      "section": "Invariants and Constraints",
+      "definition": "Scry remains a local Chrome MV3 popup command palette without external network calls, host permissions, content scripts, public-suffix downloads, or external lookup tables unless an issue explicitly changes that boundary."
+    }
+  ],
+  "sections": [
+    {
+      "title": "Concepts / Nouns",
+      "order": 0
+    },
+    {
+      "title": "UI or Subsystem Abstractions",
+      "order": 1
+    },
+    {
+      "title": "Actions / Verbs",
+      "order": 2
+    },
+    {
+      "title": "Invariants and Constraints",
+      "order": 3
+    },
+    {
+      "title": "Preferred Phrasing",
+      "order": 4
+    },
+    {
+      "title": "Example Requests",
+      "order": 5
+    }
+  ]
+}
