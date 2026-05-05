@@ -6,7 +6,7 @@ Scry is a personal Manifest V3 Chrome extension for history-first URL recall. It
 git skilift issues 13
 ```
 
-To narrow by site, put a colon after the site query: `git:` filters results to matching website names/roots such as github.com, gitter.com, or gitopia.com. `git: issues 13` composes the website filter with ordinary URL-fragment query terms, first limiting results to matching websites and then searching/ranking the remaining URLs for `issues 13`.
+To narrow by site, put a colon after the site query: `git:` filters results to matching website names/roots such as github.com, gitter.com, or gitopia.com. `git: issues 13` composes the website filter with ordinary URL-fragment query terms, first limiting results to matching websites and then searching/ranking the remaining URLs for `issues 13`. `file:` filters local `file:///...` history URLs, and `file: precalculus` composes the local file filter with ordinary URL-fragment query terms.
 
 The v1 product is intentionally narrow:
 

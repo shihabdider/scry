@@ -15,7 +15,13 @@ import {
   searchHistory,
   searchParsedHistory,
 } from '../src/core/search.js'
-import { createTypedUrlCandidate, middleTruncate, websiteNameCandidatesForHostname, websiteNameCandidatesForUrl } from '../src/core/url.js'
+import {
+  createTypedUrlCandidate,
+  middleTruncate,
+  websiteNameCandidatesForHostname,
+  websiteNameCandidatesForLocalFileUrl,
+  websiteNameCandidatesForUrl,
+} from '../src/core/url.js'
 
 const now = Date.parse('2026-04-27T00:00:00Z')
 
@@ -729,6 +735,68 @@ test('website-filter parsed search preserves token ranking within matching websi
   assert.deepEqual(results[0].debug.tokens, ['issues', '13'])
 })
 
+test('website-filter-only parsed search matches local file URL candidates', () => {
+  const index = indexOf([
+    {
+      url: 'https://example.com/newest-overall',
+      title: 'Newest overall must be filtered out',
+      visitCount: 1000,
+      lastVisitTime: now,
+    },
+    {
+      url: 'file:///Users/user1/Downloads/older.pdf',
+      title: 'Older local file',
+      visitCount: 1,
+      lastVisitTime: now - 120_000,
+    },
+    {
+      url: 'file:///Users/user1/Downloads/newer.pdf',
+      title: 'Newer local file',
+      visitCount: 1,
+      lastVisitTime: now - 60_000,
+    },
+  ])
+
+  const results = searchParsedHistory(index, parseQuery('file:'), { now, emptyQuerySort: 'recency' })
+
+  assert.deepEqual(results.map((result) => result.url), [
+    'file:///Users/user1/Downloads/newer.pdf',
+    'file:///Users/user1/Downloads/older.pdf',
+  ])
+  assert.deepEqual(results[0].debug.websiteFilterEvidence.evidence[0].candidate, 'file')
+})
+
+test('website-filter parsed search composes local file filters with ordinary token ranking', () => {
+  const index = indexOf([
+    {
+      url: 'file:///Users/user1/Downloads/books/Precalculus%20mathematics%20in%20a%20nutshell.pdf',
+      title: 'Precalculus mathematics in a nutshell',
+      visitCount: 1,
+      lastVisitTime: now - 60_000,
+    },
+    {
+      url: 'file:///Users/user1/Downloads/books/Geometry.pdf',
+      title: 'Geometry notes',
+      visitCount: 1000,
+      lastVisitTime: now,
+    },
+    {
+      url: 'https://example.com/precalculus',
+      title: 'Precalculus web result must be filtered out',
+      visitCount: 1000,
+      lastVisitTime: now,
+    },
+  ])
+
+  const results = searchParsedHistory(index, parseQuery('file: precalculus'), { now })
+
+  assert.deepEqual(results.map((result) => result.url), [
+    'file:///Users/user1/Downloads/books/Precalculus%20mathematics%20in%20a%20nutshell.pdf',
+  ])
+  assert.deepEqual(results[0].debug.tokens, ['precalculus'])
+  assert.deepEqual(results[0].debug.websiteFilterEvidence.evidence[0].candidate, 'file')
+})
+
 test('website-filter parsed search requires both colon filters and exact phrases', () => {
   const index = indexOf([
     {
@@ -1084,6 +1152,50 @@ test('website name candidates for URLs ignore common www hostnames after local U
     rootName: 'github',
     labels: ['github', 'com'],
     matchCandidates: ['github', 'github.com'],
+  })
+})
+
+test('website name candidates for local file URLs use the scheme-derived file candidate', () => {
+  assert.deepEqual(websiteNameCandidatesForLocalFileUrl(new URL('file:///Users/user1/Downloads/report.pdf')), {
+    hostname: '',
+    rootName: 'file',
+    labels: [],
+    matchCandidates: ['file'],
+  })
+})
+
+test('website name candidates for URLs route valid local file URLs to the file candidate', () => {
+  assert.deepEqual(websiteNameCandidatesForUrl('file:///Users/user1/Downloads/report.pdf'), {
+    hostname: '',
+    rootName: 'file',
+    labels: [],
+    matchCandidates: ['file'],
+  })
+})
+
+test('website name candidates for local file URLs do not derive candidates from filesystem path text', () => {
+  assert.deepEqual(
+    websiteNameCandidatesForLocalFileUrl(
+      new URL(
+        'file:///Users/user1/Downloads/books/Precalculus%20mathematics%20in%20a%20nutshell%20%20geometry,%20algebra,%20trigonometry.pdf',
+      ),
+    ),
+    {
+      hostname: '',
+      rootName: 'file',
+      labels: [],
+      matchCandidates: ['file'],
+    },
+  )
+})
+
+test('website filter evidence prefix-matches the local file candidate', () => {
+  const entry = { websiteName: websiteNameCandidatesForLocalFileUrl(new URL('file:///Users/user1/Downloads/report.pdf')) }
+  const fileFilter = normalizeWebsiteFilter('fil')
+
+  assert.deepEqual(collectWebsiteFilterEvidence(entry, [fileFilter]), {
+    matched: true,
+    evidence: [{ filter: fileFilter, candidate: 'file' }],
   })
 })
 

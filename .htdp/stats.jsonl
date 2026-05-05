@@ -89,3 +89,8 @@
 {"ts":"2026-05-04T18:51:37.997Z","agent":"implementer","wish":"searchParsedHistory","layer":0,"status":"pass","turns":22,"input":68265,"output":8692,"cacheRead":530944,"cost":0.8676,"duration":517.3}
 {"ts":"2026-05-04T18:59:11.138Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":22,"input":70166,"output":4114,"cacheRead":345088,"cost":0.6468,"duration":434.7}
 {"ts":"2026-05-04T19:06:40.598Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":10,"input":29163,"output":1919,"cacheRead":130560,"cost":0.2687,"duration":391.5}
+{"ts":"2026-05-05T01:58:42.204Z","agent":"stubber","wish":null,"layer":null,"status":"pass","turns":14,"input":40204,"output":3190,"cacheRead":274944,"cost":0.4342,"duration":388.6}
+{"ts":"2026-05-05T02:05:22.723Z","agent":"implementer","wish":"websiteNameCandidatesForLocalFileUrl","layer":1,"status":"pass","turns":14,"input":46151,"output":3412,"cacheRead":290816,"cost":0.4785,"duration":389}
+{"ts":"2026-05-05T02:13:16.127Z","agent":"implementer","wish":"websiteNameCandidatesForUrl","layer":0,"status":"pass","turns":19,"input":60541,"output":5796,"cacheRead":556032,"cost":0.7546,"duration":465.3}
+{"ts":"2026-05-05T02:19:44.167Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":15,"input":60884,"output":1418,"cacheRead":189440,"cost":0.4417,"duration":362.4}
+{"ts":"2026-05-05T02:26:32.992Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":16,"input":58848,"output":2502,"cacheRead":204800,"cost":0.4717,"duration":384}

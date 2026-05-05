@@ -82,11 +82,13 @@ test('README product examples use space-separated URL fragments without starred 
   assert.doesNotMatch(readme, /git\*skilift\*issues\*13/i)
 })
 
-test('README documents colon-delimited website-name filters composing with URL fragments', async () => {
+test('README documents colon-delimited website-name and local file filters composing with URL fragments', async () => {
   const readme = await readFile('README.md', 'utf8')
 
   assert.match(readme, /`git:`[^.]*filters[^.]*website names\/roots/i)
   assert.match(readme, /`git: issues 13`[^.]*ordinary URL-fragment query terms/i)
+  assert.match(readme, /`file:`[^.]*filters[^.]*local `file:\/\/\/\.\.\.` history URLs/i)
+  assert.match(readme, /`file: precalculus`[^.]*ordinary URL-fragment query terms/i)
 })
 
 test('source does not include external network calls', async () => {

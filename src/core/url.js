@@ -22,10 +22,10 @@ const TRACKING_PARAMS = new Set([
 
 /**
  * @typedef {object} WebsiteNameCandidates
- * @property {string} hostname Lowercase hostname with a common leading `www` label removed when present.
- * @property {string} rootName Deterministic local root-name candidate used for website filters.
- * @property {string[]} labels Lowercase hostname labels available for equivalent host-label matching.
- * @property {string[]} matchCandidates Deduplicated lowercase candidates a WebsiteFilter may prefix-match.
+ * @property {string} hostname Lowercase hostname with a common leading `www` label removed when present; empty for local file URLs and invalid/hostless URLs.
+ * @property {string} rootName Deterministic local root-name candidate used for website filters; for `file:` URLs this is the scheme-derived local-file site name `file`.
+ * @property {string[]} labels Lowercase hostname labels available for equivalent host-label matching; empty for local file URLs.
+ * @property {string[]} matchCandidates Deduplicated lowercase hostname/root or scheme-derived candidates a WebsiteFilter may prefix-match.
  */
 
 function isTrackingParam(name) {
@@ -195,7 +195,18 @@ export function websiteNameCandidatesForUrl(url) {
     return websiteNameCandidatesForHostname('')
   }
 
+  if (parsed.protocol === 'file:') return websiteNameCandidatesForLocalFileUrl(parsed)
+
   return websiteNameCandidatesForHostname(parsed.hostname)
+}
+
+export function websiteNameCandidatesForLocalFileUrl(url) {
+  return {
+    hostname: '',
+    rootName: 'file',
+    labels: [],
+    matchCandidates: ['file'],
+  }
 }
 
 export function websiteNameCandidatesForHostname(hostname) {

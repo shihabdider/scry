@@ -6,20 +6,22 @@
       "order": 0,
       "term": "website filter",
       "section": "Concepts / Nouns",
-      "definition": "A complete bracketed query term such as `[git]` that hard-filters Scry results by local hostname/root-name candidates before ordinary token and exact-phrase ranking.",
+      "definition": "A complete leading colon-delimited query term such as `git:` or `file:` that hard-filters Scry results by local hostname/root-name candidates before ordinary token and exact-phrase ranking.",
       "aliases": [
-        "bracketed website-name filter",
-        "bracket filter"
+        "colon-delimited website-name filter",
+        "site filter",
+        "legacy bracket filter"
       ]
     },
     {
       "order": 1,
       "term": "website name candidates",
       "section": "Concepts / Nouns",
-      "definition": "Deterministic local lowercase hostname/root labels used to match website filters, ignoring a common leading `www` label and avoiding public-suffix, network, or lookup-table dependencies.",
+      "definition": "Deterministic local lowercase hostname/root labels, plus the scheme-derived `file` candidate for local file URLs, used to match website filters while ignoring a common leading `www` label and avoiding public-suffix, network, filesystem, or lookup-table dependencies.",
       "aliases": [
         "hostname/root-name candidates",
-        "site/root-name candidates"
+        "site/root-name candidates",
+        "local-file site candidate"
       ]
     },
     {
