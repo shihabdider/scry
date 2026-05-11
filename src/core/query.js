@@ -140,13 +140,16 @@ function parseColonWebsiteFilters(text) {
 }
 
 function splitLeadingColonWebsiteFilter(text) {
-  const match = text.match(/^(\s*)([^\s:|\/\[\]"]+):(?:\s+|$)/)
+  const match = text.match(/^(\s*)([^\s:|\/\[\]"]+):/)
   if (!match) return null
+
+  const afterColonText = text.slice(match[0].length)
+  if (afterColonText.startsWith('/')) return null
 
   const rawText = match[2]
   return {
     filter: normalizeWebsiteFilter(rawText),
-    unfilteredText: `${match[1]}${text.slice(match[0].length)}`,
+    unfilteredText: `${match[1]}${afterColonText.replace(/^\s+/, '')}`,
   }
 }
 

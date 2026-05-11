@@ -65,6 +65,23 @@ test('recordSelection stores colon-filtered query strings under filter-distinct 
   assert.equal(data.aggregates['git issues'], undefined)
 })
 
+test('recordSelection canonicalizes adjacent colon-filter query strings', () => {
+  const data = recordSelection(undefined, {
+    query: 'git:issues',
+    urlKey,
+    selectedAt,
+  })
+
+  assert.deepEqual(data, {
+    version: 1,
+    aggregates: {
+      'git: issues': {
+        [urlKey]: learnedOnce,
+      },
+    },
+  })
+})
+
 test('recordSelection derives filter-aware keys from parsed query parts without a precomputed key', () => {
   const data = recordSelection(undefined, {
     query: {
@@ -203,6 +220,13 @@ test('selectionIntentKeysOverlap allows token overlap when normalized website fi
     ),
     true,
   )
+  assert.equal(
+    selectionIntentKeysOverlap(
+      { tokens: ['scr'], websiteFilters: [normalizeWebsiteFilter('Git')] },
+      'git:scry',
+    ),
+    true,
+  )
 })
 
 test('selectionIntentKeysOverlap rejects token overlap when website filter sets differ', () => {
@@ -278,6 +302,7 @@ test('selectionBoost keeps filtered and unfiltered learned intents distinct', ()
   }
 
   assert.equal(selectionBoost(data, parseQuery('git: issues'), urlKey, selectedAt), boostForLearnedOnce)
+  assert.equal(selectionBoost(data, parseQuery('git:issues'), urlKey, selectedAt), boostForLearnedOnce)
   assert.equal(selectionBoost(data, parseQuery('issues'), urlKey, selectedAt), Math.min(12, Math.log1p(20) * 6) + 4)
 })
 

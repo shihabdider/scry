@@ -115,7 +115,11 @@ test('website filter parsing removes leading colon filters and normalizes each f
     unfilteredText: 'issues 13',
     websiteFilters: [normalizeWebsiteFilter('Git')],
   })
-  assert.deepEqual(parseWebsiteFilters('Git: Docs: issue'), {
+  assert.deepEqual(parseWebsiteFilters('Git:scry'), {
+    unfilteredText: 'scry',
+    websiteFilters: [normalizeWebsiteFilter('Git')],
+  })
+  assert.deepEqual(parseWebsiteFilters('Git:Docs:issue'), {
     unfilteredText: 'issue',
     websiteFilters: [normalizeWebsiteFilter('Git'), normalizeWebsiteFilter('Docs')],
   })
@@ -128,13 +132,13 @@ test('website filter parsing treats colon without query text as a filter-only se
   })
 })
 
-test('website filter parsing requires colon filters to be leading site prefixes', () => {
+test('website filter parsing requires colon filters to be leading site prefixes without URL-scheme slashes', () => {
   assert.deepEqual(parseWebsiteFilters('alpha git: beta'), {
     unfilteredText: 'alpha git: beta',
     websiteFilters: [],
   })
-  assert.deepEqual(parseWebsiteFilters('git:issue'), {
-    unfilteredText: 'git:issue',
+  assert.deepEqual(parseWebsiteFilters('https://github.com/shihabdider/scry'), {
+    unfilteredText: 'https://github.com/shihabdider/scry',
     websiteFilters: [],
   })
 })
@@ -315,6 +319,14 @@ test('query parsing uses a colon after the site query for website filtering', ()
     exactPhrases: [],
     websiteFilters: [normalizeWebsiteFilter('git')],
     key: 'git: issues 13',
+  })
+  assert.deepEqual(parseQuery('git:scry'), {
+    raw: 'git:scry',
+    tokens: ['scry'],
+    unquotedTokens: ['scry'],
+    exactPhrases: [],
+    websiteFilters: [normalizeWebsiteFilter('git')],
+    key: 'git: scry',
   })
 })
 
@@ -733,6 +745,29 @@ test('website-filter parsed search preserves token ranking within matching websi
     ],
   )
   assert.deepEqual(results[0].debug.tokens, ['issues', '13'])
+})
+
+test('website-filter parsed search accepts adjacent colon query text', () => {
+  const index = indexOf([
+    {
+      url: 'https://learn.example.com/scry',
+      title: 'Scry training outside Git sites must be filtered out',
+      visitCount: 1000,
+      lastVisitTime: now,
+    },
+    {
+      url: 'https://github.com/shihabdider/scry',
+      title: 'Scry repository',
+      visitCount: 1,
+      lastVisitTime: now - 10_000,
+    },
+  ])
+
+  const results = searchParsedHistory(index, parseQuery('git:scry'), { now })
+
+  assert.deepEqual(results.map((result) => result.url), ['https://github.com/shihabdider/scry'])
+  assert.deepEqual(results[0].debug.tokens, ['scry'])
+  assert.deepEqual(results[0].debug.websiteFilterEvidence.evidence[0].candidate, 'github')
 })
 
 test('website-filter-only parsed search matches local file URL candidates', () => {
