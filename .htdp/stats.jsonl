@@ -94,3 +94,11 @@
 {"ts":"2026-05-05T02:13:16.127Z","agent":"implementer","wish":"websiteNameCandidatesForUrl","layer":0,"status":"pass","turns":19,"input":60541,"output":5796,"cacheRead":556032,"cost":0.7546,"duration":465.3}
 {"ts":"2026-05-05T02:19:44.167Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":15,"input":60884,"output":1418,"cacheRead":189440,"cost":0.4417,"duration":362.4}
 {"ts":"2026-05-05T02:26:32.992Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":16,"input":58848,"output":2502,"cacheRead":204800,"cost":0.4717,"duration":384}
+{"ts":"2026-05-12T15:35:40.801Z","agent":"stubber","wish":null,"layer":null,"status":"pass","turns":14,"input":57837,"output":4464,"cacheRead":212992,"cost":0.5296,"duration":503.7}
+{"ts":"2026-05-12T15:49:05.193Z","agent":"implementer","wish":"deriveResultRenderSelection","layer":2,"status":"pass","turns":12,"input":39232,"output":1719,"cacheRead":146432,"cost":0.3209,"duration":387}
+{"ts":"2026-05-12T15:49:06.606Z","agent":"implementer","wish":"enterResultsModeSelection","layer":2,"status":"pass","turns":15,"input":43024,"output":2215,"cacheRead":229376,"cost":0.3963,"duration":407.3}
+{"ts":"2026-05-12T16:12:07.839Z","agent":"implementer","wish":"isVisibleRowSelectedForRender","layer":1,"status":"pass","turns":18,"input":56784,"output":2054,"cacheRead":276992,"cost":0.484,"duration":421}
+{"ts":"2026-05-12T16:12:09.254Z","agent":"implementer","wish":"ScryPanelApp.focusResults(): void","layer":1,"status":"pass","turns":19,"input":48434,"output":3798,"cacheRead":411648,"cost":0.5619,"duration":478.6}
+{"ts":"2026-05-12T16:12:10.618Z","agent":"implementer","wish":"ScryPanelApp.renderResults(): void","layer":1,"status":"pass","turns":17,"input":104194,"output":3964,"cacheRead":381440,"cost":0.8306,"duration":473.9}
+{"ts":"2026-05-12T16:21:01.675Z","agent":"implementer","wish":"ScryPanelApp.bindEvents(): void","layer":0,"status":"pass","turns":24,"input":100375,"output":4426,"cacheRead":636928,"cost":0.9531,"duration":523.6}
+{"ts":"2026-05-12T16:28:20.223Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":14,"input":60541,"output":2288,"cacheRead":207872,"cost":0.4753,"duration":419.4}

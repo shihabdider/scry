@@ -29,6 +29,26 @@
       "term": "local-only MV3 boundary",
       "section": "Invariants and Constraints",
       "definition": "Scry remains a local Chrome MV3 popup command palette without external network calls, host permissions, content scripts, public-suffix downloads, or external lookup tables unless an issue explicitly changes that boundary."
+    },
+    {
+      "order": 3,
+      "term": "input mode",
+      "section": "UI or Subsystem Abstractions",
+      "definition": "The search-focused text-entry focus mode where typing edits the query and result rows must not render selected styling, aria-current=true, or selected-only action hints.",
+      "aliases": [
+        "search mode",
+        "text-entry mode"
+      ]
+    },
+    {
+      "order": 4,
+      "term": "result-navigation mode",
+      "section": "UI or Subsystem Abstractions",
+      "definition": "The results-focused normal mode where selectedIndex identifies the highlighted visible row and normal-mode commands such as y, c, j, k, and Escape operate on the selected row.",
+      "aliases": [
+        "results mode",
+        "normal mode"
+      ]
     }
   ],
   "sections": [

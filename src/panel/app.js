@@ -19,11 +19,63 @@ const COPY_FEEDBACK_DURATION_MS = 1_200
 
 /**
  * @typedef {'search'|'results'|'blurred'} FocusMode
+ *
+ * Search mode means text-entry/input mode: selectedIndex may still name the
+ * internal action target, but no row is visually selected. Results mode means
+ * normal/result-navigation mode: selectedIndex is both the action target and
+ * the visually highlighted row. Blurred mode means the panel has yielded focus.
+ */
+
+/**
+ * @typedef {object} ResultRenderSelection
+ * @property {FocusMode} focusMode Current focus lifecycle mode.
+ * @property {number} selectedIndex Internal selected row/action target.
+ * @property {number|null} visualSelectedIndex Visible highlighted row index, or null when input/blurred mode suppresses visual selection.
+ */
+
+/**
+ * @typedef {object} EnterResultsModeSelection
+ * @property {'results'} focusMode Normal/result-navigation mode after leaving text entry.
+ * @property {number} selectedIndex First visible row index selected for normal-mode commands.
  */
 
 /**
  * @typedef {'ignore'|'focusSearch'|'leavePanelFocus'|'copySelected'|'editSelectedUrl'|'moveNext'|'movePrevious'|'nextPage'|'previousPage'|'openSelected'} ResultNavigationCommand
  */
+
+/**
+ * @param {{ focusMode: FocusMode, selectedIndex: number }} selection
+ * @returns {ResultRenderSelection}
+ */
+export function deriveResultRenderSelection(selection) {
+  return {
+    focusMode: selection.focusMode,
+    selectedIndex: selection.selectedIndex,
+    visualSelectedIndex: selection.focusMode === 'results' ? selection.selectedIndex : null,
+  }
+}
+
+/**
+ * @param {number} visibleRowIndex
+ * @param {ResultRenderSelection} renderSelection
+ * @returns {boolean}
+ */
+export function isVisibleRowSelectedForRender(visibleRowIndex, renderSelection) {
+  return renderSelection.visualSelectedIndex !== null && visibleRowIndex === renderSelection.visualSelectedIndex
+}
+
+/**
+ * @param {{ visibleRows: import('../core/rows.js').VisibleRow[] }} state
+ * @returns {EnterResultsModeSelection|null}
+ */
+export function enterResultsModeSelection(state) {
+  if (state.visibleRows.length === 0) return null
+
+  return {
+    focusMode: 'results',
+    selectedIndex: 0,
+  }
+}
 
 export function resultNavigationCommandForKey(event) {
   const key = typeof event?.key === 'string' ? event.key.toLowerCase() : ''
@@ -124,7 +176,7 @@ export class ScryPanelApp {
       } else if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
         event.preventDefault()
         this.flushPendingInputResultsUpdate()
-        this.moveSelection(1)
+        this.focusResults()
       } else if (event.key === 'ArrowUp' || (event.ctrlKey && event.key.toLowerCase() === 'p')) {
         event.preventDefault()
         this.flushPendingInputResultsUpdate()
@@ -614,7 +666,19 @@ export class ScryPanelApp {
 
   focusResults() {
     this.cancelSearchFocusRequests()
-    this.focusMode = 'results'
+
+    if (this.focusMode === 'search') {
+      const transition = enterResultsModeSelection({ visibleRows: this.visibleRows })
+      if (transition) {
+        this.focusMode = transition.focusMode
+        this.selectedIndex = transition.selectedIndex
+      } else {
+        this.focusMode = 'results'
+      }
+    } else {
+      this.focusMode = 'results'
+    }
+
     this.focusSelectedResult()
   }
 
@@ -830,6 +894,10 @@ export class ScryPanelApp {
     }
 
     this.ensureSelectedVisible()
+    const renderSelection = deriveResultRenderSelection({
+      focusMode: this.focusMode,
+      selectedIndex: this.selectedIndex,
+    })
     const fragment = this.document.createDocumentFragment()
     const start = this.pageStart()
     const end = start + RESULTS_PER_PAGE
@@ -844,7 +912,7 @@ export class ScryPanelApp {
         continue
       }
 
-      const selected = visibleRowIndex === this.selectedIndex
+      const selected = isVisibleRowSelectedForRender(visibleRowIndex, renderSelection)
       const classes = ['result']
       if (row.kind === 'open-typed-url') classes.push('result-action', 'open-typed-url')
       if (selected) classes.push('selected')

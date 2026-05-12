@@ -525,6 +525,7 @@ test('renderResults pins an Open typed URL action above the current real-result 
   app.visibleRows = buildVisibleRows({ corpusResults, typedUrlCandidate })
   app.pageIndex = 1
   app.selectedIndex = 7
+  app.focusMode = 'results'
 
   app.renderResults()
 
@@ -596,16 +597,48 @@ test('renderResults adds selected real-row action hints to the meta line only on
   app.results = [first, selected]
   app.visibleRows = buildVisibleRows({ corpusResults: [first, selected] })
   app.selectedIndex = 1
+  app.focusMode = 'results'
 
   app.renderResults()
 
   const results = document.querySelector('#results')
-  const firstHtml = results.children[0].children[0].innerHTML
-  const selectedHtml = results.children[1].children[0].innerHTML
+  const firstButton = results.children[0].children[0]
+  const selectedButton = results.children[1].children[0]
+  const firstHtml = firstButton.innerHTML
+  const selectedHtml = selectedButton.innerHTML
 
+  assert.doesNotMatch(results.children[0].className, /\bselected\b/)
+  assert.equal(firstButton.getAttribute('aria-current'), 'false')
   assert.doesNotMatch(firstHtml, /\by copy\b/)
   assert.doesNotMatch(firstHtml, /\bc edit URL\b/)
+  assert.match(results.children[1].className, /\bselected\b/)
+  assert.equal(selectedButton.getAttribute('aria-current'), 'true')
   assert.match(selectedHtml, /class="result-meta"[\s\S]*3 visits · now[\s\S]*y copy[\s\S]*c edit URL/)
+})
+
+test('renderResults suppresses selected styling, aria-current, and selected-row hints in input mode', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  const first = searchResult('input-mode-first')
+  const selectedActionTarget = searchResult('input-mode-action-target')
+  app.results = [first, selectedActionTarget]
+  app.visibleRows = buildVisibleRows({ corpusResults: [first, selectedActionTarget] })
+  app.selectedIndex = 1
+  app.focusMode = 'search'
+
+  app.renderResults()
+
+  const results = document.querySelector('#results')
+  assert.equal(app.selectedIndex, 1)
+  assert.doesNotMatch(results.children[0].className, /\bselected\b/)
+  assert.doesNotMatch(results.children[1].className, /\bselected\b/)
+  assert.equal(results.children[0].children[0].getAttribute('aria-current'), 'false')
+  assert.equal(results.children[1].children[0].getAttribute('aria-current'), 'false')
+  assert.doesNotMatch(results.children[0].children[0].innerHTML, /\by copy\b/)
+  assert.doesNotMatch(results.children[0].children[0].innerHTML, /\bc edit URL\b/)
+  assert.doesNotMatch(results.children[1].children[0].innerHTML, /\by copy\b/)
+  assert.doesNotMatch(results.children[1].children[0].innerHTML, /\bc edit URL\b/)
 })
 
 test('renderResults adds only available hints to a selected typed URL row and keeps header status mode-based', () => {
@@ -623,6 +656,7 @@ test('renderResults adds only available hints to a selected typed URL row and ke
   app.results = [realResult]
   app.visibleRows = buildVisibleRows({ corpusResults: [realResult], typedUrlCandidate })
   app.selectedIndex = 0
+  app.focusMode = 'results'
 
   app.renderResults()
 
@@ -2949,6 +2983,57 @@ test('focusSearch is safe when cursor placement is unavailable', () => {
   assert.equal(document.activeElement, input)
 })
 
+test('focusResults enters result-navigation mode from search mode by selecting and focusing the first visible row', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.visibleRows = buildVisibleRows({ corpusResults: [searchResult('first'), searchResult('second')] })
+  app.selectedIndex = 1
+  app.focusMode = 'search'
+
+  const firstButton = appendFocusableRow(app.resultsList, { visibleRowIndex: 0 })
+  appendFocusableRow(app.resultsList, { visibleRowIndex: 1 })
+
+  app.focusResults()
+
+  assert.equal(app.focusMode, 'results')
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(document.activeElement, firstButton)
+})
+
+test('focusResults preserves the current selected row when already in result-navigation mode', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.visibleRows = buildVisibleRows({ corpusResults: [searchResult('first'), searchResult('second')] })
+  app.selectedIndex = 1
+  app.focusMode = 'results'
+
+  appendFocusableRow(app.resultsList, { visibleRowIndex: 0 })
+  const secondButton = appendFocusableRow(app.resultsList, { visibleRowIndex: 1 })
+
+  app.focusResults()
+
+  assert.equal(app.focusMode, 'results')
+  assert.equal(app.selectedIndex, 1)
+  assert.equal(document.activeElement, secondButton)
+})
+
+test('focusResults enters result-navigation mode and focuses the list when there are no visible rows', () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.visibleRows = []
+  app.results = []
+  app.selectedIndex = 3
+  app.focusMode = 'search'
+
+  app.focusResults()
+
+  assert.equal(app.focusMode, 'results')
+  assert.equal(document.activeElement, app.resultsList)
+})
+
 test('focusSelectedResult focuses a selected real row by visible row index', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
@@ -3050,6 +3135,61 @@ test('typing slash in search input is not intercepted as a mode shortcut', () =>
   assert.equal(event.defaultPrevented, false)
   assert.equal(app.focusMode, 'search')
   assert.equal(document.activeElement, input)
+})
+
+test('ArrowDown from the search input enters result navigation at the first visible row before normal-mode navigation continues', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.start()
+  const input = document.querySelector('#search-input')
+  assert.equal(document.activeElement, input)
+
+  const event = dispatchKeydown(input, 'ArrowDown')
+
+  assert.equal(event.defaultPrevented, true)
+  assert.equal(app.focusMode, 'results')
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(document.activeElement?.dataset.resultIndex, '0')
+
+  dispatchKeydown(document.activeElement, 'j')
+
+  assert.equal(app.selectedIndex, 1)
+  assert.equal(document.activeElement?.dataset.resultIndex, '1')
+})
+
+test('Ctrl+N from the search input enters result navigation without advancing past the first visible row', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.start()
+  const input = document.querySelector('#search-input')
+  app.selectedIndex = 2
+
+  const event = dispatchKeydown(input, 'n', { ctrlKey: true })
+
+  assert.equal(event.defaultPrevented, true)
+  assert.equal(app.focusMode, 'results')
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(document.activeElement?.dataset.resultIndex, '0')
+})
+
+test('ArrowDown from the search input enters result navigation and focuses the list when no rows are visible', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.start()
+  const input = document.querySelector('#search-input')
+  assert.equal(app.visibleRows.length, 0)
+
+  const event = dispatchKeydown(input, 'ArrowDown')
+
+  assert.equal(event.defaultPrevented, true)
+  assert.equal(app.focusMode, 'results')
+  assert.equal(document.activeElement, app.resultsList)
 })
 
 test('result navigation shortcuts are ignored when the search input is focused', () => {
