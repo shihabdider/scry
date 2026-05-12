@@ -11,16 +11,16 @@
       <header class="scry-header">
         <div class="brand-line">
           <h1>Scry</h1>
-          <span id="status" class="status" hidden aria-hidden="true">Recent history not loaded</span>
+          <span id="status" class="status" hidden aria-hidden="true">History not loaded</span>
         </div>
-        <div id="search-header" class="search-header" aria-label="Search recent history; Recent history not loaded">
+        <div id="search-header" class="search-header" aria-label="Search history; History not loaded">
           <span id="search-header-before" class="search-header-text">Search</span>
-          <button id="mode-indicator" class="mode-indicator" type="button" data-mode="recent" data-status="idle" data-clickable="true" aria-label="recent; Recent history not loaded" title="Recent history not loaded">recent</button>
-          <span id="search-header-after" class="search-header-text">history</span>
-          <span id="mode-switch-hint" class="mode-switch-hint" aria-hidden="true">Tab/Shift+Tab</span>
-          <span id="result-count" class="result-count" role="status" aria-live="polite" aria-label="Recent history not loaded">Recent history not loaded</span>
+          <button id="mode-indicator" class="mode-indicator" type="button" data-corpus="history" data-status="idle" data-clickable="false" disabled aria-disabled="true" aria-label="history; History not loaded" title="History not loaded">history</button>
+          <span id="search-header-after" class="search-header-text"></span>
+          <span id="mode-switch-hint" class="mode-switch-hint" hidden aria-hidden="true"></span>
+          <span id="result-count" class="result-count" role="status" aria-live="polite" aria-label="History not loaded">History not loaded</span>
         </div>
-        <input id="search-input" class="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="git skilift issues 13 — i or / to search" aria-label="Search recent history" autofocus />
+        <input id="search-input" class="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="git skilift issues 13 — i or / to search" aria-label="Search history" autofocus />
       </header>
 
       <section id="message" class="message" hidden></section>

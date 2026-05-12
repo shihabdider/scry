@@ -49,6 +49,16 @@
         "results mode",
         "normal mode"
       ]
+    },
+    {
+      "order": 5,
+      "term": "popup-session history corpus",
+      "section": "UI or Subsystem Abstractions",
+      "definition": "The single in-memory Chrome history index Scry loads with deep history bounds for one popup lifetime; it replaces recent/closed/deep mode selection and is not persisted across popup sessions.",
+      "aliases": [
+        "history corpus",
+        "single history surface"
+      ]
     }
   ],
   "sections": [

@@ -4,10 +4,9 @@ import { escapeHtml } from '../core/format.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
-import { createModeCache, cycleSearchMode, modeIndicatorModel, searchHeaderModel } from '../core/search-modes.js'
+import { createHistoryCorpusState, historySearchHeaderModel, historySearchSurfaceModel } from '../core/search-modes.js'
 import { fetchHistory } from '../platform/history-provider.js'
 import { loadSelectionData, saveSelectionData } from '../platform/selection-store.js'
-import { fetchRecentlyClosed, flattenClosedSessions } from '../platform/sessions-provider.js'
 import { openUrl } from '../platform/tabs.js'
 import { writeClipboardText } from '../platform/clipboard.js'
 
@@ -105,17 +104,6 @@ export function resultNavigationCommandForKey(event) {
   }
 }
 
-function modeIndicatorModelFromHeaderModel(model) {
-  return {
-    label: model.modeBadgeLabel,
-    mode: model.mode,
-    status: model.status,
-    clickable: true,
-    modeSwitchHint: model.modeSwitchHint,
-    statusText: model.statusText,
-  }
-}
-
 export class ScryPanelApp {
   constructor({ document, chromeApi = chrome, clock = () => Date.now(), windowApi = globalThis.window, navigatorApi = globalThis.navigator } = {}) {
     this.document = document
@@ -124,14 +112,13 @@ export class ScryPanelApp {
     this.windowApi = windowApi
     this.navigatorApi = navigatorApi
     this.index = null
-    this.deep = false
     this.loading = false
+    this.historyCorpusState = createHistoryCorpusState()
+    this.historyCorpusLoadPromise = null
     this.results = []
     this.selectedIndex = 0
     this.pageIndex = 0
     this.focusMode = 'search'
-    this.searchMode = 'recent'
-    this.modeCache = null
     this.visibleRows = []
     this.copiedFeedback = null
     this.focusRequestId = 0
@@ -151,14 +138,13 @@ export class ScryPanelApp {
 
   async start() {
     this.bindEvents()
-    this.searchMode = 'recent'
-    this.deep = false
-    this.modeCache = createModeCache()
+    this.historyCorpusState = createHistoryCorpusState()
+    this.historyCorpusLoadPromise = null
     this.index = null
-    this.renderModeIndicator()
+    this.renderSearchSurface()
     this.focusSearch()
     this.selectionData = await loadSelectionData({ chromeApi: this.chromeApi })
-    await this.loadHistory({ deep: false })
+    await this.loadHistory()
   }
 
   bindEvents() {
@@ -170,9 +156,8 @@ export class ScryPanelApp {
 
     this.input.addEventListener('keydown', (event) => {
       if (event.key === 'Tab') {
-        event.preventDefault()
+        this.ignoreCorpusSwitchInput(event)
         this.flushPendingInputResultsUpdate()
-        void this.switchSearchMode(cycleSearchMode(this.searchMode, { direction: event.shiftKey ? -1 : 1 }))
       } else if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
         event.preventDefault()
         this.flushPendingInputResultsUpdate()
@@ -201,12 +186,11 @@ export class ScryPanelApp {
 
     const modeIndicator = this.document.querySelector('#mode-indicator')
     modeIndicator?.addEventListener('click', (event) => {
-      event.preventDefault()
-      void this.switchSearchMode(cycleSearchMode(this.searchMode))
+      this.ignoreCorpusSwitchInput(event)
     })
 
-    this.deepSearchButton.addEventListener('click', () => {
-      void this.loadHistory({ deep: true })
+    this.deepSearchButton.addEventListener('click', (event) => {
+      this.ignoreCorpusSwitchInput(event)
     })
 
     this.previousPageButton?.addEventListener('click', () => {
@@ -222,45 +206,43 @@ export class ScryPanelApp {
     })
   }
 
-  async loadHistory({ deep }) {
-    return this.activateSearchMode(deep ? 'deep' : 'recent')
+  async loadHistory(_options = {}) {
+    return this.loadDefaultHistoryCorpus()
   }
 
-  async switchSearchMode(mode) {
-    this.resetSelectionForModeSwitch()
-    return this.activateSearchMode(mode)
-  }
-
-  async activateSearchMode(mode) {
+  async loadDefaultHistoryCorpus() {
     this.cancelPendingInputResultsUpdate()
-    const ready = this.ensureSearchModeReady(mode)
-    this.renderModeIndicator()
+    const ready = this.ensureHistoryCorpusReady()
+    this.renderLoading()
     const state = await ready
 
     if (state.status === 'ready' && state.index) {
       this.updateResults()
     } else {
       this.results = []
+      this.updateVisibleRows()
       this.renderResults()
     }
 
-    this.updateVisibleRows()
-    this.renderModeIndicator()
     return state
   }
 
-  async ensureSearchModeReady(mode) {
-    this.modeCache ??= createModeCache()
-    const state = this.modeCache[mode]
-    if (!state) throw new Error(`Unknown search mode: ${mode}`)
+  async switchSearchMode(_mode) {
+    return this.loadDefaultHistoryCorpus()
+  }
 
-    this.searchMode = mode
-    this.deep = mode === 'deep'
+  async ensureHistoryCorpusReady() {
+    this.historyCorpusState ??= createHistoryCorpusState()
+    const state = this.historyCorpusState
 
     if (state.status === 'ready' && state.index) {
       this.index = state.index
       this.loading = false
       return state
+    }
+
+    if (state.status === 'loading' && this.historyCorpusLoadPromise) {
+      return this.historyCorpusLoadPromise
     }
 
     state.status = 'loading'
@@ -269,104 +251,93 @@ export class ScryPanelApp {
     state.loadedAt = null
     this.loading = true
 
-    try {
-      let rawEntries
-      let loadedAt
-
-      if (mode === 'closed') {
-        const recentlyClosed = await fetchRecentlyClosed({ chromeApi: this.chromeApi })
-        loadedAt = this.clock()
-        rawEntries = flattenClosedSessions(recentlyClosed, { now: loadedAt })
-      } else {
+    this.historyCorpusLoadPromise = (async () => {
+      try {
         const requestedAt = this.clock()
-        rawEntries = await fetchHistory({ chromeApi: this.chromeApi, now: requestedAt, deep: mode === 'deep' })
-        loadedAt = this.clock()
+        const rawEntries = await fetchHistory({ chromeApi: this.chromeApi, now: requestedAt, deep: true })
+        const loadedAt = this.clock()
+        const index = buildHistoryIndex(rawEntries, { now: loadedAt })
+
+        state.status = 'ready'
+        state.index = index
+        state.error = null
+        state.loadedAt = loadedAt
+        this.index = index
+      } catch (error) {
+        state.status = 'error'
+        state.index = null
+        state.error = error
+        state.loadedAt = null
+        this.index = null
+      } finally {
+        this.loading = false
+        this.historyCorpusLoadPromise = null
       }
 
-      const index = buildHistoryIndex(rawEntries, { now: loadedAt })
+      return state
+    })()
 
-      state.status = 'ready'
-      state.index = index
-      state.error = null
-      state.loadedAt = loadedAt
-      this.index = index
-    } catch (error) {
-      state.status = 'error'
-      state.index = null
-      state.error = error
-      state.loadedAt = null
-      this.index = null
-    } finally {
-      this.loading = false
-    }
-
-    return state
+    return this.historyCorpusLoadPromise
   }
 
-  resetSelectionForModeSwitch() {
-    this.selectedIndex = 0
-    this.pageIndex = 0
+  ignoreCorpusSwitchInput(event) {
+    event?.preventDefault?.()
+    event?.stopPropagation?.()
   }
 
-  renderModeIndicator() {
+  renderSearchSurface() {
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
 
-    const headerModel = this.renderSearchHeader()
-    return modeIndicatorModelFromHeaderModel(headerModel)
-  }
-
-  renderSearchHeader() {
-    const mode = this.activeSearchMode()
-    const state = this.modeCache?.[mode] ?? null
-    const model = searchHeaderModel(mode, state)
+    const state = this.historyCorpusState ?? null
+    const headerModel = historySearchHeaderModel(state, { realResultCount: this.visibleResultCount() })
+    const surfaceModel = historySearchSurfaceModel(state, { realResultCount: this.visibleResultCount() })
 
     const before = this.document.querySelector('#search-header-before')
-    if (before) before.textContent = model.beforeMode
+    if (before) before.textContent = headerModel.beforeMode
 
     const after = this.document.querySelector('#search-header-after')
-    if (after) after.textContent = model.afterMode
+    if (after) after.textContent = headerModel.afterMode
 
     const hint = this.document.querySelector('#mode-switch-hint')
     if (hint) {
-      hint.textContent = model.modeSwitchHint
-      hint.hidden = !model.modeSwitchHint
+      hint.textContent = headerModel.modeSwitchHint
+      hint.hidden = !headerModel.modeSwitchHint
       hint.setAttribute('aria-hidden', 'true')
     }
 
     const resultCount = this.document.querySelector('#result-count')
     if (resultCount) {
-      resultCount.textContent = model.statusText
-      resultCount.setAttribute('aria-label', model.statusText)
+      resultCount.textContent = headerModel.statusText
+      resultCount.setAttribute('aria-label', headerModel.statusText)
       resultCount.setAttribute('role', 'status')
       resultCount.setAttribute('aria-live', 'polite')
     }
 
+    const headerLabel = [headerModel.beforeMode, headerModel.modeBadgeLabel, headerModel.afterMode].filter(Boolean).join(' ')
     const searchHeader = this.document.querySelector('#search-header')
     if (searchHeader) {
       searchHeader.hidden = false
-      searchHeader.setAttribute('aria-label', `${model.beforeMode} ${model.mode} ${model.afterMode}; ${model.statusText}`)
+      searchHeader.setAttribute('aria-label', `${headerLabel}; ${headerModel.statusText}`)
     }
 
-    this.input?.setAttribute('aria-label', `${model.beforeMode} ${model.mode} ${model.afterMode}`)
-    if (this.status) this.setStatus(model.statusText)
+    this.input?.setAttribute('aria-label', headerLabel)
+    if (this.status) this.setStatus(headerModel.statusText)
 
-    this.renderModeIndicatorElement(modeIndicatorModelFromHeaderModel(model))
+    this.renderHistoryCorpusIndicator(surfaceModel)
 
-    return model
+    return surfaceModel
   }
 
-  renderModeIndicatorElement(model) {
+  renderHistoryCorpusIndicator(model) {
     const indicator = this.document.querySelector('#mode-indicator')
     if (!indicator) return
 
-    const switchHint = model.clickable && model.modeSwitchHint
-      ? `switch mode with ${model.modeSwitchHint}`
-      : ''
-    const ariaLabel = [model.label, model.statusText, switchHint].filter(Boolean).join('; ')
+    const ariaLabel = [model.label, model.statusText].filter(Boolean).join('; ')
 
     indicator.hidden = false
     indicator.textContent = model.label
-    indicator.dataset.mode = model.mode
+    delete indicator.dataset.mode
+    indicator.dataset.corpus = model.corpus
     indicator.dataset.status = model.status
     indicator.dataset.clickable = String(model.clickable)
     indicator.disabled = !model.clickable
@@ -473,11 +444,9 @@ export class ScryPanelApp {
 
   updateResults() {
     this.cancelPendingInputResultsUpdate()
-    let currentIndex = this.index
-    if (this.modeCache) {
-      const activeModeState = this.modeCache[this.searchMode] ?? null
-      currentIndex = activeModeState?.status === 'ready' ? activeModeState.index : null
-    }
+    const currentIndex = this.historyCorpusState?.status === 'ready'
+      ? this.historyCorpusState.index
+      : null
 
     this.index = currentIndex ?? null
     this.results = currentIndex
@@ -485,7 +454,7 @@ export class ScryPanelApp {
         now: this.clock(),
         limit: SEARCH_LIMIT,
         selections: this.selectionData,
-        emptyQuerySort: this.searchMode === 'closed' ? 'recency' : 'frecency',
+        emptyQuerySort: 'frecency',
       })
       : []
 
@@ -735,83 +704,28 @@ export class ScryPanelApp {
     this.leavePanelFocus()
   }
 
-  activeSearchMode() {
-    if (this.searchMode === 'recent' || this.searchMode === 'deep' || this.searchMode === 'closed') return this.searchMode
-    return this.deep ? 'deep' : 'recent'
-  }
-
   renderLoading() {
-    const mode = this.activeSearchMode()
-    const modeState = this.modeCache?.[mode] ?? null
-    const loadingState = modeState?.status === 'loading'
-      ? modeState
-      : { mode, status: 'loading', index: null, error: null, loadedAt: null }
-    const model = modeIndicatorModel(mode, loadingState)
-    const messages = {
-      recent: 'Indexing recent browser history…',
-      deep: 'Searching all available history. This can take a moment.',
-      closed: 'Loading recently closed URLs…',
-    }
-
     this.results = []
     this.visibleRows = []
     if (this.resultsList) this.resultsList.innerHTML = ''
-    if (this.message) this.showMessage(messages[model.mode])
+    if (this.message) this.showMessage('Loading history…')
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
     if (this.pagination) this.pagination.hidden = true
     if (this.pageStatus) this.pageStatus.textContent = 'Loading…'
     if (this.previousPageButton) this.previousPageButton.disabled = true
     if (this.nextPageButton) this.nextPageButton.disabled = true
 
-    const originalModeCache = this.modeCache
-    const hadOriginalModeState = Boolean(originalModeCache && Object.prototype.hasOwnProperty.call(originalModeCache, mode))
-    const originalModeState = originalModeCache?.[mode]
-    const needsTemporaryLoadingState = originalModeState?.status !== 'loading'
-
-    if (needsTemporaryLoadingState) {
-      this.modeCache ??= createModeCache()
-      this.modeCache[mode] = loadingState
-    }
-
-    try {
-      this.renderSearchHeader()
-    } finally {
-      if (needsTemporaryLoadingState) {
-        if (originalModeCache) {
-          if (hadOriginalModeState) {
-            originalModeCache[mode] = originalModeState
-          } else {
-            delete originalModeCache[mode]
-          }
-        }
-        this.modeCache = originalModeCache
-      }
-    }
-
-    return model
+    return this.renderSearchSurface()
   }
 
   renderResults() {
     const query = this.input.value.trim()
-    const mode = this.activeSearchMode()
-    const modeState = this.modeCache?.[mode] ?? null
+    const corpusState = this.historyCorpusState ?? null
     const messages = {
-      recent: {
-        empty: 'No recent history results yet.',
-        noMatches: 'No matches in recent history.',
-        error: 'Recent history unavailable.',
-      },
-      deep: {
-        empty: 'No deep history results yet.',
-        noMatches: 'No matches in deep history.',
-        error: 'Deep history unavailable.',
-      },
-      closed: {
-        empty: 'No recently closed URLs yet.',
-        noMatches: 'No matches in recently closed URLs.',
-        error: 'Recently closed URLs unavailable.',
-      },
-    }[mode]
+      empty: 'No history results yet.',
+      noMatches: 'No matches in history.',
+      error: 'History unavailable.',
+    }
 
     const copiedMarker = (row) => row?.copied
       ? '<span class="result-copied-feedback">copied</span>'
@@ -863,7 +777,7 @@ export class ScryPanelApp {
     }
 
     let visibleRows = Array.isArray(this.visibleRows) ? this.visibleRows : []
-    if (modeState?.status === 'error') {
+    if (corpusState?.status === 'error') {
       const typedUrlCandidate = createTypedUrlCandidate(this.input.value)
       visibleRows = buildVisibleRows({
         corpusResults: [],
@@ -887,7 +801,7 @@ export class ScryPanelApp {
     this.message.hidden = true
     this.resultsList.innerHTML = ''
 
-    if (modeState?.status === 'error') {
+    if (corpusState?.status === 'error') {
       this.showMessage(messages.error)
     } else if (!hasRealRows) {
       this.showMessage(query ? messages.noMatches : messages.empty)
@@ -944,7 +858,7 @@ export class ScryPanelApp {
     if (this.focusMode === 'results') this.focusSelectedResult()
 
     this.renderPagination()
-    this.renderSearchHeader()
+    this.renderSearchSurface()
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
   }
 
