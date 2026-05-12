@@ -97,7 +97,11 @@ test('resultNavigationCommandForKey keeps selected-row commands distinct', () =>
   assert.equal(resultNavigationCommandForKey({ key: 'y' }), 'copySelected')
   assert.equal(resultNavigationCommandForKey({ key: 'c' }), 'editSelectedUrl')
   assert.equal(resultNavigationCommandForKey({ key: 'j' }), 'moveNext')
+  assert.equal(resultNavigationCommandForKey({ key: 'ArrowDown' }), 'moveNext')
+  assert.equal(resultNavigationCommandForKey({ key: 'n', ctrlKey: true }), 'moveNext')
   assert.equal(resultNavigationCommandForKey({ key: 'k' }), 'movePrevious')
+  assert.equal(resultNavigationCommandForKey({ key: 'ArrowUp' }), 'movePrevious')
+  assert.equal(resultNavigationCommandForKey({ key: 'p', ctrlKey: true }), 'movePrevious')
   assert.equal(resultNavigationCommandForKey({ key: 'l' }), 'nextPage')
   assert.equal(resultNavigationCommandForKey({ key: 'h' }), 'previousPage')
   assert.equal(resultNavigationCommandForKey({ key: 'Enter' }), 'openSelected')
@@ -105,6 +109,8 @@ test('resultNavigationCommandForKey keeps selected-row commands distinct', () =>
 
 test('resultNavigationCommandForKey ignores normal typing, unknown keys, and missing keys', () => {
   assert.equal(resultNavigationCommandForKey({ key: 'a' }), 'ignore')
+  assert.equal(resultNavigationCommandForKey({ key: 'n' }), 'ignore')
+  assert.equal(resultNavigationCommandForKey({ key: 'p' }), 'ignore')
   assert.equal(resultNavigationCommandForKey({ key: ' ' }), 'ignore')
   assert.equal(resultNavigationCommandForKey({ key: '/open' }), 'ignore')
   assert.equal(resultNavigationCommandForKey({}), 'ignore')

@@ -79,6 +79,9 @@ export function enterResultsModeSelection(state) {
 export function resultNavigationCommandForKey(event) {
   const key = typeof event?.key === 'string' ? event.key.toLowerCase() : ''
 
+  if (event?.ctrlKey && key === 'n') return 'moveNext'
+  if (event?.ctrlKey && key === 'p') return 'movePrevious'
+
   switch (key) {
     case 'i':
     case '/':
@@ -90,8 +93,10 @@ export function resultNavigationCommandForKey(event) {
     case 'c':
       return 'editSelectedUrl'
     case 'j':
+    case 'arrowdown':
       return 'moveNext'
     case 'k':
+    case 'arrowup':
       return 'movePrevious'
     case 'l':
       return 'nextPage'
@@ -165,7 +170,7 @@ export class ScryPanelApp {
       } else if (event.key === 'ArrowUp' || (event.ctrlKey && event.key.toLowerCase() === 'p')) {
         event.preventDefault()
         this.flushPendingInputResultsUpdate()
-        this.moveSelection(-1)
+        this.focusResults()
       } else if (event.key === 'Enter') {
         event.preventDefault()
         this.flushPendingInputResultsUpdate()
@@ -601,6 +606,9 @@ export class ScryPanelApp {
 
   focusSearch() {
     this.focusMode = 'search'
+    this.selectedIndex = 0
+    this.pageIndex = 0
+    this.renderResults()
     const requestId = ++this.focusRequestId
     const inputIsFocused = () => this.document.activeElement === this.input
     const placeCursorAtEnd = () => {

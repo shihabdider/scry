@@ -1407,29 +1407,42 @@ test('changeSelectedRowToSearch is a no-op when no visible row is selected', () 
   assert.equal(input.selectionEnd, 3)
 })
 
-test('result navigation i returns to search input and leaves normal input typing to the input', () => {
+test('result navigation i returns to search input, resets top selection, and clears selected row rendering', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
   const input = document.querySelector('#search-input')
   input.value = 'github issue'
   input.setSelectionRange(0, 0)
-  const selectedButton = appendFocusableRow(app.resultsList, { resultIndex: 0 })
-  document.activeElement = selectedButton
+  app.results = Array.from({ length: 8 }, (_, index) => searchResult(`input-return-${index + 1}`))
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 7
+  app.pageIndex = 1
   app.focusMode = 'results'
+  app.renderResults()
+  const selectedButton = document.activeElement
+  assert.match(app.resultsList.children[1].className, /\bselected\b/)
   app.bindEvents()
 
   const event = dispatchKeydown(selectedButton, 'i')
 
   assert.equal(event.defaultPrevented, true)
   assert.equal(app.focusMode, 'search')
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
   assert.equal(document.activeElement, input)
   assert.equal(input.value, 'github issue')
   assert.equal(input.selectionStart, input.value.length)
   assert.equal(input.selectionEnd, input.value.length)
+  for (const item of app.resultsList.children) {
+    assert.doesNotMatch(item.className, /\bselected\b/)
+    assert.equal(item.children[0].getAttribute('aria-current'), 'false')
+    assert.doesNotMatch(item.children[0].innerHTML, /\by copy\b/)
+    assert.doesNotMatch(item.children[0].innerHTML, /\bc edit URL\b/)
+  }
 })
 
-test('result navigation slash returns to search input without changing the query or selected row actions', () => {
+test('result navigation slash returns to search input without changing the query or triggering row actions', () => {
   const document = createScryDocument()
   const writes = []
   const chromeApi = createPanelChrome([])
@@ -1441,24 +1454,30 @@ test('result navigation slash returns to search input without changing the query
     navigatorApi: createClipboardNavigator(writes),
   })
   const input = document.querySelector('#search-input')
-  app.results = [searchResult('first')]
+  app.results = [searchResult('first'), searchResult('second')]
   app.visibleRows = buildVisibleRows({ corpusResults: app.results })
-  app.selectedIndex = 0
+  app.selectedIndex = 1
+  app.focusMode = 'results'
   input.value = 'github issue'
   input.setSelectionRange(0, 0)
-  const selectedButton = appendFocusableRow(app.resultsList, { resultIndex: 0 })
-  document.activeElement = selectedButton
-  app.focusMode = 'results'
+  app.renderResults()
+  const selectedButton = document.activeElement
   app.bindEvents()
 
   const event = dispatchKeydown(selectedButton, '/')
 
   assert.equal(event.defaultPrevented, true)
   assert.equal(app.focusMode, 'search')
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(app.pageIndex, 0)
   assert.equal(document.activeElement, input)
   assert.equal(input.value, 'github issue')
   assert.equal(input.selectionStart, input.value.length)
   assert.equal(input.selectionEnd, input.value.length)
+  for (const item of app.resultsList.children) {
+    assert.doesNotMatch(item.className, /\bselected\b/)
+    assert.equal(item.children[0].getAttribute('aria-current'), 'false')
+  }
   assert.deepEqual(chromeApi.tabs.opened, [])
   assert.deepEqual(chromeApi.tabs.updated, [])
   assert.deepEqual(writes, [])
@@ -1767,7 +1786,7 @@ test('typing slash in search input is not intercepted as a mode shortcut', () =>
   assert.equal(document.activeElement, input)
 })
 
-test('ArrowDown from the search input enters result navigation at the first visible row before normal-mode navigation continues', async () => {
+test('ArrowDown from the search input enters result navigation before arrow-key navigation continues', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
@@ -1783,10 +1802,17 @@ test('ArrowDown from the search input enters result navigation at the first visi
   assert.equal(app.selectedIndex, 0)
   assert.equal(document.activeElement?.dataset.resultIndex, '0')
 
-  dispatchKeydown(document.activeElement, 'j')
+  const downAgain = dispatchKeydown(document.activeElement, 'ArrowDown')
 
+  assert.equal(downAgain.defaultPrevented, true)
   assert.equal(app.selectedIndex, 1)
   assert.equal(document.activeElement?.dataset.resultIndex, '1')
+
+  const upAgain = dispatchKeydown(document.activeElement, 'ArrowUp')
+
+  assert.equal(upAgain.defaultPrevented, true)
+  assert.equal(app.selectedIndex, 0)
+  assert.equal(document.activeElement?.dataset.resultIndex, '0')
 })
 
 test('Ctrl+N from the search input enters result navigation without advancing past the first visible row', async () => {
@@ -1804,6 +1830,38 @@ test('Ctrl+N from the search input enters result navigation without advancing pa
   assert.equal(app.focusMode, 'results')
   assert.equal(app.selectedIndex, 0)
   assert.equal(document.activeElement?.dataset.resultIndex, '0')
+})
+
+test('ArrowUp and Ctrl+P from the search input enter result navigation at the first visible row', async () => {
+  const arrowDocument = createScryDocument()
+  const arrowChromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
+  const arrowApp = new ScryPanelApp({ document: arrowDocument, chromeApi: arrowChromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await arrowApp.start()
+  const arrowInput = arrowDocument.querySelector('#search-input')
+  arrowApp.selectedIndex = 2
+
+  const arrowEvent = dispatchKeydown(arrowInput, 'ArrowUp')
+
+  assert.equal(arrowEvent.defaultPrevented, true)
+  assert.equal(arrowApp.focusMode, 'results')
+  assert.equal(arrowApp.selectedIndex, 0)
+  assert.equal(arrowDocument.activeElement?.dataset.resultIndex, '0')
+
+  const ctrlDocument = createScryDocument()
+  const ctrlChromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
+  const ctrlApp = new ScryPanelApp({ document: ctrlDocument, chromeApi: ctrlChromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await ctrlApp.start()
+  const ctrlInput = ctrlDocument.querySelector('#search-input')
+  ctrlApp.selectedIndex = 2
+
+  const ctrlEvent = dispatchKeydown(ctrlInput, 'p', { ctrlKey: true })
+
+  assert.equal(ctrlEvent.defaultPrevented, true)
+  assert.equal(ctrlApp.focusMode, 'results')
+  assert.equal(ctrlApp.selectedIndex, 0)
+  assert.equal(ctrlDocument.activeElement?.dataset.resultIndex, '0')
 })
 
 test('ArrowDown from the search input enters result navigation and focuses the list when no rows are visible', async () => {
