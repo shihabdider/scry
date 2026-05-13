@@ -4,8 +4,9 @@ import { escapeHtml } from '../core/format.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
-import { createHistoryCorpusState, historySearchHeaderModel, historySearchSurfaceModel } from '../core/search-modes.js'
+import { CLOSED_MODE, createPopupSessionSearchCache, HISTORY_MODE, nextSearchMode, searchSearchHeaderModel, searchSearchSurfaceModel } from '../core/search-modes.js'
 import { fetchHistory } from '../platform/history-provider.js'
+import { fetchRecentlyClosed, flattenClosedSessions } from '../platform/sessions-provider.js'
 import { loadSelectionData, saveSelectionData } from '../platform/selection-store.js'
 import { openUrl } from '../platform/tabs.js'
 import { writeClipboardText } from '../platform/clipboard.js'
@@ -40,6 +41,16 @@ const COPY_FEEDBACK_DURATION_MS = 1_200
 
 /**
  * @typedef {'ignore'|'focusSearch'|'leavePanelFocus'|'copySelected'|'editSelectedUrl'|'moveNext'|'movePrevious'|'nextPage'|'previousPage'|'openSelected'} ResultNavigationCommand
+ */
+
+/**
+ * @typedef {import('../core/search-modes.js').SearchMode} SearchMode
+ * @typedef {import('../core/search-modes.js').PopupSessionSearchCache} PopupSessionSearchCache
+ *
+ * `ScryPanelApp` owns exactly two popup-session search corpora: the default
+ * `history` cache loaded from deep Chrome history, and the `closed` cache
+ * loaded from Chrome sessions. Switching mode changes only the active corpus;
+ * it must preserve the current query and reuse a ready in-memory index.
  */
 
 /**
@@ -118,8 +129,8 @@ export class ScryPanelApp {
     this.navigatorApi = navigatorApi
     this.index = null
     this.loading = false
-    this.historyCorpusState = createHistoryCorpusState()
-    this.historyCorpusLoadPromise = null
+    this.searchCache = createPopupSessionSearchCache({ activeMode: HISTORY_MODE })
+    this.searchMode = this.searchCache.activeMode
     this.results = []
     this.selectedIndex = 0
     this.pageIndex = 0
@@ -143,8 +154,8 @@ export class ScryPanelApp {
 
   async start() {
     this.bindEvents()
-    this.historyCorpusState = createHistoryCorpusState()
-    this.historyCorpusLoadPromise = null
+    this.searchCache = createPopupSessionSearchCache({ activeMode: HISTORY_MODE })
+    this.searchMode = this.searchCache.activeMode
     this.index = null
     this.renderSearchSurface()
     this.focusSearch()
@@ -161,8 +172,9 @@ export class ScryPanelApp {
 
     this.input.addEventListener('keydown', (event) => {
       if (event.key === 'Tab') {
-        this.ignoreCorpusSwitchInput(event)
+        event.preventDefault()
         this.flushPendingInputResultsUpdate()
+        void this.cycleSearchMode(event.shiftKey ? -1 : 1)
       } else if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
         event.preventDefault()
         this.flushPendingInputResultsUpdate()
@@ -191,7 +203,8 @@ export class ScryPanelApp {
 
     const modeIndicator = this.document.querySelector('#mode-indicator')
     modeIndicator?.addEventListener('click', (event) => {
-      this.ignoreCorpusSwitchInput(event)
+      event.preventDefault()
+      void this.cycleSearchMode(1)
     })
 
     this.deepSearchButton.addEventListener('click', (event) => {
@@ -212,55 +225,87 @@ export class ScryPanelApp {
   }
 
   async loadHistory(_options = {}) {
-    return this.loadDefaultHistoryCorpus()
+    return this.loadDefaultSearchMode()
   }
 
-  async loadDefaultHistoryCorpus() {
-    this.cancelPendingInputResultsUpdate()
-    const ready = this.ensureHistoryCorpusReady()
-    this.renderLoading()
-    const state = await ready
+  async loadDefaultSearchMode() {
+    return this.switchSearchMode(HISTORY_MODE)
+  }
 
-    if (state.status === 'ready' && state.index) {
+  async cycleSearchMode(direction = 1) {
+    const nextMode = nextSearchMode(this.searchMode, direction)
+    return this.switchSearchMode(nextMode)
+  }
+
+  async switchSearchMode(mode) {
+    this.selectedIndex = 0
+    this.pageIndex = 0
+
+    const readyPromise = this.ensureSearchModeReady(mode)
+    const activeState = this.activeSearchModeState()
+    if (activeState?.status === 'loading') this.renderLoading()
+
+    let readyState
+    try {
+      readyState = await readyPromise
+    } catch (error) {
+      readyState = this.activeSearchModeState()
+      if (readyState) {
+        readyState.status = 'error'
+        readyState.index = null
+        readyState.error = error
+        readyState.loadedAt = null
+        readyState.loadingPromise = null
+      }
+    }
+
+    if (readyState?.status === 'ready') {
       this.updateResults()
     } else {
+      this.index = null
       this.results = []
-      this.updateVisibleRows()
+      this.visibleRows = []
       this.renderResults()
     }
 
-    return state
+    return readyState
   }
 
-  async switchSearchMode(_mode) {
-    return this.loadDefaultHistoryCorpus()
+  async ensureSearchModeReady(mode = this.searchMode) {
+    if (!this.searchCache?.modes?.history || !this.searchCache?.modes?.closed) {
+      this.searchCache = createPopupSessionSearchCache({ activeMode: HISTORY_MODE })
+    }
+
+    const normalizedMode = mode === CLOSED_MODE ? CLOSED_MODE : HISTORY_MODE
+    this.searchCache.activeMode = normalizedMode
+    this.searchMode = normalizedMode
+
+    const state = this.searchCache.modes[normalizedMode]
+    if (state.status === 'ready') {
+      this.index = state.index
+      return state
+    }
+    if (state.status === 'loading' && state.loadingPromise) return state.loadingPromise
+
+    return normalizedMode === CLOSED_MODE
+      ? this.loadClosedMode(state)
+      : this.loadHistoryMode(state)
   }
 
   async ensureHistoryCorpusReady() {
-    this.historyCorpusState ??= createHistoryCorpusState()
-    const state = this.historyCorpusState
+    return this.ensureSearchModeReady(HISTORY_MODE)
+  }
 
-    if (state.status === 'ready' && state.index) {
-      this.index = state.index
-      this.loading = false
-      return state
-    }
-
-    if (state.status === 'loading' && this.historyCorpusLoadPromise) {
-      return this.historyCorpusLoadPromise
-    }
-
+  async loadSearchModeState(state, loadRawEntries) {
     state.status = 'loading'
     state.error = null
     state.index = null
     state.loadedAt = null
     this.loading = true
 
-    this.historyCorpusLoadPromise = (async () => {
+    const loadingPromise = (async () => {
       try {
-        const requestedAt = this.clock()
-        const rawEntries = await fetchHistory({ chromeApi: this.chromeApi, now: requestedAt, deep: true })
-        const loadedAt = this.clock()
+        const { rawEntries, loadedAt } = await loadRawEntries()
         const index = buildHistoryIndex(rawEntries, { now: loadedAt })
 
         state.status = 'ready'
@@ -275,14 +320,32 @@ export class ScryPanelApp {
         state.loadedAt = null
         this.index = null
       } finally {
+        state.loadingPromise = null
         this.loading = false
-        this.historyCorpusLoadPromise = null
       }
 
       return state
     })()
 
-    return this.historyCorpusLoadPromise
+    state.loadingPromise = loadingPromise
+    return loadingPromise
+  }
+
+  async loadHistoryMode(state) {
+    return this.loadSearchModeState(state, async () => {
+      const requestedAt = this.clock()
+      const rawEntries = await fetchHistory({ chromeApi: this.chromeApi, now: requestedAt, deep: true })
+      return { rawEntries, loadedAt: this.clock() }
+    })
+  }
+
+  async loadClosedMode(state) {
+    return this.loadSearchModeState(state, async () => {
+      const recentlyClosed = await fetchRecentlyClosed({ chromeApi: this.chromeApi })
+      const loadedAt = this.clock()
+      const rawEntries = flattenClosedSessions(recentlyClosed, { now: loadedAt })
+      return { rawEntries, loadedAt }
+    })
   }
 
   ignoreCorpusSwitchInput(event) {
@@ -290,12 +353,42 @@ export class ScryPanelApp {
     event?.stopPropagation?.()
   }
 
+  activeSearchModeState() {
+    const cache = this.searchCache
+    const activeMode = cache?.activeMode
+
+    if (activeMode !== HISTORY_MODE && activeMode !== CLOSED_MODE) return null
+
+    return cache?.modes?.[activeMode] ?? null
+  }
+
+  emptyQuerySortForMode(mode = this.searchMode) {
+    return mode === CLOSED_MODE ? 'recency' : 'frecency'
+  }
+
+  resultMessagesForMode(mode = this.searchMode) {
+    const messagesByMode = {
+      history: {
+        empty: 'No history results yet.',
+        noMatches: 'No matches in history.',
+        error: 'History unavailable.',
+      },
+      closed: {
+        empty: 'No recently closed URLs yet.',
+        noMatches: 'No matches in recently closed URLs.',
+        error: 'Recently closed URLs unavailable.',
+      },
+    }
+
+    return mode === CLOSED_MODE ? messagesByMode.closed : messagesByMode.history
+  }
+
   renderSearchSurface() {
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
 
-    const state = this.historyCorpusState ?? null
-    const headerModel = historySearchHeaderModel(state, { realResultCount: this.visibleResultCount() })
-    const surfaceModel = historySearchSurfaceModel(state, { realResultCount: this.visibleResultCount() })
+    const cache = this.searchCache ?? createPopupSessionSearchCache({ activeMode: HISTORY_MODE })
+    const headerModel = searchSearchHeaderModel(cache, { realResultCount: this.visibleResultCount() })
+    const surfaceModel = searchSearchSurfaceModel(cache, { realResultCount: this.visibleResultCount() })
 
     const before = this.document.querySelector('#search-header-before')
     if (before) before.textContent = headerModel.beforeMode
@@ -342,7 +435,8 @@ export class ScryPanelApp {
     indicator.hidden = false
     indicator.textContent = model.label
     delete indicator.dataset.mode
-    indicator.dataset.corpus = model.corpus
+    indicator.dataset.mode = model.mode
+    indicator.dataset.corpus = model.mode
     indicator.dataset.status = model.status
     indicator.dataset.clickable = String(model.clickable)
     indicator.disabled = !model.clickable
@@ -449,8 +543,9 @@ export class ScryPanelApp {
 
   updateResults() {
     this.cancelPendingInputResultsUpdate()
-    const currentIndex = this.historyCorpusState?.status === 'ready'
-      ? this.historyCorpusState.index
+    const activeState = this.activeSearchModeState()
+    const currentIndex = activeState?.status === 'ready'
+      ? activeState.index
       : null
 
     this.index = currentIndex ?? null
@@ -459,7 +554,7 @@ export class ScryPanelApp {
         now: this.clock(),
         limit: SEARCH_LIMIT,
         selections: this.selectionData,
-        emptyQuerySort: 'frecency',
+        emptyQuerySort: this.emptyQuerySortForMode(this.searchMode),
       })
       : []
 
@@ -716,24 +811,21 @@ export class ScryPanelApp {
     this.results = []
     this.visibleRows = []
     if (this.resultsList) this.resultsList.innerHTML = ''
-    if (this.message) this.showMessage('Loading history…')
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
     if (this.pagination) this.pagination.hidden = true
     if (this.pageStatus) this.pageStatus.textContent = 'Loading…'
     if (this.previousPageButton) this.previousPageButton.disabled = true
     if (this.nextPageButton) this.nextPageButton.disabled = true
 
-    return this.renderSearchSurface()
+    const model = this.renderSearchSurface()
+    if (this.message) this.showMessage(model.statusText)
+    return model
   }
 
   renderResults() {
     const query = this.input.value.trim()
-    const corpusState = this.historyCorpusState ?? null
-    const messages = {
-      empty: 'No history results yet.',
-      noMatches: 'No matches in history.',
-      error: 'History unavailable.',
-    }
+    const corpusState = this.activeSearchModeState()
+    const messages = this.resultMessagesForMode(this.searchMode)
 
     const copiedMarker = (row) => row?.copied
       ? '<span class="result-copied-feedback">copied</span>'

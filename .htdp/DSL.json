@@ -52,12 +52,14 @@
     },
     {
       "order": 5,
-      "term": "popup-session history corpus",
+      "term": "popup-session search corpora",
       "section": "UI or Subsystem Abstractions",
-      "definition": "The single in-memory Chrome history index Scry loads with deep history bounds for one popup lifetime; it replaces recent/closed/deep mode selection and is not persisted across popup sessions.",
+      "definition": "The two in-memory popup-lifetime search indexes exposed by Scry: `history`, loaded by default from deep Chrome history via `fetchHistory({ deep: true })`, and `closed`, loaded from flattened Chrome recently closed tab/window sessions. Tab, Shift+Tab, and the corpus badge cycle only between these two corpora without changing the query; legacy `recent` and explicit `deep` modes are not restored.",
       "aliases": [
+        "popup-session history and closed corpora",
+        "two-mode search surface",
         "history corpus",
-        "single history surface"
+        "closed corpus"
       ]
     }
   ],

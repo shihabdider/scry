@@ -140,6 +140,87 @@ function createTimerApi() {
   }
 }
 
+test('activeSearchModeState returns the default history popup-session search corpus state', () => {
+  const document = createScryDocument()
+  const app = new ScryPanelApp({ document, chromeApi: createPanelChrome([]), clock: () => now, windowApi: { blur() {} } })
+
+  assert.equal(app.activeSearchModeState(), app.searchCache.modes.history)
+  assert.equal(app.activeSearchModeState()?.mode, 'history')
+})
+
+test('activeSearchModeState returns the closed popup-session search corpus state when active', () => {
+  const document = createScryDocument()
+  const app = new ScryPanelApp({ document, chromeApi: createPanelChrome([]), clock: () => now, windowApi: { blur() {} } })
+
+  app.searchCache.activeMode = 'closed'
+
+  assert.equal(app.activeSearchModeState(), app.searchCache.modes.closed)
+  assert.equal(app.activeSearchModeState()?.mode, 'closed')
+})
+
+test('activeSearchModeState returns null when there is no active history or closed cache state', () => {
+  const document = createScryDocument()
+  const app = new ScryPanelApp({ document, chromeApi: createPanelChrome([]), clock: () => now, windowApi: { blur() {} } })
+
+  app.searchCache = null
+  assert.equal(app.activeSearchModeState(), null)
+
+  app.searchCache = { activeMode: 'recent', modes: { history: {}, closed: {} } }
+  assert.equal(app.activeSearchModeState(), null)
+})
+
+test('emptyQuerySortForMode uses frecency for the default history popup-session corpus', () => {
+  const document = createScryDocument()
+  const app = new ScryPanelApp({ document, chromeApi: createPanelChrome([]), clock: () => now, windowApi: { blur() {} } })
+
+  assert.equal(app.emptyQuerySortForMode(), 'frecency')
+  assert.equal(app.emptyQuerySortForMode('history'), 'frecency')
+})
+
+test('emptyQuerySortForMode uses recency for recently closed empty-query results', () => {
+  const document = createScryDocument()
+  const app = new ScryPanelApp({ document, chromeApi: createPanelChrome([]), clock: () => now, windowApi: { blur() {} } })
+
+  assert.equal(app.emptyQuerySortForMode('closed'), 'recency')
+
+  app.searchMode = 'closed'
+  assert.equal(app.emptyQuerySortForMode(), 'recency')
+})
+
+test('resultMessagesForMode uses history copy by default', () => {
+  const document = createScryDocument()
+  const app = new ScryPanelApp({ document, chromeApi: createPanelChrome([]), clock: () => now, windowApi: { blur() {} } })
+
+  assert.deepEqual(app.resultMessagesForMode(), {
+    empty: 'No history results yet.',
+    noMatches: 'No matches in history.',
+    error: 'History unavailable.',
+  })
+  assert.deepEqual(app.resultMessagesForMode('history'), {
+    empty: 'No history results yet.',
+    noMatches: 'No matches in history.',
+    error: 'History unavailable.',
+  })
+})
+
+test('resultMessagesForMode uses recently closed copy when closed mode is active or requested', () => {
+  const document = createScryDocument()
+  const app = new ScryPanelApp({ document, chromeApi: createPanelChrome([]), clock: () => now, windowApi: { blur() {} } })
+
+  assert.deepEqual(app.resultMessagesForMode('closed'), {
+    empty: 'No recently closed URLs yet.',
+    noMatches: 'No matches in recently closed URLs.',
+    error: 'Recently closed URLs unavailable.',
+  })
+
+  app.searchMode = 'closed'
+  assert.deepEqual(app.resultMessagesForMode(), {
+    empty: 'No recently closed URLs yet.',
+    noMatches: 'No matches in recently closed URLs.',
+    error: 'Recently closed URLs unavailable.',
+  })
+})
+
 test('updateVisibleRows pins a typed URL candidate above corpus results and selection follows visible row order', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
@@ -992,11 +1073,9 @@ test('updateResults safely renders an active mode with no index and keeps URL-li
       lastVisitTime: now,
     },
   ], { now })
-  app.modeCache = {
-    recent: { mode: 'recent', status: 'ready', index: staleIndex, error: null, loadedAt: now },
-    deep: { mode: 'deep', status: 'idle', index: null, error: null, loadedAt: null },
-    closed: { mode: 'closed', status: 'error', index: null, error: new Error('sessions unavailable'), loadedAt: null },
-  }
+  app.searchCache.activeMode = 'closed'
+  app.searchCache.modes.history = { ...app.searchCache.modes.history, status: 'ready', index: staleIndex, loadedAt: now }
+  app.searchCache.modes.closed = { ...app.searchCache.modes.closed, status: 'error', index: null, error: new Error('sessions unavailable') }
   app.searchMode = 'closed'
   app.index = staleIndex
   app.results = [searchResult('stale')]
@@ -1021,6 +1100,46 @@ test('updateResults safely renders an active mode with no index and keeps URL-li
     key: 'https://typed.example/path',
   })
   assert.equal(renderCalls, 1)
+})
+
+test('switchSearchMode shows closed errors with a typed URL row while preserving the history cache', async () => {
+  const document = createScryDocument()
+  appendSearchHeader(document)
+  const chromeApi = createPanelChrome([])
+  chromeApi.history.search = async () => [historyEntry(1)]
+  chromeApi.sessions = {
+    getRecentlyClosed() {
+      return Promise.reject(new Error('sessions unavailable'))
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  await app.start()
+  const input = document.querySelector('#search-input')
+  const historyIndex = app.searchCache.modes.history.index
+  input.value = 'typed.example/path#fragment'
+
+  const closedState = await app.switchSearchMode('closed')
+
+  assert.equal(closedState.status, 'error')
+  assert.equal(app.searchMode, 'closed')
+  assert.equal(app.index, null)
+  assert.deepEqual(app.results, [])
+  assert.equal(app.message.textContent, 'Recently closed URLs unavailable.')
+  assert.equal(app.visibleRows[0]?.kind, 'open-typed-url')
+  assert.deepEqual(app.visibleRows[0]?.candidate, {
+    displayInput: 'typed.example/path',
+    normalizedUrl: 'https://typed.example/path',
+    key: 'https://typed.example/path',
+  })
+  assert.equal(app.searchCache.modes.history.index, historyIndex)
+
+  const historyState = await app.switchSearchMode('history')
+
+  assert.equal(historyState.status, 'ready')
+  assert.equal(historyState.index, historyIndex)
+  assert.equal(app.index, historyIndex)
+  assert.equal(app.searchMode, 'history')
 })
 
 test('selectedVisibleRow returns null when no visible row is selected', () => {
@@ -2104,7 +2223,51 @@ test('j/k navigate results and unmodified Enter opens the selected result in a n
   assert.equal(windowApi.closeCalls, 1)
 })
 
-test('ensureHistoryCorpusReady loads and reuses one deep popup-session history corpus', async () => {
+test('ensureSearchModeReady loads and reuses history and closed popup-session search corpora', async () => {
+  const document = createScryDocument()
+  const historyCalls = []
+  const sessionCalls = []
+  const chromeApi = createPanelChrome([])
+  chromeApi.history.search = async (query) => {
+    historyCalls.push(query)
+    return [historyEntry(1)]
+  }
+  chromeApi.sessions = {
+    getRecentlyClosed(...args) {
+      sessionCalls.push(args)
+      return Promise.resolve([
+        {
+          tab: { url: 'https://example.com/closed', title: 'Closed tab' },
+          lastModified: Math.floor(now / 1_000),
+        },
+      ])
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+
+  const firstHistory = await app.ensureSearchModeReady('history')
+  const secondHistory = await app.ensureSearchModeReady('history')
+  const firstClosed = await app.ensureSearchModeReady('closed')
+  const secondClosed = await app.ensureSearchModeReady('closed')
+
+  assert.equal(firstHistory, secondHistory)
+  assert.equal(firstHistory.status, 'ready')
+  assert.equal(firstHistory.mode, 'history')
+  assert.equal(firstHistory.index.entries.length, 1)
+  assert.equal(firstClosed, secondClosed)
+  assert.equal(firstClosed.status, 'ready')
+  assert.equal(firstClosed.mode, 'closed')
+  assert.equal(firstClosed.index.entries.length, 1)
+  assert.equal(app.searchMode, 'closed')
+  assert.equal(app.searchCache.activeMode, 'closed')
+  assert.equal(app.index, firstClosed.index)
+  assert.deepEqual(historyCalls, [
+    { text: '', startTime: 0, maxResults: 100_000 },
+  ])
+  assert.deepEqual(sessionCalls, [[]])
+})
+
+test('ensureSearchModeReady normalizes legacy modes to the default history corpus', async () => {
   const document = createScryDocument()
   const historyCalls = []
   const chromeApi = createPanelChrome([])
@@ -2113,29 +2276,28 @@ test('ensureHistoryCorpusReady loads and reuses one deep popup-session history c
     return [historyEntry(1)]
   }
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
+  app.searchCache = null
+  app.searchMode = 'recent'
 
-  const first = await app.ensureHistoryCorpusReady()
-  const second = await app.ensureHistoryCorpusReady()
+  const state = await app.ensureSearchModeReady('deep')
 
-  assert.equal(first, second)
-  assert.equal(first.status, 'ready')
-  assert.equal(first.corpus, 'history')
-  assert.equal(first.index.entries.length, 1)
-  assert.equal(app.index, first.index)
+  assert.equal(state.status, 'ready')
+  assert.equal(state.mode, 'history')
+  assert.equal(app.searchMode, 'history')
+  assert.equal(app.searchCache.activeMode, 'history')
   assert.deepEqual(historyCalls, [
     { text: '', startTime: 0, maxResults: 100_000 },
   ])
 })
 
-test('renderSearchSurface renders a disabled single-history corpus badge and no switch hint', () => {
+test('renderSearchSurface renders a clickable two-mode corpus badge and switch hint', () => {
   const document = createScryDocument()
   const { modeIndicator, after, hint, count } = appendSearchHeader(document)
   const app = new ScryPanelApp({ document, chromeApi: createPanelChrome([]), clock: () => now, windowApi: { blur() {} } })
-  app.historyCorpusState = {
-    corpus: 'history',
+  app.searchCache.modes.history = {
+    ...app.searchCache.modes.history,
     status: 'ready',
     index: buildHistoryIndex([historyEntry(1), historyEntry(2)], { now }),
-    error: null,
     loadedAt: now,
   }
 
@@ -2143,21 +2305,21 @@ test('renderSearchSurface renders a disabled single-history corpus badge and no 
 
   assert.deepEqual(model, {
     label: 'history',
-    corpus: 'history',
+    mode: 'history',
     status: 'ready',
-    clickable: false,
-    modeSwitchHint: '',
+    clickable: true,
+    modeSwitchHint: 'Tab / Shift+Tab',
     statusText: '2 history URLs',
   })
   assert.equal(modeIndicator.textContent, 'history')
   assert.equal(modeIndicator.dataset.corpus, 'history')
-  assert.equal(modeIndicator.dataset.mode, undefined)
-  assert.equal(modeIndicator.dataset.clickable, 'false')
-  assert.equal(modeIndicator.disabled, true)
+  assert.equal(modeIndicator.dataset.mode, 'history')
+  assert.equal(modeIndicator.dataset.clickable, 'true')
+  assert.equal(modeIndicator.disabled, false)
   assert.equal(modeIndicator.getAttribute('aria-label'), 'history; 2 history URLs')
   assert.equal(after.textContent, '')
-  assert.equal(hint.hidden, true)
-  assert.equal(hint.textContent, '')
+  assert.equal(hint.hidden, false)
+  assert.equal(hint.textContent, 'Tab / Shift+Tab')
   assert.equal(count.textContent, '2 history URLs')
   assert.equal(document.querySelector('#search-input').getAttribute('aria-label'), 'Search history')
 })
@@ -2178,36 +2340,58 @@ test('start loads selection data and the deep history corpus by default', async 
   assert.deepEqual(historyCalls, [
     { text: '', startTime: 0, maxResults: 100_000 },
   ])
-  assert.equal(app.historyCorpusState.status, 'ready')
-  assert.equal(app.historyCorpusState.index.entries.length, 2)
-  assert.equal(app.index, app.historyCorpusState.index)
+  assert.equal(app.searchCache.modes.history.status, 'ready')
+  assert.equal(app.searchCache.modes.history.index.entries.length, 2)
+  assert.equal(app.index, app.searchCache.modes.history.index)
+  assert.equal(app.searchMode, 'history')
   assert.equal(modeIndicator.dataset.corpus, 'history')
-  assert.equal(modeIndicator.dataset.clickable, 'false')
+  assert.equal(modeIndicator.dataset.mode, 'history')
+  assert.equal(modeIndicator.dataset.clickable, 'true')
 })
 
-test('Tab and corpus badge clicks are swallowed without reloading or changing the single corpus', async () => {
+test('Tab, Shift+Tab, and corpus badge clicks switch between history and closed without changing the query', async () => {
   const document = createScryDocument()
   const { modeIndicator } = appendSearchHeader(document)
   const historyCalls = []
+  const sessionCalls = []
   const chromeApi = createPanelChrome([])
   chromeApi.history.search = async (query) => {
     historyCalls.push(query)
     return [historyEntry(1)]
   }
+  chromeApi.sessions = {
+    getRecentlyClosed(...args) {
+      sessionCalls.push(args)
+      return Promise.resolve([
+        {
+          tab: { url: 'https://example.com/closed', title: 'Closed tab' },
+          lastModified: Math.floor(now / 1_000),
+        },
+      ])
+    },
+  }
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
 
   await app.start()
   const input = document.querySelector('#search-input')
+  input.value = 'scry issue'
   const tab = dispatchKeydown(input, 'Tab')
+  await settle()
   const shiftTab = dispatchKeydown(input, 'Tab', { shiftKey: true })
+  await settle()
   const click = modeIndicator.dispatchEvent({ type: 'click', bubbles: true })
+  await settle()
 
   assert.equal(tab.defaultPrevented, true)
   assert.equal(shiftTab.defaultPrevented, true)
   assert.equal(click, false)
-  assert.equal(app.historyCorpusState.corpus, 'history')
-  assert.equal(app.historyCorpusState.status, 'ready')
+  assert.equal(input.value, 'scry issue')
+  assert.equal(app.searchMode, 'closed')
+  assert.equal(app.searchCache.modes.history.status, 'ready')
+  assert.equal(app.searchCache.modes.closed.status, 'ready')
+  assert.equal(modeIndicator.dataset.corpus, 'closed')
   assert.deepEqual(historyCalls, [
     { text: '', startTime: 0, maxResults: 100_000 },
   ])
+  assert.deepEqual(sessionCalls, [[]])
 })

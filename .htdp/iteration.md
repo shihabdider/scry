@@ -1,7 +1,7 @@
 # Iteration
 
-anchor: 6ea9b7c39ee1a3c879886c71014883336813758b
-started: 2026-05-12T19:45:00Z
+anchor: db176a9bd3449152decb47dc332e0ab35e54c0d6
+started: 2026-05-12T21:13:50Z
 stubber-mode: data-definition-driven
 workflow-mode: autonomous
 language: JavaScript
@@ -10,64 +10,70 @@ transparent: true
 ## Source Artifacts
 
 - PRD: none
-- Issue: .htdp/issues/issue-0030-use-cached-deep-history-by-default.md
+- Issue: .htdp/issues/issue-0031-restore-recently-closed-browsing-mode.md
 - Architecture review: none
 - Project DSL: .htdp/DSL.json
 
 ## Problem
 
-Erase Scry's recent/closed/deep mode abstraction and use one popup-session history corpus by default. Startup should load Chrome history with deep bounds, cache the index in memory for the popup lifetime, and render a single non-cycling "Search history" surface. Tab/Shift+Tab and the old badge click path must no longer switch corpora.
+Restore a closed-only browsing/searching mode while preserving the cached deep-history default introduced by issue-0030. Scry should expose exactly two popup-session corpora: `history` (default, deep Chrome history) and `closed` (flattened Chrome recently closed tabs/windows). Tab, Shift+Tab, and the corpus badge should switch between these two corpora without changing the query.
 
 ## Data Definition Plan
 
-Replace the old `SearchMode`/`SearchModeCache` model with a single `HistoryCorpusState` (`history`, `idle|loading|ready|error`, index, error, loadedAt) plus header/surface view models for the single history surface. In `ScryPanelApp`, replace `searchMode`, `modeCache`, `deep`, mode activation, and recently closed mode loading with `historyCorpusState` and `ensureHistoryCorpusReady()`, which always calls `fetchHistory({ deep: true })` and reuses the ready state. Keep recently closed ranking out of scope for issue-0031.
+Replace the single `HistoryCorpusState` view model with a two-mode popup-session cache. `SearchMode` should be `history | closed`; each `SearchModeState` tracks `status`, `index`, `error`, and `loadedAt`. Header/badge models should advertise a clickable corpus switch for `history` and `closed` only, not the old `recent` or `deep` variants. `ScryPanelApp` should load `history` from `fetchHistory({ deep: true })`, load `closed` from `fetchRecentlyClosed()` plus `flattenClosedSessions()`, search closed mode with `emptyQuerySort: 'recency'`, and reuse each ready mode's in-memory index for the popup session.
 
 ## Polya Ledger
 
 ### Knowns
 
-- User clarified that we do want to erase the mode abstraction and that incremental compatibility with recent/closed/deep made the first attempt too slow and tangled.
-- Current product direction: deep history is the default and only corpus surface for issue-0030.
-- Recently closed should become a ranking signal later, not a separate mode here.
-- The old mode badge DOM can remain as a non-clickable history corpus badge for minimal markup/style churn.
+- User confirmed the plan to keep cached deep history as the default history mode and restore a separate recently closed mode.
+- The restored mode cycle should be two modes only: `history` and `closed`.
+- Existing sessions provider exposes `fetchRecentlyClosed()` and `flattenClosedSessions()` for local Chrome sessions data.
+- Existing search supports `emptyQuerySort: 'recency'`, which matches the desired recently closed browsing behavior.
+- issue-0030 has been accepted as the baseline for cached deep-history default.
 
 ### Constraints
 
-- Keep Scry local-only; no external network calls, host permissions, content scripts, options pages, or persisted full-history index.
-- Use existing Chrome history deep bounds (`startTime: 0`, existing deep max results) through `fetchHistory({ deep: true })`.
-- Preserve result navigation, input-mode highlight behavior from issue-0032, typed URL rows, pagination, selection learning, exact phrases, and website filters.
+- Preserve the local-only MV3 boundary: no external network calls, host permissions, content scripts, options pages, or new permissions.
+- Do not restore the old `recent` vs `deep` split; only `history` and `closed` should be user-visible corpora.
+- Preserve query text, exact phrases, website filters, typed URL rows, pagination, selection learning, input mode, and result-navigation mode behavior while switching corpora.
+- Closed mode failures should be local to the closed corpus; switching back to history should continue to use the cached deep-history corpus.
 - Run `npm test` and `npm run check` after implementation.
-- Complete exactly one issue-boundary commit for issue-0030.
+- Complete exactly one issue-boundary commit for issue-0031.
 
 ### Unknowns That Matter
 
-- None open. User explicitly chose the broad replacement/nuke strategy over incremental compatibility.
+- None open. User confirmed the two-mode `history`/`closed` plan.
 
 ### Out of Scope
 
-- Recently closed ranking boost or sessions API merge.
-- Persisting the deep-history index across popup sessions.
-- Ranking/parser/filter changes unrelated to corpus selection.
-- Removing the historical `sessions` permission before issue-0031 decides how closed-session ranking is loaded.
+- Restoring old `recent` mode.
+- Restoring old explicit `deep` mode; `history` is already deep by default.
+- Recently closed ranking boosts inside the default history mode.
+- Persisting either corpus index beyond the popup session.
+- Changing permissions beyond the existing history/sessions/storage/tabs set.
 
 ### Assumptions
 
-- Keeping the existing `#mode-indicator` element as a disabled `history` badge is acceptable because it no longer exposes a mode abstraction or switching behavior.
-- Compatibility methods `loadHistory()` and `switchSearchMode()` may remain as no-op/default-history wrappers for internal callers/tests, but they do not preserve or expose recent/closed/deep modes.
+- The existing `#mode-indicator` DOM and CSS can become a clickable corpus badge again.
+- The hidden deep-search fallback button can remain hidden and ignored for compatibility with existing markup/tests.
+- Search-mode compatibility method names may remain if useful, but public behavior should expose `history`/`closed`, not `recent`/`deep`.
 
 ### Alternatives Considered
 
-- Continue the incremental HtDP-generated migration — rejected after it produced many serialized wishes, failing intermediate checks, and stale compatibility tests.
-- Fully remove the badge element — rejected as unnecessary style/DOM churn for this slice; disabling it as a history corpus badge satisfies the behavior.
-- Chosen: replace the mode module with single-corpus data definitions and simplify panel loading/rendering around that one state.
+- Restore the old `recent -> closed -> deep` cycle — rejected because issue-0030 intentionally made deep history the default and removed the recent/deep split.
+- Keep one corpus and add a ranking boost only — rejected for this request because the user wants to browse recently closed history directly.
+- Chosen: two cached popup-session corpora, `history` and `closed`, with cycling UI restored only between those modes.
 
 ### Decision Log
 
-- 2026-05-12T19:45:00Z — user confirmed the intended design is to erase the mode abstraction and approved resetting the tangled WIP for a direct replacement.
+- 2026-05-12T21:12:07Z — issue-0030 accepted as cached deep-history baseline; user requested a follow-up to restore closed-only browsing.
+- 2026-05-12T21:13:50Z — user confirmed two-mode plan (`history` and `closed`) by replying "go".
 
 ### Look Back
 
-- Replaced `src/core/search-modes.js` with single history corpus data definitions and view models.
-- Replaced panel mode state with one `historyCorpusState` loaded via deep history and cached for the popup session.
-- Removed Tab/badge corpus cycling and rewrote obsolete mode tests into single-corpus coverage.
-- Final symbolic verification passed with `npm run check` and `npm test`.
+- Restored a two-mode popup-session search cache: `history` remains the default deep-history corpus, and `closed` loads flattened Chrome recently closed tabs/windows.
+- Restored Tab, Shift+Tab, and corpus badge switching between `history` and `closed` while preserving the query.
+- Closed mode uses pure recency ordering for empty queries; history mode keeps frecency ordering.
+- Abstractor extracted `ScryPanelApp.loadSearchModeState(state, loadRawEntries)` to share loading/error/index state transitions between history and closed loaders.
+- Final symbolic verification passed with `npm test` (279 tests) and `npm run check` before human eval.

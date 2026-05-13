@@ -20,7 +20,7 @@ test('manifest exposes a Chrome popup command palette for history and closed-ses
   assert.equal('options_page' in manifest, false)
 })
 
-test('popup exposes one disabled history corpus badge without a visible legacy deep-search fallback', async () => {
+test('popup exposes a clickable history/closed corpus badge without a visible legacy deep-search fallback', async () => {
   const html = await readFile('popup.html', 'utf8')
   const modeIndicator = tagWithId(html, 'mode-indicator')
   const deepSearchButton = tagWithId(html, 'deep-search-button')
@@ -28,12 +28,13 @@ test('popup exposes one disabled history corpus badge without a visible legacy d
   assert.match(modeIndicator, /^<button\b/i)
   assert.match(modeIndicator, /\btype="button"/i)
   assert.doesNotMatch(modeIndicator, /\bhidden\b/i)
-  assert.doesNotMatch(modeIndicator, /\bdata-mode=/i)
+  assert.match(modeIndicator, /\bdata-mode="history"/i)
   assert.match(modeIndicator, /\bdata-corpus="history"/i)
   assert.match(modeIndicator, /\bdata-status="idle"/i)
-  assert.match(modeIndicator, /\bdata-clickable="false"/i)
-  assert.match(modeIndicator, /\bdisabled\b/i)
-  assert.match(modeIndicator, /\baria-label="history; History not loaded"/i)
+  assert.match(modeIndicator, /\bdata-clickable="true"/i)
+  assert.doesNotMatch(modeIndicator, /\sdisabled(?:\s|=|>)/i)
+  assert.match(modeIndicator, /\baria-disabled="false"/i)
+  assert.match(modeIndicator, /\baria-label="history; History not loaded; switch to recently closed with Tab"/i)
   assert.match(html, />history<\/button>/i)
 
   assert.match(deepSearchButton, /^<button\b/i)
@@ -51,7 +52,7 @@ test('popup uses a compact search header row instead of the legacy standalone la
   assert.match(searchHeader, /id="search-header-before"[\s\S]*>\s*Search\s*</i)
   assert.match(searchHeader, /id="mode-indicator"[\s\S]*>\s*history\s*<\/button>/i)
   assert.match(searchHeader, /id="search-header-after"[\s\S]*>\s*<\/span>/i)
-  assert.match(searchHeader, /id="mode-switch-hint"[^>]*\bhidden\b[\s\S]*>\s*<\/span>/i)
+  assert.match(searchHeader, /id="mode-switch-hint"[\s\S]*>\s*Tab \/ Shift\+Tab switches history ↔ closed\s*<\/span>/i)
   assert.match(searchHeader, /id="result-count"[\s\S]*\brole="status"[\s\S]*>\s*History not loaded\s*</i)
   assert.match(searchInput, /\baria-label="Search history"/i)
   assert.match(brandStatus, /\bhidden\b/i)

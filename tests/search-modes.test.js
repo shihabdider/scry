@@ -2,96 +2,149 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  createHistoryCorpusState,
-  HISTORY_CORPUS_ID,
-  historyCorpusStatusText,
-  historySearchHeaderModel,
-  historySearchSurfaceModel,
+  CLOSED_MODE,
+  createPopupSessionSearchCache,
+  createSearchModeState,
+  HISTORY_MODE,
+  nextSearchMode,
+  SEARCH_MODES,
+  searchModeStatusText,
+  searchSearchHeaderModel,
+  searchSearchSurfaceModel,
 } from '../src/core/search-modes.js'
 
-test('createHistoryCorpusState initializes the idle popup-session history corpus', () => {
-  assert.deepEqual(createHistoryCorpusState(), {
-    corpus: HISTORY_CORPUS_ID,
+test('createSearchModeState initializes an idle popup-session search corpus', () => {
+  assert.deepEqual(createSearchModeState(HISTORY_MODE), {
+    mode: HISTORY_MODE,
     status: 'idle',
     index: null,
     error: null,
     loadedAt: null,
+    loadingPromise: null,
   })
 })
 
-test('createHistoryCorpusState returns independent mutable corpus state objects', () => {
-  const first = createHistoryCorpusState()
-  const second = createHistoryCorpusState()
-  const index = { builtAt: 123, entries: [] }
-  const error = new Error('history unavailable')
-
-  first.status = 'ready'
-  first.index = index
-  first.loadedAt = 456
-  second.status = 'error'
-  second.error = error
-
-  assert.notEqual(first, second)
-  assert.equal(first.index, index)
-  assert.equal(second.error, error)
-  assert.deepEqual(createHistoryCorpusState(), {
-    corpus: 'history',
-    status: 'idle',
-    index: null,
-    error: null,
-    loadedAt: null,
+test('createPopupSessionSearchCache initializes exactly history and closed popup-session corpora', () => {
+  assert.deepEqual(SEARCH_MODES, [HISTORY_MODE, CLOSED_MODE])
+  assert.deepEqual(createPopupSessionSearchCache(), {
+    activeMode: HISTORY_MODE,
+    modes: {
+      history: createSearchModeState(HISTORY_MODE),
+      closed: createSearchModeState(CLOSED_MODE),
+    },
   })
 })
 
-function historyCorpusState({ status = 'idle', entries = null, error = null } = {}) {
-  return {
-    corpus: 'history',
-    status,
-    index: entries === null ? null : { builtAt: 123, entries },
-    error,
-    loadedAt: status === 'ready' ? 456 : null,
+test('searchModeStatusText describes history cache status and ready entry counts', () => {
+  assert.equal(searchModeStatusText(null), 'History not loaded')
+  assert.equal(searchModeStatusText(createSearchModeState(HISTORY_MODE)), 'History not loaded')
+  assert.equal(searchModeStatusText({ ...createSearchModeState(HISTORY_MODE), status: 'loading' }), 'Loading history…')
+  assert.equal(
+    searchModeStatusText({ ...createSearchModeState(HISTORY_MODE), status: 'ready', index: { builtAt: 100, entries: [] } }),
+    '0 history URLs',
+  )
+  assert.equal(
+    searchModeStatusText({ ...createSearchModeState(HISTORY_MODE), status: 'ready', index: { builtAt: 100, entries: [{}] } }),
+    '1 history URL',
+  )
+  assert.equal(
+    searchModeStatusText({ ...createSearchModeState(HISTORY_MODE), status: 'ready', index: { builtAt: 100, entries: [{}, {}] } }),
+    '2 history URLs',
+  )
+  assert.equal(searchModeStatusText({ ...createSearchModeState(HISTORY_MODE), status: 'error' }), 'History unavailable')
+})
+
+test('searchModeStatusText describes recently closed cache status and ready entry counts', () => {
+  assert.equal(searchModeStatusText(createSearchModeState(CLOSED_MODE)), 'Recently closed URLs not loaded')
+  assert.equal(searchModeStatusText({ ...createSearchModeState(CLOSED_MODE), status: 'loading' }), 'Loading recently closed URLs…')
+  assert.equal(
+    searchModeStatusText({ ...createSearchModeState(CLOSED_MODE), status: 'ready', index: { builtAt: 100, entries: [] } }),
+    '0 recently closed URLs',
+  )
+  assert.equal(
+    searchModeStatusText({ ...createSearchModeState(CLOSED_MODE), status: 'ready', index: { builtAt: 100, entries: [{}] } }),
+    '1 recently closed URL',
+  )
+  assert.equal(
+    searchModeStatusText({ ...createSearchModeState(CLOSED_MODE), status: 'ready', index: { builtAt: 100, entries: [{}, {}] } }),
+    '2 recently closed URLs',
+  )
+  assert.equal(searchModeStatusText({ ...createSearchModeState(CLOSED_MODE), status: 'error' }), 'Recently closed URLs unavailable')
+})
+
+test('searchSearchSurfaceModel describes the active popup-session corpus badge', () => {
+  const cache = createPopupSessionSearchCache({ activeMode: CLOSED_MODE })
+  cache.modes.closed = {
+    ...createSearchModeState(CLOSED_MODE),
+    status: 'ready',
+    index: { builtAt: 100, entries: [{}, {}] },
+    loadedAt: 100,
   }
-}
 
-test('historyCorpusStatusText reports single history surface status text', () => {
-  assert.equal(historyCorpusStatusText(null), 'History not loaded')
-  assert.equal(historyCorpusStatusText(historyCorpusState()), 'History not loaded')
-  assert.equal(historyCorpusStatusText(historyCorpusState({ status: 'loading' })), 'Loading history…')
-  assert.equal(historyCorpusStatusText(historyCorpusState({ status: 'ready', entries: [] })), '0 history URLs')
-  assert.equal(historyCorpusStatusText(historyCorpusState({ status: 'ready', entries: [{}] })), '1 history URL')
-  assert.equal(historyCorpusStatusText(historyCorpusState({ status: 'ready', entries: [{}, {}] })), '2 history URLs')
-  assert.equal(historyCorpusStatusText(historyCorpusState({ status: 'error', error: new Error('history unavailable') })), 'History unavailable')
+  assert.deepEqual(searchSearchSurfaceModel(cache), {
+    label: CLOSED_MODE,
+    mode: CLOSED_MODE,
+    status: 'ready',
+    clickable: true,
+    modeSwitchHint: 'Tab / Shift+Tab',
+    statusText: '2 recently closed URLs',
+  })
 })
 
-test('historySearchSurfaceModel builds a non-clickable history corpus badge model', () => {
-  assert.deepEqual(historySearchSurfaceModel(null), {
-    label: 'history',
-    corpus: 'history',
+test('searchSearchSurfaceModel defaults invalid cache input to an idle history badge', () => {
+  assert.deepEqual(searchSearchSurfaceModel(null), {
+    label: HISTORY_MODE,
+    mode: HISTORY_MODE,
     status: 'idle',
-    clickable: false,
-    modeSwitchHint: '',
+    clickable: true,
+    modeSwitchHint: 'Tab / Shift+Tab',
     statusText: 'History not loaded',
   })
-
-  assert.equal(historySearchSurfaceModel(historyCorpusState({ status: 'loading' })).statusText, 'Loading history…')
-  assert.equal(historySearchSurfaceModel(historyCorpusState({ status: 'ready', entries: [{}, {}] })).statusText, '2 history URLs')
-  assert.equal(historySearchSurfaceModel(historyCorpusState({ status: 'error' })).statusText, 'History unavailable')
+  assert.deepEqual(searchSearchSurfaceModel({ activeMode: 'recent', modes: {} }), {
+    label: HISTORY_MODE,
+    mode: HISTORY_MODE,
+    status: 'idle',
+    clickable: true,
+    modeSwitchHint: 'Tab / Shift+Tab',
+    statusText: 'History not loaded',
+  })
 })
 
-test('historySearchHeaderModel builds the single Search history header without switch hints', () => {
-  assert.deepEqual(historySearchHeaderModel(null), {
+test('searchSearchHeaderModel describes the active popup-session corpus header', () => {
+  const cache = createPopupSessionSearchCache({ activeMode: HISTORY_MODE })
+  cache.modes.history = {
+    ...createSearchModeState(HISTORY_MODE),
+    status: 'ready',
+    index: { builtAt: 100, entries: [{}] },
+    loadedAt: 100,
+  }
+
+  assert.deepEqual(searchSearchHeaderModel(cache), {
     beforeMode: 'Search',
-    modeBadgeLabel: 'history',
-    corpus: 'history',
+    modeBadgeLabel: HISTORY_MODE,
+    mode: HISTORY_MODE,
     afterMode: '',
-    modeSwitchHint: '',
-    status: 'idle',
-    statusText: 'History not loaded',
+    modeSwitchHint: 'Tab / Shift+Tab',
+    status: 'ready',
+    statusText: '1 history URL',
   })
+})
 
-  const model = historySearchHeaderModel(historyCorpusState({ status: 'ready', entries: [{}, {}, {}] }), { realResultCount: 1 })
-  assert.equal(model.statusText, '3 history URLs')
-  assert.equal(model.modeBadgeLabel, 'history')
-  assert.equal(model.modeSwitchHint, '')
-  assert.equal('realResultCount' in model, false)
+test('nextSearchMode defaults to cycling forward from history to closed', () => {
+  assert.equal(nextSearchMode(HISTORY_MODE), CLOSED_MODE)
+})
+
+test('nextSearchMode cycles forward between only history and closed', () => {
+  assert.equal(nextSearchMode(HISTORY_MODE, 1), CLOSED_MODE)
+  assert.equal(nextSearchMode(CLOSED_MODE, 1), HISTORY_MODE)
+})
+
+test('nextSearchMode supports Shift+Tab/backward cycling between only history and closed', () => {
+  assert.equal(nextSearchMode(HISTORY_MODE, -1), CLOSED_MODE)
+  assert.equal(nextSearchMode(CLOSED_MODE, -1), HISTORY_MODE)
+})
+
+test('nextSearchMode normalizes unknown legacy modes back to history', () => {
+  assert.equal(nextSearchMode('recent', 1), HISTORY_MODE)
+  assert.equal(nextSearchMode('deep', -1), HISTORY_MODE)
 })

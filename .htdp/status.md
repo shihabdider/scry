@@ -2,19 +2,31 @@
 
 phase: 3
 layer: 0
-updated: 2026-05-12T19:55:00.000Z
+updated: 2026-05-13T00:10:00.000Z
 
 ## Wishes
 
 | wish | file | layer | status | time |
 |------|------|-------|--------|------|
-| HistoryCorpusState and history surface models | src/core/search-modes.js | 0 | pass | manual |
-| ScryPanelApp history corpus loading/rendering | src/panel/app.js | 0 | pass | manual |
-| Single-corpus tests and static popup contract updates | tests, popup.html | 0 | pass | manual |
+| nextSearchMode | src/core/search-modes.js | 2 | pass | ad-hoc repair |
+| searchModeStatusText | src/core/search-modes.js | 2 | pass | ad-hoc repair |
+| ScryPanelApp.activeSearchModeState(): SearchModeState | src/panel/app.js | 2 | pass | ad-hoc repair |
+| ScryPanelApp.emptyQuerySortForMode(mode?: SearchMode): 'frecency' | 'recency' | src/panel/app.js | 2 | pass | ad-hoc repair |
+| ScryPanelApp.resultMessagesForMode(mode?: SearchMode): { empty: string, noMatches: string, error: string } | src/panel/app.js | 2 | pass | ad-hoc repair |
+| ScryPanelApp.loadHistoryMode(state: SearchModeState): Promise<SearchModeState> | src/panel/app.js | 2 | pass | ad-hoc repair |
+| ScryPanelApp.loadClosedMode(state: SearchModeState): Promise<SearchModeState> | src/panel/app.js | 2 | pass | ad-hoc repair |
+| searchSearchSurfaceModel | src/core/search-modes.js | 1 | pass | ad-hoc repair |
+| ScryPanelApp.ensureSearchModeReady(mode?: SearchMode): Promise<SearchModeState> | src/panel/app.js | 1 | pass | ad-hoc repair |
+| searchSearchHeaderModel | src/core/search-modes.js | 0 | pass | ad-hoc repair |
+| ScryPanelApp.switchSearchMode(mode: SearchMode): Promise<SearchModeState> | src/panel/app.js | 0 | pass | ad-hoc repair |
+| ScryPanelApp.cycleSearchMode(direction?: number): Promise<SearchModeState> | src/panel/app.js | 0 | pass | ad-hoc repair |
+| ScryPanelApp.loadDefaultSearchMode(): Promise<SearchModeState> | src/panel/app.js | 0 | pass | ad-hoc repair |
 
 ## Log
 
-- Reset tangled incremental issue-0030 WIP after user clarified broad nuke/replacement strategy.
-- Replaced mode abstraction with a single popup-session history corpus.
+- Stubber created a two-mode `history`/`closed` data-definition plan and wish list.
+- Layer dispatch produced correct partial implementations but implementer_post failed while stale tests and later stubs were still failing.
+- Ad-hoc implementer repair completed the remaining core/panel models, mode switching, closed loading, and stale test updates.
+- Abstractor extracted `ScryPanelApp.loadSearchModeState(state, loadRawEntries)` to share history/closed loading state transitions.
+- `npm test`: pass (279 tests).
 - `npm run check`: pass.
-- `npm test`: pass (257 tests).
