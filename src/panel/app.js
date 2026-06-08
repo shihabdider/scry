@@ -13,6 +13,7 @@ import { loadSelectionData, saveSelectionData } from '../platform/selection-stor
 import { fetchRecentlyClosed, flattenClosedSessions } from '../platform/sessions-provider.js'
 import { openUrl } from '../platform/tabs.js'
 import { writeClipboardText } from '../platform/clipboard.js'
+import { allowsBrowsingDataPersistence, incognitoContextFromExtension } from '../platform/incognito-context.js'
 
 const SEARCH_LIMIT = 100
 const RESULTS_PER_PAGE = 6
@@ -1006,6 +1007,28 @@ export class ScryPanelApp {
     this.windowApi?.blur?.()
   }
 
+  /**
+   * { newTab: boolean } -> Promise<void>
+   *
+   * Opens the selected visible row and, for persistable real rows in a non-incognito popup context,
+   * records selection learning before closing the popup.
+   *
+   * Functional Examples:
+   * - In a normal popup with a real history row selected, openSelected({ newTab: true }) should open the row in a new tab, record parsed selection learning, save selection data, refresh results, and close the popup.
+   * - In an incognito popup with a real history row selected, openSelected({ newTab: false }) should open the row in the current tab, leave selectionData and chrome.storage.local unchanged, skip result refresh for learning, and close the popup.
+   * - With a synthetic typed URL row selected, openSelected({ newTab: false }) should open the typed URL without recording selection learning regardless of incognito context.
+   * - With no selected row URL, openSelected({ newTab: true }) should not open a tab, write storage, or close the popup.
+   *
+   * Template:
+   * Compose row opening, optional selection learning, and IncognitoContext:
+   * - selectedVisibleRow then rowOpenUrl; when no URL, return
+   * - openUrl(url, { chromeApi, newTab }) as before
+   * - get rowSelectionLearningKey(row); synthetic rows have no key and skip learning
+   * - build IncognitoContext from chrome.extension.inIncognitoContext for the popup
+   * - when browsing data persistence is allowed, recordSelection, saveSelectionData, and updateResults
+   * - when persistence is not allowed, skip recordSelection and saveSelectionData
+   * - leavePanelFocus
+   */
   async openSelected({ newTab }) {
     const row = this.selectedVisibleRow()
     const url = rowOpenUrl(row)
@@ -1014,7 +1037,8 @@ export class ScryPanelApp {
     await openUrl(url, { chromeApi: this.chromeApi, newTab })
 
     const urlKey = rowSelectionLearningKey(row)
-    if (urlKey) {
+    const incognitoContext = incognitoContextFromExtension({ chromeApi: this.chromeApi })
+    if (urlKey && allowsBrowsingDataPersistence(incognitoContext)) {
       this.selectionData = recordSelection(this.selectionData, {
         query: parseQuery(this.input.value),
         urlKey,

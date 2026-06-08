@@ -1,7 +1,7 @@
 # Iteration
 
-anchor: 052c4778b1980ebaf69f661802a8aaf5d08195a6
-started: 2026-06-08T00:49:56Z
+anchor: 94a293fff2e89b7ad522a3a16a6c2ebcbc854811
+started: 2026-06-08T02:31:53Z
 stubber-mode: data-definition-driven
 workflow-mode: autonomous
 language: JavaScript
@@ -13,72 +13,57 @@ integration-target: none
 ## Source Artifacts
 
 - PRD: none
-- Project DSL: .dsl.md
 
 ## Problem
 
-Add a local-only hidden `favorites` search mode to Scry. Users can save URL-bearing pages/targets into a local favorites list, enter favorites with `:f` through `:favorite` + `Enter`, search saved favorites with Scry's existing URL recall behavior, exit favorites with `Tab` to the previous public mode, and remove selected favorites with one-level popup-session undo from list-selection mode.
+Prevent Scry from persisting incognito browsing-derived URLs while still allowing the extension popup and commands to work in incognito. Passive history search remains in-memory; persistent writes that could capture incognito sites must be skipped when their source is an incognito tab or incognito extension popup.
 
-Functional checkpoint: In Chrome, a user can add the current tab via the `Alt+Shift+F` extension command, add page/link/image/video/audio/frame URLs via the right-click menu, receive a brief green `✓` extension badge after successful background saves, type `:f` + `Enter` in Scry to view/search saved favorites, press `Tab` to leave favorites, and in favorites list-selection mode use `x remove` plus `u undo`.
+Functional checkpoint: With the extension allowed in incognito, opening Scry in an incognito window still lets the user search/open URLs, but selecting a result from the incognito popup does not write selection-learning data, and Alt+Shift+F/context-menu favorite saves from incognito tabs no-op without writing `chrome.storage.local`. Normal-window favorites and selection learning continue to work.
 
 ## Data Definition Plan
 
-Use data-definition-driven stubbing because this JavaScript extension change is additive. Add a `FavoriteUrl` / stored favorites data definition with URL, normalized key, title, added/updated timestamp, and local ordering semantics. Add pure normalization/upsert/remove/undo-adjacent helpers around favorites. Add a `favorites` hidden search mode while preserving the public `recent -> closed -> deep` cycle. Add a command parser for `:f[avorite]` entry. Add platform adapters for `chrome.storage.local` favorites, background command/context-menu saves, and popup loading/removal/undo. Reuse `buildHistoryIndex` / `searchHistory` by converting favorites into history-like entries with recency based on favorite update time.
+Add or reuse a small incognito-context data definition representing Chrome's incognito signals: a popup/extension context flag (`chrome.extension.inIncognitoContext`) and tab-origin flags (`tab.incognito`). Use it at storage-write boundaries only. Background favorite save targets should reject incognito tabs before URL normalization/storage. Popup selection-learning should open the selected row as before but skip `recordSelection`/`saveSelectionData` when the popup is in an incognito extension context. Keep history fetch/index behavior unchanged because Scry does not persist fetched history and Chrome history does not include incognito visits.
 
 ## Ledger
 
 ### Knowns
 
-- Public modes are `recent`, `closed`, and `deep`, cycled with `Tab` / `Shift+Tab`.
-- `favorites` must be hidden from public mode cycling and entered by prefix command `:f` through `:favorite` + `Enter`.
-- Entering favorites clears the input and shows all favorites.
-- `Tab` in favorites exits back to the previous public mode.
-- Favorites must be local extension data shared by popup/background using `chrome.storage.local`.
-- A new `Alt+Shift+F` Chrome command saves the current active tab.
-- Context menu saves URL-bearing contexts: page, link, image, video, audio, frame.
-- Duplicate favorite saves update metadata and move the URL to the top.
-- In favorites list-selection mode, selected favorite shows `x remove`; removal is immediate and `u undo` restores the most recently removed favorite for the current popup session.
+- Scry currently fetches Chrome history into an in-memory index via `chrome.history.search`.
+- Persistent local writes currently include favorites in `chrome.storage.local` and selection-learning data in `chrome.storage.local`.
+- Favorites can currently be saved from the active tab command and context menus.
+- Selection learning is written after opening a real result row.
+- The extension should remain local-only and continue working in incognito.
 
 ### Constraints
 
-- Keep Scry local-only: no external network calls, host permissions, content scripts, options page, or bookmark API dependency.
-- Use Scry's existing URL acceptance/opening rules for favorites eligibility.
-- Preserve existing public mode behavior, history/closed/deep ranking, typed URL action, copy/edit hints, and selection learning outside favorites.
+- Do not add external network calls, host permissions, content scripts, or options pages.
+- Do not disable incognito operation; only skip privacy-sensitive persistent writes from incognito contexts.
+- Preserve normal-window behavior.
 - Run `npm test` and `npm run check` after implementation.
 
 ### Unknowns That Matter
 
-- [resolved] Storage means `chrome.storage.local`, not DOM `window.localStorage`.
-- [resolved] `Tab` from favorites returns to the previous public mode.
-- [resolved] Entering favorites clears the input.
-- [resolved] Keyboard add command uses `Alt+Shift+F`, which is not otherwise bound by Scry.
-- [resolved] Context menu targets are page, link, image, video, audio, and frame.
-- [resolved] Duplicate saves update metadata and move to top.
-- [resolved] URL eligibility follows Scry's existing URL acceptance/opening rules.
-- [resolved] Removal is included via `x remove` in favorites list-selection mode with one-level `u undo`.
+- [resolved] Interpret “not store those sites” as avoiding persistent writes derived from incognito tabs/popups, not disabling in-memory search/open behavior.
 
 ### Out of Scope
 
-- Syncing favorites across browsers/accounts beyond Chrome extension local storage.
-- Importing/exporting or full favorite management UI.
-- Persistent undo after closing the popup.
-- Content scripts, host permissions, options pages, external network calls, or filesystem/bookmark API integration.
-- Making favorites reachable by public mode `Tab` cycling.
+- Removing any incognito URLs that may already have been stored before this change.
+- Changing Chrome's own history/session APIs or browser-level incognito behavior.
+- Hiding regular-window favorites/selection data from incognito search UI.
 
 ### Assumptions
 
-- Favorite recency should use the latest save/update time for empty-query ordering.
-- Background save feedback uses an extension action badge instead of notifications, avoiding a new notifications permission.
-- One-level undo only needs to be represented in popup memory; after undo, the restored favorite returns with its previous metadata.
+- `chrome.extension.inIncognitoContext` is the appropriate popup-context signal when available.
+- `tab.incognito === true` is the appropriate background tab-source signal for command/context-menu saves.
 
 ### Decisions
 
-- 2026-06-08T00:49:56Z — Completed alignment with the user and proceeding with the above feature contract.
+- 2026-06-08T02:31:53Z — Start a fresh HtDP iteration for incognito privacy write suppression.
 
 ### Look Back
 
-- Phase 1 added HtDP data definitions and stubs for `FavoriteUrl`, stored favorites, hidden search mode state, favorites command parsing, storage adapters, background command/context-menu seams, and popup favorites state.
-- Phase 2 implemented local `chrome.storage.local` favorites, `:f` through `:favorite` entry, hidden favorites search/results, Tab exit to the previous public mode, `Alt+Shift+F` active-tab save command with badge feedback, URL-bearing context menus with badge feedback, selected-row `x remove`, and one-level popup-session `u undo` with visible feedback.
-- Phase 3 abstracted shared search-mode badge/header construction and cached mode loading transitions after all feature tests passed.
-- Verification passed with `npm test` (384 tests), `npm run check`, and HtDP `final_preverify`.
-- Cleanup removed unintended `.codegraph` artifacts from the final commit while keeping the repo-root `htdp.json` verifier config created for this HtDP workflow.
+- Phase 1 added an `IncognitoContext` data definition and wishes for extension-context detection, tab-origin detection, persistence policy, incognito-aware favorite targets, and incognito-safe selection learning.
+- Phase 2 implemented `src/platform/incognito-context.js`, guarded background favorite save targets when `tab.incognito === true`, and guarded popup selection-learning writes when `chrome.extension.inIncognitoContext === true`.
+- Phase 3 abstracted duplicated incognito-context construction into a shared helper.
+- Verification passed with `npm test` (403 tests), `npm run check`, and HtDP `final_preverify`.
+- Cleanup removed unintended `.codegraph` artifacts from this checkpoint.

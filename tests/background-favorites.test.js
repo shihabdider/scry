@@ -114,6 +114,13 @@ test('favoriteTargetFromActiveTab rejects a tab without a URL', () => {
   assert.equal(favoriteTargetFromActiveTab({ title: 'Missing URL' }), null)
 })
 
+test('favoriteTargetFromActiveTab rejects an incognito tab before saving', () => {
+  assert.equal(
+    favoriteTargetFromActiveTab({ url: 'https://secret.example/', title: 'Secret', incognito: true }),
+    null,
+  )
+})
+
 test('favoriteTargetFromContextMenu produces a page save target', () => {
   assert.deepEqual(
     favoriteTargetFromContextMenu(
@@ -159,6 +166,16 @@ test('favoriteTargetFromContextMenu rejects unknown Scry favorite menu items', (
     favoriteTargetFromContextMenu(
       { menuItemId: 'unknown', pageUrl: 'https://example.com/docs' },
       { title: 'Example docs' },
+    ),
+    null,
+  )
+})
+
+test('favoriteTargetFromContextMenu rejects an incognito tab-origin click before saving', () => {
+  assert.equal(
+    favoriteTargetFromContextMenu(
+      { menuItemId: 'scry-save-favorite:page', pageUrl: 'https://secret.example/' },
+      { title: 'Secret', incognito: true },
     ),
     null,
   )
@@ -287,6 +304,21 @@ test('handleFavoriteCommand resolves to null when the active tab has no URL', as
   assert.deepEqual(chrome.writes, [])
 })
 
+test('handleFavoriteCommand does not write storage for an incognito active tab', async () => {
+  const chrome = favoriteSaveChrome({ tabs: [{ url: 'https://secret.example/', title: 'Secret', incognito: true }] })
+  const feedback = feedbackAction()
+  chrome.chromeApi.action = feedback.action
+
+  assert.equal(
+    await handleFavoriteCommand('save-current-tab-as-favorite', { chromeApi: chrome.chromeApi, now: 2_000 }),
+    null,
+  )
+  assert.deepEqual(chrome.tabQueries, [{ active: true, currentWindow: true }])
+  assert.deepEqual(chrome.getKeys, [])
+  assert.deepEqual(chrome.writes, [])
+  assert.deepEqual(feedback.badgeTexts, [])
+})
+
 test('handleFavoriteContextMenuClick saves a page target locally', async () => {
   const storage = storageWith({})
   const expectedFavorite = {
@@ -362,6 +394,24 @@ test('handleFavoriteContextMenuClick no-ops an unknown menu item without writing
     null,
   )
   assert.deepEqual(storage.writes, [])
+})
+
+test('handleFavoriteContextMenuClick does not write storage for an incognito tab-origin click', async () => {
+  const storage = storageWith({})
+  const feedback = feedbackAction()
+  storage.chromeApi.action = feedback.action
+
+  assert.equal(
+    await handleFavoriteContextMenuClick(
+      { menuItemId: 'scry-save-favorite:page', pageUrl: 'https://secret.example/' },
+      { title: 'Secret', incognito: true },
+      { chromeApi: storage.chromeApi, now: 2_000 },
+    ),
+    null,
+  )
+  assert.deepEqual(storage.getKeys, [])
+  assert.deepEqual(storage.writes, [])
+  assert.deepEqual(feedback.badgeTexts, [])
 })
 
 test('installFavoriteBackgroundHandlers registers context menus on install and startup', () => {

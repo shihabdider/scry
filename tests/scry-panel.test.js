@@ -1635,6 +1635,58 @@ test('openSelected opens a real visible row in a new tab and records parsed unqu
   assert.equal(windowApi.closeCalls, 1)
 })
 
+test('openSelected opens a real visible row in an incognito popup without recording selection learning', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  chromeApi.extension = { inIncognitoContext: true }
+  const selectionWrites = []
+  chromeApi.storage.local.set = async (value) => {
+    selectionWrites.push(value)
+  }
+  const windowApi = {
+    closeCalls: 0,
+    close() {
+      this.closeCalls++
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi })
+  const docsResult = searchResult('docs')
+  const existingSelectionData = {
+    version: 1,
+    aggregates: {
+      'docs install': {
+        [docsResult.key]: {
+          count: 2,
+          lastSelectedAt: now - 1,
+          selectedAt: [now - 2, now - 1],
+        },
+      },
+    },
+  }
+  const originalSelectionData = structuredClone(existingSelectionData)
+  app.selectionData = existingSelectionData
+  app.input.value = 'docs install'
+  app.results = [docsResult]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 0
+  let updateCalls = 0
+  app.updateResults = () => {
+    updateCalls++
+  }
+
+  await app.openSelected({ newTab: false })
+
+  assert.deepEqual(chromeApi.tabs.updated, [
+    { id: 101, change: { url: 'https://example.com/docs?tab=readme' } },
+  ])
+  assert.deepEqual(chromeApi.tabs.opened, [])
+  assert.equal(app.selectionData, existingSelectionData)
+  assert.deepEqual(app.selectionData, originalSelectionData)
+  assert.deepEqual(selectionWrites, [])
+  assert.equal(updateCalls, 0)
+  assert.equal(windowApi.closeCalls, 1)
+})
+
 test('openSelected is a no-op when no visible row is selected', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
