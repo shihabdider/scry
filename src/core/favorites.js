@@ -13,7 +13,7 @@ import { normalizeHistoryUrl } from './url.js'
  *
  * Interpretation:
  * Describes the local Chrome surface that supplied a URL-bearing favorite target. "tab" comes
- * from the unbound extension command; the other variants come from the context menu.
+ * from the active-tab extension command; the other variants come from the context menu.
  *
  * Examples:
  * - "tab" represents saving the current active tab.

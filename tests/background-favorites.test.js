@@ -8,6 +8,7 @@ import {
   handleFavoriteContextMenuClick,
   installFavoriteBackgroundHandlers,
   registerFavoriteContextMenus,
+  showFavoriteSaveFeedback,
 } from '../background.js'
 import { FAVORITES_STORAGE_KEY } from '../src/platform/favorites-store.js'
 
@@ -54,6 +55,45 @@ function favoriteSaveChrome({ slot = {}, tabs = [] } = {}) {
   }
 
   return { ...storage, tabQueries }
+}
+
+function feedbackAction() {
+  const badgeTexts = []
+  const badgeBackgroundColors = []
+
+  return {
+    badgeTexts,
+    badgeBackgroundColors,
+    action: {
+      setBadgeText(details) {
+        badgeTexts.push(details)
+      },
+      setBadgeBackgroundColor(details) {
+        badgeBackgroundColors.push(details)
+      },
+    },
+  }
+}
+
+function feedbackWindow() {
+  const timers = []
+  return {
+    timers,
+    windowApi: {
+      setTimeout(callback, delay) {
+        const timer = {
+          callback,
+          delay,
+          unrefed: false,
+          unref() {
+            this.unrefed = true
+          },
+        }
+        timers.push(timer)
+        return timer
+      },
+    },
+  }
 }
 
 test('favoriteTargetFromActiveTab produces a tab save target with title', () => {
@@ -174,6 +214,14 @@ test('registerFavoriteContextMenus creates menu items with one matching Chrome c
   ])
 })
 
+test('showFavoriteSaveFeedback no-ops when there is no saved favorite or action badge API', () => {
+  const feedback = feedbackAction()
+
+  assert.equal(showFavoriteSaveFeedback(null, { chromeApi: { action: feedback.action } }), false)
+  assert.deepEqual(feedback.badgeTexts, [])
+  assert.equal(showFavoriteSaveFeedback({ key: 'https://example.com/docs' }, { chromeApi: {} }), false)
+})
+
 test('handleFavoriteCommand queries the active tab and saves a matching command target locally', async () => {
   const chrome = favoriteSaveChrome({
     tabs: [{ url: 'https://Example.com/docs?utm_source=news#intro', title: 'Example docs' }],
@@ -193,6 +241,31 @@ test('handleFavoriteCommand queries the active tab and saves a matching command 
   )
   assert.deepEqual(chrome.tabQueries, [{ active: true, currentWindow: true }])
   assert.deepEqual(chrome.writes, [{ [FAVORITES_STORAGE_KEY]: [expectedFavorite] }])
+})
+
+test('handleFavoriteCommand shows badge feedback when it saves the current tab', async () => {
+  const chrome = favoriteSaveChrome({
+    tabs: [{ url: 'https://example.com/docs', title: 'Example docs' }],
+  })
+  const feedback = feedbackAction()
+  const timer = feedbackWindow()
+  chrome.chromeApi.action = feedback.action
+
+  const saved = await handleFavoriteCommand('save-current-tab-as-favorite', {
+    chromeApi: chrome.chromeApi,
+    now: 2_000,
+    windowApi: timer.windowApi,
+  })
+
+  assert.equal(saved.key, 'https://example.com/docs')
+  assert.deepEqual(feedback.badgeBackgroundColors, [{ color: '#188038' }])
+  assert.deepEqual(feedback.badgeTexts, [{ text: '✓' }])
+  assert.equal(timer.timers.length, 1)
+  assert.equal(timer.timers[0].delay, 1_500)
+  assert.equal(timer.timers[0].unrefed, true)
+
+  timer.timers[0].callback()
+  assert.deepEqual(feedback.badgeTexts, [{ text: '✓' }, { text: '' }])
 })
 
 test('handleFavoriteCommand no-ops an unknown command without querying tabs or writing storage', async () => {
@@ -256,6 +329,25 @@ test('handleFavoriteContextMenuClick saves a link target locally', async () => {
     expectedFavorite,
   )
   assert.deepEqual(storage.writes, [{ [FAVORITES_STORAGE_KEY]: [expectedFavorite] }])
+})
+
+test('handleFavoriteContextMenuClick shows badge feedback when it saves a URL-bearing target', async () => {
+  const storage = storageWith({})
+  const feedback = feedbackAction()
+  const timer = feedbackWindow()
+  storage.chromeApi.action = feedback.action
+
+  const saved = await handleFavoriteContextMenuClick(
+    { menuItemId: 'scry-save-favorite:link', linkUrl: 'https://example.com/download' },
+    { title: 'Example docs' },
+    { chromeApi: storage.chromeApi, now: 2_000, windowApi: timer.windowApi },
+  )
+
+  assert.equal(saved.key, 'https://example.com/download')
+  assert.deepEqual(feedback.badgeTexts, [{ text: '✓' }])
+  assert.equal(timer.timers[0].delay, 1_500)
+  timer.timers[0].callback()
+  assert.deepEqual(feedback.badgeTexts, [{ text: '✓' }, { text: '' }])
 })
 
 test('handleFavoriteContextMenuClick no-ops an unknown menu item without writing storage', async () => {

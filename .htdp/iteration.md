@@ -19,7 +19,7 @@ integration-target: none
 
 Add a local-only hidden `favorites` search mode to Scry. Users can save URL-bearing pages/targets into a local favorites list, enter favorites with `:f` through `:favorite` + `Enter`, search saved favorites with Scry's existing URL recall behavior, exit favorites with `Tab` to the previous public mode, and remove selected favorites with one-level popup-session undo from list-selection mode.
 
-Functional checkpoint: In Chrome, a user can add the current tab via a new unbound extension command, add page/link/image/video/audio/frame URLs via the right-click menu, type `:f` + `Enter` in Scry to view/search saved favorites, press `Tab` to leave favorites, and in favorites list-selection mode use `x remove` plus `u undo`.
+Functional checkpoint: In Chrome, a user can add the current tab via the `Alt+Shift+F` extension command, add page/link/image/video/audio/frame URLs via the right-click menu, receive a brief green `✓` extension badge after successful background saves, type `:f` + `Enter` in Scry to view/search saved favorites, press `Tab` to leave favorites, and in favorites list-selection mode use `x remove` plus `u undo`.
 
 ## Data Definition Plan
 
@@ -34,7 +34,7 @@ Use data-definition-driven stubbing because this JavaScript extension change is 
 - Entering favorites clears the input and shows all favorites.
 - `Tab` in favorites exits back to the previous public mode.
 - Favorites must be local extension data shared by popup/background using `chrome.storage.local`.
-- A new unbound Chrome command saves the current active tab.
+- A new `Alt+Shift+F` Chrome command saves the current active tab.
 - Context menu saves URL-bearing contexts: page, link, image, video, audio, frame.
 - Duplicate favorite saves update metadata and move the URL to the top.
 - In favorites list-selection mode, selected favorite shows `x remove`; removal is immediate and `u undo` restores the most recently removed favorite for the current popup session.
@@ -51,7 +51,7 @@ Use data-definition-driven stubbing because this JavaScript extension change is 
 - [resolved] Storage means `chrome.storage.local`, not DOM `window.localStorage`.
 - [resolved] `Tab` from favorites returns to the previous public mode.
 - [resolved] Entering favorites clears the input.
-- [resolved] Keyboard add command has no default shortcut.
+- [resolved] Keyboard add command uses `Alt+Shift+F`, which is not otherwise bound by Scry.
 - [resolved] Context menu targets are page, link, image, video, audio, and frame.
 - [resolved] Duplicate saves update metadata and move to top.
 - [resolved] URL eligibility follows Scry's existing URL acceptance/opening rules.
@@ -68,7 +68,7 @@ Use data-definition-driven stubbing because this JavaScript extension change is 
 ### Assumptions
 
 - Favorite recency should use the latest save/update time for empty-query ordering.
-- Background save feedback can be minimal for this pass because the requested checkpoint is functional local saving/searching, not rich notifications.
+- Background save feedback uses an extension action badge instead of notifications, avoiding a new notifications permission.
 - One-level undo only needs to be represented in popup memory; after undo, the restored favorite returns with its previous metadata.
 
 ### Decisions
@@ -78,7 +78,7 @@ Use data-definition-driven stubbing because this JavaScript extension change is 
 ### Look Back
 
 - Phase 1 added HtDP data definitions and stubs for `FavoriteUrl`, stored favorites, hidden search mode state, favorites command parsing, storage adapters, background command/context-menu seams, and popup favorites state.
-- Phase 2 implemented local `chrome.storage.local` favorites, `:f` through `:favorite` entry, hidden favorites search/results, Tab exit to the previous public mode, unbound active-tab save command, URL-bearing context menus, selected-row `x remove`, and one-level popup-session `u undo` with visible feedback.
+- Phase 2 implemented local `chrome.storage.local` favorites, `:f` through `:favorite` entry, hidden favorites search/results, Tab exit to the previous public mode, `Alt+Shift+F` active-tab save command with badge feedback, URL-bearing context menus with badge feedback, selected-row `x remove`, and one-level popup-session `u undo` with visible feedback.
 - Phase 3 abstracted shared search-mode badge/header construction and cached mode loading transitions after all feature tests passed.
 - Verification passed with `npm test` (384 tests), `npm run check`, and HtDP `final_preverify`.
 - Cleanup removed unintended `.codegraph` artifacts from the final commit while keeping the repo-root `htdp.json` verifier config created for this HtDP workflow.

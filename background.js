@@ -2,6 +2,9 @@ import { saveFavoriteTarget } from './src/platform/favorites-store.js'
 
 const FAVORITE_CONTEXT_MENU_ID_PREFIX = 'scry-save-favorite:'
 const FAVORITE_CONTEXT_MENU_CONTEXTS = Object.freeze(['page', 'link', 'image', 'video', 'audio', 'frame'])
+const FAVORITE_SAVE_FEEDBACK_BADGE_TEXT = '✓'
+const FAVORITE_SAVE_FEEDBACK_BADGE_BACKGROUND_COLOR = '#188038'
+const FAVORITE_SAVE_FEEDBACK_DURATION_MS = 1_500
 
 /**
  * A FavoriteContextMenuContext is one of:
@@ -29,8 +32,8 @@ const FAVORITE_CONTEXT_MENU_CONTEXTS = Object.freeze(['page', 'link', 'image', '
  * - "save-current-tab-as-favorite"
  *
  * Interpretation:
- * Represents the unbound Chrome extension command that saves the active tab to local favorites.
- * The command has no default shortcut; users may bind one in Chrome if desired.
+ * Represents the Chrome extension command that saves the active tab to local favorites.
+ * The command is suggested as Alt+Shift+F so users can test it immediately and remap it in Chrome if desired.
  *
  * Examples:
  * - "save-current-tab-as-favorite" represents saving the current active tab.
@@ -169,10 +172,60 @@ export function registerFavoriteContextMenus({ chromeApi = chrome } = {}) {
   }
 }
 
+function invokeChromeAction(action, methodName, details) {
+  const method = action?.[methodName]
+  if (typeof method !== 'function') return false
+
+  try {
+    const maybePromise = method.call(action, details)
+    maybePromise?.catch?.(() => {})
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
- * string { chromeApi?: object, now?: number } -> Promise<import('./src/core/favorites.js').FavoriteUrl | null>
+ * FavoriteUrl | null { chromeApi?: object, windowApi?: object, durationMs?: number } -> boolean
  *
- * Handles the unbound Chrome command for saving the current active tab to local Scry favorites.
+ * Shows short local extension-icon feedback after a favorite is saved, returning true when the
+ * badge feedback could be started.
+ *
+ * Functional Examples:
+ * - showFavoriteSaveFeedback(exampleFavorite, { chromeApi, windowApi }) should set a green “✓” badge and schedule it to clear.
+ * - showFavoriteSaveFeedback(null, { chromeApi, windowApi }) should not touch the badge and should return false.
+ * - showFavoriteSaveFeedback(exampleFavorite, { chromeApiWithoutAction, windowApi }) should return false.
+ *
+ * Template:
+ * Follow optional favorite/action data:
+ * - when favorite or chrome.action.setBadgeText is absent, return false
+ * - set a green check badge on the extension action
+ * - schedule badge text clearing after a short delay
+ */
+export function showFavoriteSaveFeedback(favorite, { chromeApi = chrome, windowApi = globalThis, durationMs = FAVORITE_SAVE_FEEDBACK_DURATION_MS } = {}) {
+  if (!favorite) return false
+
+  const action = chromeApi?.action
+  if (typeof action?.setBadgeText !== 'function') return false
+
+  invokeChromeAction(action, 'setBadgeBackgroundColor', { color: FAVORITE_SAVE_FEEDBACK_BADGE_BACKGROUND_COLOR })
+  invokeChromeAction(action, 'setBadgeText', { text: FAVORITE_SAVE_FEEDBACK_BADGE_TEXT })
+
+  const timerApi = typeof windowApi?.setTimeout === 'function' ? windowApi : globalThis
+  if (typeof timerApi?.setTimeout === 'function' && durationMs > 0) {
+    const timer = timerApi.setTimeout.call(timerApi, () => {
+      invokeChromeAction(action, 'setBadgeText', { text: '' })
+    }, durationMs)
+    timer?.unref?.()
+  }
+
+  return true
+}
+
+/**
+ * string { chromeApi?: object, now?: number, windowApi?: object } -> Promise<import('./src/core/favorites.js').FavoriteUrl | null>
+ *
+ * Handles the Alt+Shift+F Chrome command for saving the current active tab to local Scry favorites.
  *
  * Functional Examples:
  * - handleFavoriteCommand("save-current-tab-as-favorite", { chromeApi, now: 2_000 }) should query the active tab, save it with source "tab", and resolve to the saved FavoriteUrl.
@@ -186,7 +239,7 @@ export function registerFavoriteContextMenus({ chromeApi = chrome } = {}) {
  * - when a target is present, call saveFavoriteTarget(target, { chromeApi, now })
  * - otherwise return null
  */
-export async function handleFavoriteCommand(command, { chromeApi = chrome, now = Date.now() } = {}) {
+export async function handleFavoriteCommand(command, { chromeApi = chrome, now = Date.now(), windowApi = globalThis } = {}) {
   if (command !== 'save-current-tab-as-favorite') return null
 
   const queryTabs = chromeApi?.tabs?.query
@@ -196,11 +249,13 @@ export async function handleFavoriteCommand(command, { chromeApi = chrome, now =
   const target = favoriteTargetFromActiveTab(Array.isArray(tabs) ? tabs[0] : null)
   if (!target) return null
 
-  return saveFavoriteTarget(target, { chromeApi, now })
+  const saved = await saveFavoriteTarget(target, { chromeApi, now })
+  showFavoriteSaveFeedback(saved, { chromeApi, windowApi })
+  return saved
 }
 
 /**
- * ChromeContextMenuFavoriteInfo object { chromeApi?: object, now?: number } -> Promise<import('./src/core/favorites.js').FavoriteUrl | null>
+ * ChromeContextMenuFavoriteInfo object { chromeApi?: object, now?: number, windowApi?: object } -> Promise<import('./src/core/favorites.js').FavoriteUrl | null>
  *
  * Handles a Scry favorites context-menu click by saving the clicked URL-bearing target to local
  * extension storage.
@@ -216,18 +271,20 @@ export async function handleFavoriteCommand(command, { chromeApi = chrome, now =
  * - when target is null, return null
  * - otherwise call saveFavoriteTarget(target, { chromeApi, now })
  */
-export async function handleFavoriteContextMenuClick(info, tab, { chromeApi = chrome, now = Date.now() } = {}) {
+export async function handleFavoriteContextMenuClick(info, tab, { chromeApi = chrome, now = Date.now(), windowApi = globalThis } = {}) {
   const target = favoriteTargetFromContextMenu(info, tab)
   if (!target) return null
 
-  return saveFavoriteTarget(target, { chromeApi, now })
+  const saved = await saveFavoriteTarget(target, { chromeApi, now })
+  showFavoriteSaveFeedback(saved, { chromeApi, windowApi })
+  return saved
 }
 
 /**
  * { chromeApi?: object } -> void
  *
  * Installs the background service-worker listeners that keep favorites local-only: context-menu
- * registration, context-menu click saves, and the unbound active-tab save command.
+ * registration, context-menu click saves, and the active-tab save command.
  *
  * Functional Examples:
  * - installFavoriteBackgroundHandlers({ chromeApi }) should register context menus when the extension is installed.
@@ -242,13 +299,13 @@ export async function handleFavoriteContextMenuClick(info, tab, { chromeApi = ch
  * - attach commands.onCommand listener to handleFavoriteCommand
  * - attach contextMenus.onClicked listener to handleFavoriteContextMenuClick
  */
-export function installFavoriteBackgroundHandlers({ chromeApi = chrome } = {}) {
+export function installFavoriteBackgroundHandlers({ chromeApi = chrome, windowApi = globalThis } = {}) {
   const registerMenus = () => registerFavoriteContextMenus({ chromeApi })
 
   chromeApi?.runtime?.onInstalled?.addListener?.(registerMenus)
   chromeApi?.runtime?.onStartup?.addListener?.(registerMenus)
-  chromeApi?.commands?.onCommand?.addListener?.((command) => handleFavoriteCommand(command, { chromeApi }))
-  chromeApi?.contextMenus?.onClicked?.addListener?.((info, tab) => handleFavoriteContextMenuClick(info, tab, { chromeApi }))
+  chromeApi?.commands?.onCommand?.addListener?.((command) => handleFavoriteCommand(command, { chromeApi, windowApi }))
+  chromeApi?.contextMenus?.onClicked?.addListener?.((info, tab) => handleFavoriteContextMenuClick(info, tab, { chromeApi, windowApi }))
 }
 
 if (typeof chrome !== 'undefined') {

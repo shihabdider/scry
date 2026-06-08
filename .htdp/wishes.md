@@ -67,7 +67,7 @@
   Template: design comment/skeleton added near stub
   Depends on: none
 - `favoriteTargetFromActiveTab(tab: object): FavoriteSaveTarget | null` in `background.js`
-  Purpose: Convert the active tab from the unbound command into a favorites save target.
+  Purpose: Convert the active tab from the `Alt+Shift+F` command into a favorites save target.
   Functional Examples: function design comment/docstring added near stub; input coverage includes tab with title, tab without title, and missing URL.
   Template: design comment/skeleton added near stub
   Depends on: none
@@ -110,8 +110,8 @@
   Depends on: loadStoredFavorites, restoreRemovedFavorite, saveStoredFavorites
 
 ### Layer 2
-- `handleFavoriteCommand(command: string, options?: { chromeApi?: object, now?: number }): Promise<FavoriteUrl | null>` in `background.js`
-  Purpose: Handle the unbound active-tab save command by querying the active tab and saving it as a favorite.
+- `handleFavoriteCommand(command: string, options?: { chromeApi?: object, now?: number, windowApi?: object }): Promise<FavoriteUrl | null>` in `background.js`
+  Purpose: Handle the `Alt+Shift+F` active-tab save command by querying the active tab, saving it as a favorite, and showing badge feedback.
   Functional Examples: function design comment/docstring added near stub; input coverage includes matching command, unknown command, and active tab without URL.
   Template: design comment/skeleton added near stub
   Depends on: favoriteTargetFromActiveTab, saveFavoriteTarget
@@ -173,7 +173,7 @@
 - `src/platform/favorites-store.js`: added `FavoritesStorageSlot` and `FavoriteStorageWrite` for `chrome.storage.local` favorites persistence.
 - `background.js`: added `FavoriteContextMenuContext`, `FavoriteCommandName`, and `ChromeContextMenuFavoriteInfo` for background command/context-menu seams.
 - `src/panel/app.js`: extended `ResultNavigationCommand`, added `FavoritesPanelState`, and added popup-session fields `previousPublicSearchMode` and `favoriteRemovalUndo`.
-- `manifest.json`: added a module background service worker and unbound `save-current-tab-as-favorite` Chrome command.
+- `manifest.json`: added a module background service worker and `Alt+Shift+F` `save-current-tab-as-favorite` Chrome command.
 
 ## Assertion Changes Flagged
 None

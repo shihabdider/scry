@@ -20,7 +20,11 @@
       }
     },
     "save-current-tab-as-favorite": {
-      "description": "Save the current tab to Scry favorites"
+      "description": "Save the current tab to Scry favorites",
+      "suggested_key": {
+        "default": "Alt+Shift+F",
+        "mac": "Alt+Shift+F"
+      }
     }
   }
 }

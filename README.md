@@ -8,7 +8,7 @@ git skilift issues 13
 
 To narrow by site, put a colon after the site query: `git:` filters results to matching website names/roots such as github.com, gitter.com, or gitopia.com. `git: issues 13` composes the website filter with ordinary URL-fragment query terms, first limiting results to matching websites and then searching/ranking the remaining URLs for `issues 13`. `file:` filters local `file:///...` history URLs, and `file: precalculus` composes the local file filter with ordinary URL-fragment query terms.
 
-Favorites are a hidden search mode rather than part of the normal `Tab` mode cycle. Type `:f`, `:fa`, … `:favorite` and press `Enter` to search locally saved favorites; press `Tab` from favorites to return to the previous public mode. Save favorites with the unbound **Save the current tab to Scry favorites** extension command or the **Save … to Scry favorites** right-click menu for page, link, image, video, audio, and frame URLs. In favorites list-selection mode, `x` removes the selected favorite and `u` restores the most recent removal for the current popup session.
+Favorites are a hidden search mode rather than part of the normal `Tab` mode cycle. Type `:f`, `:fa`, … `:favorite` and press `Enter` to search locally saved favorites; press `Tab` from favorites to return to the previous public mode. Save favorites with the **Save the current tab to Scry favorites** extension command (`Alt+Shift+F`) or the **Save … to Scry favorites** right-click menu for page, link, image, video, audio, and frame URLs. A successful background save briefly shows a green `✓` badge on the Scry extension icon. In favorites list-selection mode, `x` removes the selected favorite and `u` restores the most recent removal for the current popup session.
 
 The v1 product is intentionally narrow:
 
@@ -25,6 +25,7 @@ The v1 product is intentionally narrow:
 3. Click **Load unpacked**.
 4. Select this repository directory.
 5. Open Scry with `Command+K`; close the popup with `Esc` or by focusing the page.
+6. Save the current tab to favorites with `Alt+Shift+F`.
 
 If Chrome reports a shortcut conflict, remap Scry at `chrome://extensions/shortcuts`.
 
