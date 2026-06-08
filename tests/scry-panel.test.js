@@ -1687,6 +1687,64 @@ test('openSelected opens a real visible row in an incognito popup without record
   assert.equal(windowApi.closeCalls, 1)
 })
 
+test('openSelected opens a real favorites-mode row in an incognito popup and records selection learning', async () => {
+  const document = createScryDocument()
+  const chromeApi = createPanelChrome([])
+  chromeApi.extension = { inIncognitoContext: true }
+  const selectionWrites = []
+  chromeApi.storage.local.set = async (value) => {
+    selectionWrites.push(value)
+  }
+  const windowApi = {
+    closeCalls: 0,
+    close() {
+      this.closeCalls++
+    },
+  }
+  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi })
+  const favoriteResult = {
+    ...searchResult('secret'),
+    key: 'https://secret.example/',
+    url: 'https://secret.example/',
+    displayUrl: 'secret.example',
+    title: 'Secret',
+    urlHtml: 'secret.example',
+    titleHtml: 'Secret',
+  }
+  app.searchMode = 'favorites'
+  app.input.value = 'secret favorite'
+  app.results = [favoriteResult]
+  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
+  app.selectedIndex = 0
+  let updateCalls = 0
+  app.updateResults = () => {
+    updateCalls++
+  }
+
+  await app.openSelected({ newTab: false })
+
+  const expectedSelectionData = {
+    version: 1,
+    aggregates: {
+      'secret favorite': {
+        [favoriteResult.key]: {
+          count: 1,
+          lastSelectedAt: now,
+          selectedAt: [now],
+        },
+      },
+    },
+  }
+  assert.deepEqual(chromeApi.tabs.updated, [
+    { id: 101, change: { url: 'https://secret.example/' } },
+  ])
+  assert.deepEqual(chromeApi.tabs.opened, [])
+  assert.deepEqual(app.selectionData, expectedSelectionData)
+  assert.deepEqual(selectionWrites, [{ [SELECTION_STORAGE_KEY]: expectedSelectionData }])
+  assert.equal(updateCalls, 1)
+  assert.equal(windowApi.closeCalls, 1)
+})
+
 test('openSelected is a no-op when no visible row is selected', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])

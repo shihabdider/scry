@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  allowsBrowsingDataPersistence,
+  allowsImplicitSelectionLearningPersistence,
   incognitoContextFromExtension,
   incognitoContextFromTab,
 } from '../src/platform/incognito-context.js'
@@ -62,30 +62,38 @@ test('incognitoContextFromTab defaults a missing tab to a normal context', () =>
   })
 })
 
-test('allowsBrowsingDataPersistence allows persistence when both incognito signals are false', () => {
+test('allowsImplicitSelectionLearningPersistence allows recent public-mode learning in a normal context', () => {
   assert.equal(
-    allowsBrowsingDataPersistence({ extensionInIncognitoContext: false, tabIncognito: false }),
+    allowsImplicitSelectionLearningPersistence({ extensionInIncognitoContext: false, tabIncognito: false }, 'recent'),
     true,
   )
 })
 
-test('allowsBrowsingDataPersistence rejects persistence for an incognito extension context', () => {
+test('allowsImplicitSelectionLearningPersistence rejects recent public-mode learning in an incognito extension context', () => {
   assert.equal(
-    allowsBrowsingDataPersistence({ extensionInIncognitoContext: true, tabIncognito: false }),
+    allowsImplicitSelectionLearningPersistence({ extensionInIncognitoContext: true, tabIncognito: false }, 'recent'),
     false,
   )
 })
 
-test('allowsBrowsingDataPersistence rejects persistence for an incognito tab context', () => {
+test('allowsImplicitSelectionLearningPersistence rejects closed public-mode learning in an incognito tab context', () => {
   assert.equal(
-    allowsBrowsingDataPersistence({ extensionInIncognitoContext: false, tabIncognito: true }),
+    allowsImplicitSelectionLearningPersistence({ extensionInIncognitoContext: false, tabIncognito: true }, 'closed'),
     false,
   )
 })
 
-test('allowsBrowsingDataPersistence rejects persistence when both incognito signals are true', () => {
+test('allowsImplicitSelectionLearningPersistence rejects deep public-mode learning when both incognito signals are true', () => {
   assert.equal(
-    allowsBrowsingDataPersistence({ extensionInIncognitoContext: true, tabIncognito: true }),
+    allowsImplicitSelectionLearningPersistence({ extensionInIncognitoContext: true, tabIncognito: true }, 'deep'),
     false,
   )
 })
+
+test('allowsImplicitSelectionLearningPersistence allows hidden favorites-mode learning in an incognito context', () => {
+  assert.equal(
+    allowsImplicitSelectionLearningPersistence({ extensionInIncognitoContext: true, tabIncognito: true }, 'favorites'),
+    true,
+  )
+})
+

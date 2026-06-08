@@ -1,7 +1,7 @@
 # Iteration
 
-anchor: 94a293fff2e89b7ad522a3a16a6c2ebcbc854811
-started: 2026-06-08T02:31:53Z
+anchor: 0e9005df3f91c397e0c42cdebef23363dd5a8235
+started: 2026-06-08T02:57:42Z
 stubber-mode: data-definition-driven
 workflow-mode: autonomous
 language: JavaScript
@@ -16,54 +16,53 @@ integration-target: none
 
 ## Problem
 
-Prevent Scry from persisting incognito browsing-derived URLs while still allowing the extension popup and commands to work in incognito. Passive history search remains in-memory; persistent writes that could capture incognito sites must be skipped when their source is an incognito tab or incognito extension popup.
+Correct Scry's incognito behavior: public search modes must not persist incognito/public-mode usage history from an incognito popup, but explicit favorites saves must still work for incognito URLs.
 
-Functional checkpoint: With the extension allowed in incognito, opening Scry in an incognito window still lets the user search/open URLs, but selecting a result from the incognito popup does not write selection-learning data, and Alt+Shift+F/context-menu favorite saves from incognito tabs no-op without writing `chrome.storage.local`. Normal-window favorites and selection learning continue to work.
+Functional checkpoint: With Scry enabled in incognito, the popup continues to search/open in public modes without writing selection-learning data from the incognito popup. Pressing `Alt+Shift+F` on an incognito tab or using a Scry favorite context-menu item in incognito still saves that URL to local favorites, because favorites are explicit user saves. Normal-window behavior remains unchanged.
 
 ## Data Definition Plan
 
-Add or reuse a small incognito-context data definition representing Chrome's incognito signals: a popup/extension context flag (`chrome.extension.inIncognitoContext`) and tab-origin flags (`tab.incognito`). Use it at storage-write boundaries only. Background favorite save targets should reject incognito tabs before URL normalization/storage. Popup selection-learning should open the selected row as before but skip `recordSelection`/`saveSelectionData` when the popup is in an incognito extension context. Keep history fetch/index behavior unchanged because Scry does not persist fetched history and Chrome history does not include incognito visits.
+Reuse the `IncognitoContext` data definition for Chrome's extension-context signal. Narrow the persistence policy so it applies only to implicit public-mode selection-learning writes, not to explicit favorite saves. Remove the tab-incognito rejection from background favorite target creation and update tests to treat incognito favorite saves as allowed. In `ScryPanelApp.openSelected`, allow selection learning in non-public/hidden favorites mode, but skip it in public modes when `chrome.extension.inIncognitoContext` is true.
 
 ## Ledger
 
 ### Knowns
 
-- Scry currently fetches Chrome history into an in-memory index via `chrome.history.search`.
-- Persistent local writes currently include favorites in `chrome.storage.local` and selection-learning data in `chrome.storage.local`.
-- Favorites can currently be saved from the active tab command and context menus.
-- Selection learning is written after opening a real result row.
-- The extension should remain local-only and continue working in incognito.
+- Chrome public history APIs do not store incognito visits as browser history.
+- Scry public modes (`recent`, `closed`, `deep`) should not add their own persistent selection-learning record from an incognito popup.
+- Favorites are explicit user-saved URLs and should be allowed from incognito tabs.
+- Prior implementation overcorrected by rejecting incognito favorite saves.
 
 ### Constraints
 
-- Do not add external network calls, host permissions, content scripts, or options pages.
-- Do not disable incognito operation; only skip privacy-sensitive persistent writes from incognito contexts.
+- Keep Scry local-only: no external network calls, host permissions, content scripts, or options pages.
 - Preserve normal-window behavior.
+- Preserve incognito popup search/open behavior.
 - Run `npm test` and `npm run check` after implementation.
 
 ### Unknowns That Matter
 
-- [resolved] Interpret “not store those sites” as avoiding persistent writes derived from incognito tabs/popups, not disabling in-memory search/open behavior.
+- [resolved] User wants incognito favorites saves allowed while public-mode implicit history/learning writes are suppressed.
 
 ### Out of Scope
 
-- Removing any incognito URLs that may already have been stored before this change.
-- Changing Chrome's own history/session APIs or browser-level incognito behavior.
-- Hiding regular-window favorites/selection data from incognito search UI.
+- Purging existing stored data.
+- Changing Chrome's own incognito history/session behavior.
+- Adding separate favorite visibility or storage partitioning.
 
 ### Assumptions
 
-- `chrome.extension.inIncognitoContext` is the appropriate popup-context signal when available.
-- `tab.incognito === true` is the appropriate background tab-source signal for command/context-menu saves.
+- Favorites mode is hidden/non-public and represents explicit saved URLs, so its own usage may continue to use normal ranking behavior.
+- `chrome.extension.inIncognitoContext` remains the appropriate popup-context signal for suppressing public-mode selection learning.
 
 ### Decisions
 
-- 2026-06-08T02:31:53Z — Start a fresh HtDP iteration for incognito privacy write suppression.
+- 2026-06-08T02:57:42Z — Correct previous interpretation: only public-mode implicit history/learning should be suppressed; explicit incognito favorite saves should work.
 
 ### Look Back
 
-- Phase 1 added an `IncognitoContext` data definition and wishes for extension-context detection, tab-origin detection, persistence policy, incognito-aware favorite targets, and incognito-safe selection learning.
-- Phase 2 implemented `src/platform/incognito-context.js`, guarded background favorite save targets when `tab.incognito === true`, and guarded popup selection-learning writes when `chrome.extension.inIncognitoContext === true`.
-- Phase 3 abstracted duplicated incognito-context construction into a shared helper.
-- Verification passed with `npm test` (403 tests), `npm run check`, and HtDP `final_preverify`.
-- Cleanup removed unintended `.codegraph` artifacts from this checkpoint.
+- Phase 1 narrowed the incognito persistence policy to implicit selection-learning by search mode, and corrected favorite target design comments to allow incognito URL-bearing tabs/context menus.
+- Phase 2 implemented `allowsImplicitSelectionLearningPersistence`, removed the background incognito favorite-save rejection, and updated `ScryPanelApp.openSelected` so incognito public modes skip selection learning while incognito favorites mode can still learn from explicit favorites usage.
+- Cleanup removed the stale broad `allowsBrowsingDataPersistence` helper to avoid conflicting with explicit incognito favorite saves.
+- Phase 3 abstracted shared background favorite target creation and save-with-feedback tails.
+- Verification passed with `npm test` (408 tests), `npm run check`, and HtDP `final_preverify`.

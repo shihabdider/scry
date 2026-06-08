@@ -4,16 +4,18 @@
  * - tabIncognito: boolean
  *
  * Interpretation:
- * Represents Chrome's incognito signals visible at Scry persistence boundaries. The extension flag
- * comes from chrome.extension.inIncognitoContext for popup/extension pages; the tab flag comes from
- * Chrome tab.incognito for URL-bearing tab or context-menu origins. Any true flag means Scry may
- * open/search as usual but must not persist browsing-derived favorites or selection-learning data.
+ * Represents Chrome's incognito signals visible at Scry's local persistence boundaries. The
+ * extension flag comes from chrome.extension.inIncognitoContext for popup/extension pages and is
+ * the signal used to suppress implicit public-mode selection learning from an incognito popup. The
+ * tab flag comes from Chrome tab.incognito for URL-bearing active-tab or context-menu origins; it
+ * records provenance for explicit favorite saves but does not by itself make an explicit save
+ * ineligible. Policy functions decide which signal matters for each write kind.
  *
  * Examples:
- * - { extensionInIncognitoContext: false, tabIncognito: false } represents a normal-window popup or tab origin where persistence is allowed.
- * - { extensionInIncognitoContext: true, tabIncognito: false } represents an incognito extension popup with no specific tab-origin signal.
- * - { extensionInIncognitoContext: false, tabIncognito: true } represents a URL supplied by an incognito tab to a background command or context-menu click.
- * - { extensionInIncognitoContext: true, tabIncognito: true } represents both extension and tab incognito signals being present.
+ * - { extensionInIncognitoContext: false, tabIncognito: false } represents a normal-window popup or tab origin where public selection learning and explicit favorites saves are allowed.
+ * - { extensionInIncognitoContext: true, tabIncognito: false } represents an incognito extension popup where public-mode selection learning is skipped.
+ * - { extensionInIncognitoContext: false, tabIncognito: true } represents a URL supplied by an incognito tab to an explicit background favorite command or context-menu click.
+ * - { extensionInIncognitoContext: true, tabIncognito: true } represents both extension and tab incognito signals being present; explicit favorite saves may still proceed while implicit public-mode learning is suppressed.
  *
  * @typedef {object} IncognitoContext
  * @property {boolean} extensionInIncognitoContext Whether Chrome reports this extension context is incognito.
@@ -87,23 +89,28 @@ export function incognitoContextFromTab(tab, { extensionInIncognitoContext = fal
 }
 
 /**
- * IncognitoContext -> boolean
+ * IncognitoContext import('../core/search-modes.js').SearchMode -> boolean
  *
- * Produces whether Scry may persist browsing-derived data for the given Chrome incognito signals.
- * Persistence is allowed only when both the extension context and source tab are non-incognito.
+ * Produces whether Scry may persist implicit selection learning for an opened row in the active
+ * search mode. Public modes must not learn from an incognito context; hidden favorites mode may
+ * learn because it is based on explicitly saved local favorites.
  *
  * Functional Examples:
- * - allowsBrowsingDataPersistence({ extensionInIncognitoContext: false, tabIncognito: false }) should produce true.
- * - allowsBrowsingDataPersistence({ extensionInIncognitoContext: true, tabIncognito: false }) should produce false.
- * - allowsBrowsingDataPersistence({ extensionInIncognitoContext: false, tabIncognito: true }) should produce false.
- * - allowsBrowsingDataPersistence({ extensionInIncognitoContext: true, tabIncognito: true }) should produce false.
+ * - allowsImplicitSelectionLearningPersistence({ extensionInIncognitoContext: false, tabIncognito: false }, "recent") should produce true.
+ * - allowsImplicitSelectionLearningPersistence({ extensionInIncognitoContext: true, tabIncognito: false }, "recent") should produce false.
+ * - allowsImplicitSelectionLearningPersistence({ extensionInIncognitoContext: false, tabIncognito: true }, "closed") should produce false.
+ * - allowsImplicitSelectionLearningPersistence({ extensionInIncognitoContext: true, tabIncognito: true }, "deep") should produce false.
+ * - allowsImplicitSelectionLearningPersistence({ extensionInIncognitoContext: true, tabIncognito: true }, "favorites") should produce true.
  *
  * Template:
- * Follow the compound IncognitoContext fields:
- * - if extensionInIncognitoContext is true, persistence is not allowed
- * - if tabIncognito is true, persistence is not allowed
- * - otherwise persistence is allowed
+ * Compose IncognitoContext with SearchMode:
+ * - branch on public SearchMode variants versus hidden favorites
+ * - for "recent", "closed", and "deep", allow only when both incognito signals are false
+ * - for "favorites", allow because favorites are explicit local data
  */
-export function allowsBrowsingDataPersistence(context) {
+export function allowsImplicitSelectionLearningPersistence(context, mode) {
+  if (mode === 'favorites') return true
+
   return !context.extensionInIncognitoContext && !context.tabIncognito
 }
+

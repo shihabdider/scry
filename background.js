@@ -1,5 +1,4 @@
 import { saveFavoriteTarget } from './src/platform/favorites-store.js'
-import { allowsBrowsingDataPersistence, incognitoContextFromTab } from './src/platform/incognito-context.js'
 
 const FAVORITE_CONTEXT_MENU_ID_PREFIX = 'scry-save-favorite:'
 const FAVORITE_CONTEXT_MENU_CONTEXTS = Object.freeze(['page', 'link', 'image', 'video', 'audio', 'frame'])
@@ -68,64 +67,81 @@ const FAVORITE_SAVE_FEEDBACK_DURATION_MS = 1_500
  */
 
 /**
+ * string import('./src/core/favorites.js').FavoriteSource object -> import('./src/core/favorites.js').FavoriteSaveTarget | null
+ *
+ * Produces a FavoriteSaveTarget from a non-empty URL, caller-supplied source, and best-effort tab
+ * title metadata. The tab incognito flag is intentionally ignored because favorites are explicit
+ * local saves.
+ *
+ * Functional Examples:
+ * - favoriteTargetFromUrl("https://example.com/docs", "tab", { title: "Example docs" }) should produce { url: "https://example.com/docs", title: "Example docs", source: "tab" }.
+ * - favoriteTargetFromUrl("https://cdn.example.com/img.png", "image", { title: "Example docs", incognito: true }) should produce { url: "https://cdn.example.com/img.png", title: "Example docs", source: "image" }.
+ * - favoriteTargetFromUrl("", "page", { title: "Missing URL" }) should produce null.
+ *
+ * Template:
+ * Follow the URL-bearing favorite target fields:
+ * - validate that url is a non-empty string
+ * - copy tab.title only when Chrome supplied a string
+ * - build the FavoriteSaveTarget with the caller-supplied source
+ */
+function favoriteTargetFromUrl(url, source, tab) {
+  if (typeof url !== 'string' || url.length === 0) return null
+
+  return {
+    url,
+    title: typeof tab?.title === 'string' ? tab.title : undefined,
+    source,
+  }
+}
+
+/**
  * object -> import('./src/core/favorites.js').FavoriteSaveTarget | null
  *
- * Produces a FavoriteSaveTarget for a non-incognito active tab command, or null when Chrome did not
- * provide a URL-bearing active tab or the tab is incognito.
+ * Produces a FavoriteSaveTarget for a URL-bearing active tab command, including incognito tabs, or
+ * null when Chrome did not provide a URL-bearing active tab.
  *
  * Functional Examples:
  * - favoriteTargetFromActiveTab({ url: "https://example.com/docs", title: "Example docs", incognito: false }) should produce { url: "https://example.com/docs", title: "Example docs", source: "tab" }.
  * - favoriteTargetFromActiveTab({ url: "https://example.com/docs" }) should produce { url: "https://example.com/docs", title: undefined, source: "tab" }.
  * - favoriteTargetFromActiveTab({ title: "Missing URL" }) should produce null.
- * - favoriteTargetFromActiveTab({ url: "https://secret.example/", title: "Secret", incognito: true }) should produce null.
+ * - favoriteTargetFromActiveTab({ url: "https://secret.example/", title: "Secret", incognito: true }) should produce { url: "https://secret.example/", title: "Secret", source: "tab" }.
  *
  * Template:
- * Compose IncognitoContext with the active tab object fields:
- * - build IncognitoContext from tab.incognito
- * - when browsing data persistence is not allowed, produce null
- * - when tab.url is a non-empty string, build a FavoriteSaveTarget with source "tab"
- * - otherwise produce null
+ * Use the active tab object fields and explicit favorite-save intent:
+ * - ignore tab.incognito because favorites are explicit user saves
+ * - delegate tab.url, source "tab", and tab metadata to favoriteTargetFromUrl
+ * - favoriteTargetFromUrl validates non-empty URL and builds the FavoriteSaveTarget
  */
 export function favoriteTargetFromActiveTab(tab) {
-  const context = incognitoContextFromTab(tab)
-  if (!allowsBrowsingDataPersistence(context)) return null
-
-  if (typeof tab?.url !== 'string' || tab.url.length === 0) return null
-
-  return {
-    url: tab.url,
-    title: typeof tab?.title === 'string' ? tab.title : undefined,
-    source: 'tab',
-  }
+  return favoriteTargetFromUrl(tab?.url, 'tab', tab)
 }
 
 /**
  * ChromeContextMenuFavoriteInfo object -> import('./src/core/favorites.js').FavoriteSaveTarget | null
  *
- * Produces a FavoriteSaveTarget from a non-incognito Chrome context-menu click by choosing the URL
- * field that corresponds to the clicked favorite menu item.
+ * Produces a FavoriteSaveTarget from a Chrome context-menu click, including incognito tab-origin
+ * clicks, by choosing the URL field that corresponds to the clicked favorite menu item.
  *
  * Functional Examples:
  * - favoriteTargetFromContextMenu({ menuItemId: "scry-save-favorite:page", pageUrl: "https://example.com/docs" }, { title: "Example docs", incognito: false }) should produce { url: "https://example.com/docs", title: "Example docs", source: "page" }.
  * - favoriteTargetFromContextMenu({ menuItemId: "scry-save-favorite:link", linkUrl: "https://example.com/download" }, { title: "Example docs" }) should produce { url: "https://example.com/download", title: "Example docs", source: "link" }.
  * - favoriteTargetFromContextMenu({ menuItemId: "scry-save-favorite:image", srcUrl: "https://cdn.example.com/img.png" }, { title: "Example docs" }) should produce { url: "https://cdn.example.com/img.png", title: "Example docs", source: "image" }.
+ * - favoriteTargetFromContextMenu({ menuItemId: "scry-save-favorite:video", srcUrl: "https://cdn.example.com/video.mp4" }, { title: "Example docs" }) should produce { url: "https://cdn.example.com/video.mp4", title: "Example docs", source: "video" }.
+ * - favoriteTargetFromContextMenu({ menuItemId: "scry-save-favorite:audio", srcUrl: "https://cdn.example.com/audio.mp3" }, { title: "Example docs" }) should produce { url: "https://cdn.example.com/audio.mp3", title: "Example docs", source: "audio" }.
  * - favoriteTargetFromContextMenu({ menuItemId: "scry-save-favorite:frame", frameUrl: "https://frame.example.com/" }, { title: "Frame host" }) should produce { url: "https://frame.example.com/", title: "Frame host", source: "frame" }.
  * - favoriteTargetFromContextMenu({ menuItemId: "unknown", pageUrl: "https://example.com/docs" }, { title: "Example docs" }) should produce null.
- * - favoriteTargetFromContextMenu({ menuItemId: "scry-save-favorite:page", pageUrl: "https://secret.example/" }, { title: "Secret", incognito: true }) should produce null.
+ * - favoriteTargetFromContextMenu({ menuItemId: "scry-save-favorite:link" }, { title: "Example docs" }) should produce null.
+ * - favoriteTargetFromContextMenu({ menuItemId: "scry-save-favorite:page", pageUrl: "https://secret.example/" }, { title: "Secret", incognito: true }) should produce { url: "https://secret.example/", title: "Secret", source: "page" }.
  *
  * Template:
- * Compose IncognitoContext with FavoriteContextMenuContext as an itemization:
- * - build IncognitoContext from tab.incognito
- * - when browsing data persistence is not allowed, produce null
+ * Compose explicit favorite-save intent with FavoriteContextMenuContext as an itemization:
+ * - ignore tab.incognito because favorites are explicit user saves
  * - parse the context from info.menuItemId
  * - for page use pageUrl; for link use linkUrl; for image/video/audio use srcUrl; for frame use frameUrl
- * - when the chosen URL is a non-empty string, build a FavoriteSaveTarget with tab title fallback
- * - otherwise produce null
+ * - delegate the chosen URL, parsed source, and tab metadata to favoriteTargetFromUrl
+ * - favoriteTargetFromUrl validates non-empty URL and builds the FavoriteSaveTarget
  */
 export function favoriteTargetFromContextMenu(info, tab) {
-  const context = incognitoContextFromTab(tab)
-  if (!allowsBrowsingDataPersistence(context)) return null
-
   const menuItemId = typeof info?.menuItemId === 'string' ? info.menuItemId : ''
   if (!menuItemId.startsWith(FAVORITE_CONTEXT_MENU_ID_PREFIX)) return null
 
@@ -141,13 +157,7 @@ export function favoriteTargetFromContextMenu(info, tab) {
     frame: info?.frameUrl,
   }
   const url = urlBySource[source]
-  if (typeof url !== 'string' || url.length === 0) return null
-
-  return {
-    url,
-    title: typeof tab?.title === 'string' ? tab.title : undefined,
-    source,
-  }
+  return favoriteTargetFromUrl(url, source, tab)
 }
 
 /**
@@ -236,6 +246,32 @@ export function showFavoriteSaveFeedback(favorite, { chromeApi = chrome, windowA
 }
 
 /**
+ * import('./src/core/favorites.js').FavoriteSaveTarget | null { chromeApi?: object, now?: number, windowApi?: object } -> Promise<import('./src/core/favorites.js').FavoriteUrl | null>
+ *
+ * Saves a parsed local favorite target, shows extension-icon feedback for the saved favorite, and
+ * resolves to the saved FavoriteUrl. A null target returns null without writing or showing feedback.
+ *
+ * Functional Examples:
+ * - saveFavoriteTargetWithFeedback(target, { chromeApi, now: 2_000, windowApi }) should save target locally, show badge feedback, and resolve to the saved FavoriteUrl.
+ * - saveFavoriteTargetWithFeedback(null, { chromeApi, now: 2_000, windowApi }) should not write storage or show feedback and should resolve to null.
+ * - saveFavoriteTargetWithFeedback(ineligibleTarget, { chromeApi, now: 2_000, windowApi }) should resolve to null after saveFavoriteTarget rejects the target.
+ *
+ * Template:
+ * Compose FavoriteSaveTarget with the background feedback seam:
+ * - when target is null, return null
+ * - saveFavoriteTarget(target, { chromeApi, now })
+ * - showFavoriteSaveFeedback(saved, { chromeApi, windowApi })
+ * - return saved
+ */
+async function saveFavoriteTargetWithFeedback(target, { chromeApi = chrome, now = Date.now(), windowApi = globalThis } = {}) {
+  if (!target) return null
+
+  const saved = await saveFavoriteTarget(target, { chromeApi, now })
+  showFavoriteSaveFeedback(saved, { chromeApi, windowApi })
+  return saved
+}
+
+/**
  * string { chromeApi?: object, now?: number, windowApi?: object } -> Promise<import('./src/core/favorites.js').FavoriteUrl | null>
  *
  * Handles the Alt+Shift+F Chrome command for saving the current active tab to local Scry favorites.
@@ -244,14 +280,14 @@ export function showFavoriteSaveFeedback(favorite, { chromeApi = chrome, windowA
  * - handleFavoriteCommand("save-current-tab-as-favorite", { chromeApi, now: 2_000 }) should query the active tab, save it with source "tab", and resolve to the saved FavoriteUrl.
  * - handleFavoriteCommand("unknown", { chromeApi, now: 2_000 }) should not query tabs or write storage and should resolve to null.
  * - handleFavoriteCommand("save-current-tab-as-favorite", { chromeApiWithNoActiveUrl, now: 2_000 }) should resolve to null.
- * - handleFavoriteCommand("save-current-tab-as-favorite", { chromeApiWithIncognitoActiveTab, now: 2_000 }) should query the active tab, write no storage, and resolve to null.
+ * - handleFavoriteCommand("save-current-tab-as-favorite", { chromeApiWithIncognitoActiveTab, now: 2_000 }) should query the active tab, save the incognito URL to local favorites, show feedback, and resolve to the saved FavoriteUrl.
  *
  * Template:
  * Follow FavoriteCommandName as an itemization:
  * - when command is save-current-tab-as-favorite, query the active tab
- * - convert the tab with incognito-aware favoriteTargetFromActiveTab
- * - when a target is present, call saveFavoriteTarget(target, { chromeApi, now })
- * - otherwise return null
+ * - convert the tab with favoriteTargetFromActiveTab
+ * - delegate the parsed target to saveFavoriteTargetWithFeedback
+ * - let saveFavoriteTargetWithFeedback handle absent or ineligible targets
  */
 export async function handleFavoriteCommand(command, { chromeApi = chrome, now = Date.now(), windowApi = globalThis } = {}) {
   if (command !== 'save-current-tab-as-favorite') return null
@@ -261,11 +297,7 @@ export async function handleFavoriteCommand(command, { chromeApi = chrome, now =
 
   const tabs = await queryTabs.call(chromeApi.tabs, { active: true, currentWindow: true })
   const target = favoriteTargetFromActiveTab(Array.isArray(tabs) ? tabs[0] : null)
-  if (!target) return null
-
-  const saved = await saveFavoriteTarget(target, { chromeApi, now })
-  showFavoriteSaveFeedback(saved, { chromeApi, windowApi })
-  return saved
+  return saveFavoriteTargetWithFeedback(target, { chromeApi, now, windowApi })
 }
 
 /**
@@ -278,21 +310,17 @@ export async function handleFavoriteCommand(command, { chromeApi = chrome, now =
  * - handleFavoriteContextMenuClick(pageInfo, tab, { chromeApi, now: 2_000 }) should save the page target and resolve to the saved FavoriteUrl.
  * - handleFavoriteContextMenuClick(linkInfo, tab, { chromeApi, now: 2_000 }) should save the link target and resolve to the saved FavoriteUrl.
  * - handleFavoriteContextMenuClick(unknownInfo, tab, { chromeApi, now: 2_000 }) should not write storage and should resolve to null.
- * - handleFavoriteContextMenuClick(pageInfo, incognitoTab, { chromeApi, now: 2_000 }) should write no storage and resolve to null.
+ * - handleFavoriteContextMenuClick(pageInfo, incognitoTab, { chromeApi, now: 2_000 }) should save the incognito page URL to local favorites, show feedback, and resolve to the saved FavoriteUrl.
  *
  * Template:
- * Compose incognito-aware context-menu parsing and storage:
+ * Compose context-menu parsing and storage:
  * - favoriteTargetFromContextMenu(info, tab)
- * - when target is null, return null
- * - otherwise call saveFavoriteTarget(target, { chromeApi, now })
+ * - delegate the parsed target to saveFavoriteTargetWithFeedback
+ * - let saveFavoriteTargetWithFeedback handle absent or ineligible targets
  */
 export async function handleFavoriteContextMenuClick(info, tab, { chromeApi = chrome, now = Date.now(), windowApi = globalThis } = {}) {
   const target = favoriteTargetFromContextMenu(info, tab)
-  if (!target) return null
-
-  const saved = await saveFavoriteTarget(target, { chromeApi, now })
-  showFavoriteSaveFeedback(saved, { chromeApi, windowApi })
-  return saved
+  return saveFavoriteTargetWithFeedback(target, { chromeApi, now, windowApi })
 }
 
 /**
