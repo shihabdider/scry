@@ -1,27 +1,56 @@
 # Status
 
 phase: 3
-layer: 0
-updated: 2026-05-05T02:19:44.167Z
+layer: complete
+updated: 2026-06-08T02:10:00Z
 
 ## Wishes
 
 | wish | file | layer | status | time |
 |------|------|-------|--------|------|
-| websiteNameCandidatesForLocalFileUrl | src/core/url.js | 1 | pass | 389.0s |
-| websiteNameCandidatesForUrl | src/core/url.js | 0 | pass | 465.3s |
+| parseFavoritesCommand | src/core/favorites-command.js | 4 | pass | verified |
+| favoriteFromSaveTarget | src/core/favorites.js | 4 | pass | verified |
+| upsertFavoriteUrl | src/core/favorites.js | 4 | pass | verified |
+| removeFavoriteByKey | src/core/favorites.js | 4 | pass | verified |
+| restoreRemovedFavorite | src/core/favorites.js | 4 | pass | verified |
+| favoritesToHistoryEntries | src/core/favorites.js | 4 | pass | verified |
+| isHiddenSearchMode | src/core/search-modes.js | 4 | pass | verified |
+| hiddenSearchModeExitTarget | src/core/search-modes.js | 4 | pass | verified |
+| favoritesModeIndicatorModel | src/core/search-modes.js | 4 | pass | verified |
+| selectedFavoriteRowActionHints | src/core/rows.js | 4 | pass | verified |
+| favoriteResultNavigationCommandForKey | src/panel/app.js | 4 | pass | verified |
+| loadStoredFavorites | src/platform/favorites-store.js | 4 | pass | verified |
+| saveStoredFavorites | src/platform/favorites-store.js | 4 | pass | verified |
+| favoriteTargetFromActiveTab | background.js | 4 | pass | verified |
+| favoriteTargetFromContextMenu | background.js | 4 | pass | verified |
+| registerFavoriteContextMenus | background.js | 4 | pass | verified |
+| favoritesSearchHeaderModel | src/core/search-modes.js | 3 | pass | verified |
+| buildFavoritesIndex | src/core/favorites.js | 3 | pass | verified |
+| saveFavoriteTarget | src/platform/favorites-store.js | 3 | pass | verified |
+| removeStoredFavoriteByKey | src/platform/favorites-store.js | 3 | pass | verified |
+| restoreStoredFavoriteRemoval | src/platform/favorites-store.js | 3 | pass | verified |
+| handleFavoriteCommand | background.js | 2 | pass | verified |
+| handleFavoriteContextMenuClick | background.js | 2 | pass | verified |
+| ensureFavoritesModeReady | src/panel/app.js | 2 | pass | verified |
+| exitFavoritesModeToPreviousPublicMode | src/panel/app.js | 2 | pass | verified |
+| removeSelectedFavorite | src/panel/app.js | 2 | pass | verified |
+| undoLastFavoriteRemoval | src/panel/app.js | 2 | pass | verified |
+| enterFavoritesMode | src/panel/app.js | 1 | pass | verified |
+| handleSearchInputTab | src/panel/app.js | 1 | pass | verified |
+| installFavoriteBackgroundHandlers | background.js | 1 | pass | verified |
+| handleSearchInputEnter | src/panel/app.js | 0 | pass | verified |
 
 ## Log
 
-- 21:58:42 stubber complete, 2 wishes, 2 layers
-- 21:58:42 stubber_post verification: pass
-- 21:58:53 websiteNameCandidatesForLocalFileUrl: running
-- 22:05:22 websiteNameCandidatesForLocalFileUrl: pass (389.0s, $0.4785)
-- 22:05:24 implementer_post verification for websiteNameCandidatesForLocalFileUrl: pass
-- 22:05:25 layer 1 verification: pass
-- 22:05:30 websiteNameCandidatesForUrl: running
-- 22:13:16 websiteNameCandidatesForUrl: pass (465.3s, $0.7546)
-- 22:13:17 implementer_post verification for websiteNameCandidatesForUrl: pass
-- 22:13:19 layer 0 verification: pass
-- 22:19:42 abstractor pass
-- 22:19:44 abstractor_post verification: pass
+- 21:05:31 stubber complete, 31 wishes, 5 layers
+- 21:05:31 stubber_post verification: pass
+- 21:18:00 layer 4 implementation verified by `npm test` and `npm run check`
+- 21:25:00 layer 3 implementation verified by `npm test` and `npm run check`
+- 21:32:00 layer 2 implementation verified by `npm test` and `npm run check`
+- 21:38:00 layer 1 implementation verified by `npm test` and `npm run check`
+- 21:43:00 layer 0 implementation verified by `npm test` and `npm run check`
+- 21:50:00 targeted undo-feedback fix verified by `npm test` and `npm run check`
+- 21:56:30 abstractor pass
+- 21:56:32 abstractor_post verification: pass
+- 22:00:00 final_preverify verification: pass
+- 22:10:00 final manual verification rerun: `npm test` pass (384 tests), `npm run check` pass

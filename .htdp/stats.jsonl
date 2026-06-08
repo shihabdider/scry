@@ -94,3 +94,11 @@
 {"ts":"2026-05-05T02:13:16.127Z","agent":"implementer","wish":"websiteNameCandidatesForUrl","layer":0,"status":"pass","turns":19,"input":60541,"output":5796,"cacheRead":556032,"cost":0.7546,"duration":465.3}
 {"ts":"2026-05-05T02:19:44.167Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":15,"input":60884,"output":1418,"cacheRead":189440,"cost":0.4417,"duration":362.4}
 {"ts":"2026-05-05T02:26:32.992Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":16,"input":58848,"output":2502,"cacheRead":204800,"cost":0.4717,"duration":384}
+{"ts":"2026-06-08T01:05:31.265Z","agent":"stubber","wish":null,"layer":null,"status":"pass","turns":39,"input":139310,"output":44499,"cacheRead":2860544,"cost":3.4618,"duration":904.3}
+{"ts":"2026-06-08T01:14:40.532Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":41,"input":164274,"output":20799,"cacheRead":2046976,"cost":2.4688,"duration":496.7}
+{"ts":"2026-06-08T01:18:39.970Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":23,"input":105188,"output":9461,"cacheRead":707072,"cost":1.1633,"duration":224.1}
+{"ts":"2026-06-08T01:28:25.347Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":50,"input":291680,"output":24523,"cacheRead":4121088,"cost":4.2546,"duration":576.2}
+{"ts":"2026-06-08T01:34:36.618Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":30,"input":178466,"output":14244,"cacheRead":1524224,"cost":2.0818,"duration":363.9}
+{"ts":"2026-06-08T01:39:22.979Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":31,"input":87542,"output":12249,"cacheRead":1384960,"cost":1.4977,"duration":279.2}
+{"ts":"2026-06-08T01:48:38.298Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":32,"input":91011,"output":10537,"cacheRead":1202688,"cost":1.3725,"duration":491.9}
+{"ts":"2026-06-08T01:56:32.305Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":39,"input":202151,"output":21966,"cacheRead":1633792,"cost":2.4866,"duration":463.7}

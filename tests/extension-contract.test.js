@@ -13,7 +13,7 @@ test('manifest exposes a Chrome popup command palette for history and closed-ses
   assert.equal(manifest.commands._execute_action.suggested_key.default, 'Ctrl+K')
   assert.equal(manifest.commands._execute_action.suggested_key.mac, 'Command+K')
   assert.equal(manifest.permissions.every((permission) => typeof permission === 'string'), true)
-  assert.deepEqual([...manifest.permissions].sort(), ['history', 'sessions', 'storage', 'tabs'].sort())
+  assert.deepEqual([...manifest.permissions].sort(), ['contextMenus', 'history', 'sessions', 'storage', 'tabs'].sort())
   assert.equal('side_panel' in manifest, false)
   assert.equal('host_permissions' in manifest, false)
   assert.equal('content_scripts' in manifest, false)
