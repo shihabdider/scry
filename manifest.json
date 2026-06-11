@@ -3,16 +3,27 @@
   "name": "Scry",
   "version": "0.1.0",
   "description": "History-first URL recall for Chrome.",
-  "permissions": ["history", "sessions", "storage", "tabs"],
+  "permissions": ["contextMenus", "history", "sessions", "storage", "tabs"],
   "action": {
     "default_title": "Scry",
     "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
   },
   "commands": {
     "_execute_action": {
       "suggested_key": {
         "default": "Ctrl+K",
         "mac": "Command+K"
+      }
+    },
+    "save-current-tab-as-favorite": {
+      "description": "Save the current tab to Scry favorites",
+      "suggested_key": {
+        "default": "Alt+Shift+F",
+        "mac": "Alt+Shift+F"
       }
     }
   }

@@ -1,32 +1,27 @@
 # Status
 
-phase: 3
-layer: 0
-updated: 2026-05-13T00:10:00.000Z
+phase: complete
+layer: complete
+updated: 2026-06-08T03:22:25Z
 
 ## Wishes
 
 | wish | file | layer | status | time |
 |------|------|-------|--------|------|
-| nextSearchMode | src/core/search-modes.js | 2 | pass | ad-hoc repair |
-| searchModeStatusText | src/core/search-modes.js | 2 | pass | ad-hoc repair |
-| ScryPanelApp.activeSearchModeState(): SearchModeState | src/panel/app.js | 2 | pass | ad-hoc repair |
-| ScryPanelApp.emptyQuerySortForMode(mode?: SearchMode): 'frecency' | 'recency' | src/panel/app.js | 2 | pass | ad-hoc repair |
-| ScryPanelApp.resultMessagesForMode(mode?: SearchMode): { empty: string, noMatches: string, error: string } | src/panel/app.js | 2 | pass | ad-hoc repair |
-| ScryPanelApp.loadHistoryMode(state: SearchModeState): Promise<SearchModeState> | src/panel/app.js | 2 | pass | ad-hoc repair |
-| ScryPanelApp.loadClosedMode(state: SearchModeState): Promise<SearchModeState> | src/panel/app.js | 2 | pass | ad-hoc repair |
-| searchSearchSurfaceModel | src/core/search-modes.js | 1 | pass | ad-hoc repair |
-| ScryPanelApp.ensureSearchModeReady(mode?: SearchMode): Promise<SearchModeState> | src/panel/app.js | 1 | pass | ad-hoc repair |
-| searchSearchHeaderModel | src/core/search-modes.js | 0 | pass | ad-hoc repair |
-| ScryPanelApp.switchSearchMode(mode: SearchMode): Promise<SearchModeState> | src/panel/app.js | 0 | pass | ad-hoc repair |
-| ScryPanelApp.cycleSearchMode(direction?: number): Promise<SearchModeState> | src/panel/app.js | 0 | pass | ad-hoc repair |
-| ScryPanelApp.loadDefaultSearchMode(): Promise<SearchModeState> | src/panel/app.js | 0 | pass | ad-hoc repair |
+| allowsImplicitSelectionLearningPersistence | src/platform/incognito-context.js | 1 | pass | verified |
+| favoriteTargetFromActiveTab | background.js | 1 | pass | verified |
+| favoriteTargetFromContextMenu | background.js | 1 | pass | verified |
+| ScryPanelApp.openSelected | src/panel/app.js | 0 | pass | verified |
+| handleFavoriteCommand | background.js | 0 | pass | verified |
+| handleFavoriteContextMenuClick | background.js | 0 | pass | verified |
 
 ## Log
 
-- Stubber created a two-mode `history`/`closed` data-definition plan and wish list.
-- Layer dispatch produced correct partial implementations but implementer_post failed while stale tests and later stubs were still failing.
-- Ad-hoc implementer repair completed the remaining core/panel models, mode switching, closed loading, and stale test updates.
-- Abstractor extracted `ScryPanelApp.loadSearchModeState(state, loadRawEntries)` to share history/closed loading state transitions.
-- `npm test`: pass (279 tests).
-- `npm run check`: pass.
+- 23:05:55 stubber complete, 6 wishes, 2 layers
+- 23:05:55 stubber_post verification: pass
+- 23:10:00 layer 1 corrected incognito policy and favorite target behavior verified by `npm test` and `npm run check`
+- 23:14:00 layer 0 popup/background handler integration verified by `npm test` and `npm run check`
+- 23:15:00 removed stale broad incognito persistence helper and verified by `npm test` and `npm run check`
+- 23:20:42 abstractor pass; added shared favorite-target and save-with-feedback helpers
+- 23:20:44 abstractor_post verification: pass
+- 23:22:00 final_preverify verification: pass (`npm test`, `npm run check`)

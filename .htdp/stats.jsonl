@@ -94,26 +94,22 @@
 {"ts":"2026-05-05T02:13:16.127Z","agent":"implementer","wish":"websiteNameCandidatesForUrl","layer":0,"status":"pass","turns":19,"input":60541,"output":5796,"cacheRead":556032,"cost":0.7546,"duration":465.3}
 {"ts":"2026-05-05T02:19:44.167Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":15,"input":60884,"output":1418,"cacheRead":189440,"cost":0.4417,"duration":362.4}
 {"ts":"2026-05-05T02:26:32.992Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":16,"input":58848,"output":2502,"cacheRead":204800,"cost":0.4717,"duration":384}
-{"ts":"2026-05-12T15:35:40.801Z","agent":"stubber","wish":null,"layer":null,"status":"pass","turns":14,"input":57837,"output":4464,"cacheRead":212992,"cost":0.5296,"duration":503.7}
-{"ts":"2026-05-12T15:49:05.193Z","agent":"implementer","wish":"deriveResultRenderSelection","layer":2,"status":"pass","turns":12,"input":39232,"output":1719,"cacheRead":146432,"cost":0.3209,"duration":387}
-{"ts":"2026-05-12T15:49:06.606Z","agent":"implementer","wish":"enterResultsModeSelection","layer":2,"status":"pass","turns":15,"input":43024,"output":2215,"cacheRead":229376,"cost":0.3963,"duration":407.3}
-{"ts":"2026-05-12T16:12:07.839Z","agent":"implementer","wish":"isVisibleRowSelectedForRender","layer":1,"status":"pass","turns":18,"input":56784,"output":2054,"cacheRead":276992,"cost":0.484,"duration":421}
-{"ts":"2026-05-12T16:12:09.254Z","agent":"implementer","wish":"ScryPanelApp.focusResults(): void","layer":1,"status":"pass","turns":19,"input":48434,"output":3798,"cacheRead":411648,"cost":0.5619,"duration":478.6}
-{"ts":"2026-05-12T16:12:10.618Z","agent":"implementer","wish":"ScryPanelApp.renderResults(): void","layer":1,"status":"pass","turns":17,"input":104194,"output":3964,"cacheRead":381440,"cost":0.8306,"duration":473.9}
-{"ts":"2026-05-12T16:21:01.675Z","agent":"implementer","wish":"ScryPanelApp.bindEvents(): void","layer":0,"status":"pass","turns":24,"input":100375,"output":4426,"cacheRead":636928,"cost":0.9531,"duration":523.6}
-{"ts":"2026-05-12T16:28:20.223Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":14,"input":60541,"output":2288,"cacheRead":207872,"cost":0.4753,"duration":419.4}
-{"ts":"2026-05-12T20:39:51.682Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":23,"input":107755,"output":8320,"cacheRead":756736,"cost":1.1667,"duration":497.6}
-{"ts":"2026-05-12T21:23:09.275Z","agent":"stubber","wish":null,"layer":null,"status":"pass","turns":25,"input":66905,"output":10108,"cacheRead":783872,"cost":1.0297,"duration":519.6}
-{"ts":"2026-05-12T21:59:02.412Z","agent":"implementer","wish":"nextSearchMode","layer":2,"status":"fail","turns":13,"input":59945,"output":3434,"cacheRead":180224,"cost":0.4929,"duration":389.8}
-{"ts":"2026-05-12T21:59:03.694Z","agent":"implementer","wish":"searchModeStatusText","layer":2,"status":"fail","turns":18,"input":57289,"output":3653,"cacheRead":390656,"cost":0.5914,"duration":399}
-{"ts":"2026-05-12T21:59:04.955Z","agent":"implementer","wish":"ScryPanelApp.activeSearchModeState(): SearchModeState | null","layer":2,"status":"fail","turns":14,"input":67007,"output":4346,"cacheRead":229888,"cost":0.5804,"duration":407.7}
-{"ts":"2026-05-12T21:59:06.168Z","agent":"implementer","wish":"ScryPanelApp.emptyQuerySortForMode(mode?: SearchMode): 'frecency' | 'recency'","layer":2,"status":"fail","turns":12,"input":50918,"output":3151,"cacheRead":227840,"cost":0.463,"duration":383.2}
-{"ts":"2026-05-12T21:59:07.398Z","agent":"implementer","wish":"ScryPanelApp.resultMessagesForMode(mode?: SearchMode): { empty: string, noMatches: string, error: string }","layer":2,"status":"fail","turns":21,"input":69129,"output":3981,"cacheRead":596992,"cost":0.7636,"duration":417.1}
-{"ts":"2026-05-12T21:59:08.637Z","agent":"implementer","wish":"ScryPanelApp.loadHistoryMode(state: SearchModeState): Promise<SearchModeState>","layer":2,"status":"fail","turns":22,"input":118287,"output":6316,"cacheRead":646144,"cost":1.104,"duration":456.2}
-{"ts":"2026-05-12T21:59:09.862Z","agent":"implementer","wish":"ScryPanelApp.loadClosedMode(state: SearchModeState): Promise<SearchModeState>","layer":2,"status":"fail","turns":23,"input":97267,"output":5652,"cacheRead":541184,"cost":0.9265,"duration":475.9}
-{"ts":"2026-05-12T22:50:01.886Z","agent":"implementer","wish":"searchSearchSurfaceModel","layer":1,"status":"fail","turns":13,"input":39777,"output":1737,"cacheRead":119296,"cost":0.3106,"duration":3022.6}
-{"ts":"2026-05-12T22:50:01.887Z","agent":"implementer","wish":"ScryPanelApp.ensureSearchModeReady(mode?: SearchMode): Promise<SearchModeState>","layer":1,"status":"fail","turns":15,"input":53544,"output":1345,"cacheRead":215552,"cost":0.4158,"duration":128.8}
-{"ts":"2026-05-13T00:02:13.716Z","agent":"implementer","wish":"searchSearchHeaderModel","layer":0,"status":"fail","turns":5,"input":12135,"output":497,"cacheRead":22528,"cost":0.0868,"duration":3334.6}
-{"ts":"2026-05-13T00:02:13.717Z","agent":"implementer","wish":"ScryPanelApp.switchSearchMode(mode: SearchMode): Promise<SearchModeState>","layer":0,"status":"fail","turns":5,"input":16811,"output":584,"cacheRead":14336,"cost":0.1087,"duration":3337.5}
-{"ts":"2026-05-13T14:15:06.398Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":51,"input":160034,"output":12471,"cacheRead":1722368,"cost":2.0355,"duration":666}
-{"ts":"2026-05-13T14:22:11.719Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":22,"input":51764,"output":3071,"cacheRead":288256,"cost":0.4951,"duration":395.7}
+{"ts":"2026-06-08T01:05:31.265Z","agent":"stubber","wish":null,"layer":null,"status":"pass","turns":39,"input":139310,"output":44499,"cacheRead":2860544,"cost":3.4618,"duration":904.3}
+{"ts":"2026-06-08T01:14:40.532Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":41,"input":164274,"output":20799,"cacheRead":2046976,"cost":2.4688,"duration":496.7}
+{"ts":"2026-06-08T01:18:39.970Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":23,"input":105188,"output":9461,"cacheRead":707072,"cost":1.1633,"duration":224.1}
+{"ts":"2026-06-08T01:28:25.347Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":50,"input":291680,"output":24523,"cacheRead":4121088,"cost":4.2546,"duration":576.2}
+{"ts":"2026-06-08T01:34:36.618Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":30,"input":178466,"output":14244,"cacheRead":1524224,"cost":2.0818,"duration":363.9}
+{"ts":"2026-06-08T01:39:22.979Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":31,"input":87542,"output":12249,"cacheRead":1384960,"cost":1.4977,"duration":279.2}
+{"ts":"2026-06-08T01:48:38.298Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":32,"input":91011,"output":10537,"cacheRead":1202688,"cost":1.3725,"duration":491.9}
+{"ts":"2026-06-08T01:56:32.305Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":39,"input":202151,"output":21966,"cacheRead":1633792,"cost":2.4866,"duration":463.7}
+{"ts":"2026-06-08T02:40:22.529Z","agent":"stubber","wish":null,"layer":null,"status":"pass","turns":38,"input":173093,"output":20451,"cacheRead":1622528,"cost":2.2903,"duration":485.1}
+{"ts":"2026-06-08T02:43:13.827Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":18,"input":52602,"output":5884,"cacheRead":301056,"cost":0.5901,"duration":147.5}
+{"ts":"2026-06-08T02:46:04.230Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":14,"input":54293,"output":6627,"cacheRead":380928,"cost":0.6607,"duration":151.4}
+{"ts":"2026-06-08T02:48:40.903Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":19,"input":79190,"output":5525,"cacheRead":400384,"cost":0.7619,"duration":149.9}
+{"ts":"2026-06-08T02:52:38.126Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":31,"input":68145,"output":7843,"cacheRead":889856,"cost":1.0209,"duration":217.2}
+{"ts":"2026-06-08T03:05:55.125Z","agent":"stubber","wish":null,"layer":null,"status":"pass","turns":30,"input":98367,"output":21569,"cacheRead":1430016,"cost":1.8539,"duration":467.8}
+{"ts":"2026-06-08T03:11:10.373Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":33,"input":180998,"output":12150,"cacheRead":1464320,"cost":2.0016,"duration":304.8}
+{"ts":"2026-06-08T03:13:53.391Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":21,"input":71337,"output":5378,"cacheRead":763904,"cost":0.9,"duration":154.3}
+{"ts":"2026-06-08T03:15:31.410Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":13,"input":73582,"output":2627,"cacheRead":199680,"cost":0.5466,"duration":77}
+{"ts":"2026-06-08T03:20:44.350Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":35,"input":80214,"output":10337,"cacheRead":898048,"cost":1.1602,"duration":291}
+{"ts":"2026-06-08T03:22:05.318Z","agent":"implementer","wish":null,"layer":null,"status":"pass","turns":8,"input":31963,"output":1942,"cacheRead":54784,"cost":0.2455,"duration":61.1}

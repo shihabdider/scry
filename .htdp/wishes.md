@@ -1,70 +1,54 @@
 ## Wish List
 
-### Layer 2 (implement first)
-- `nextSearchMode(currentMode: SearchMode, direction?: number): SearchMode` in `src/core/search-modes.js`
-  Purpose: Cycle exactly between `history` and `closed`, using Shift+Tab/backward direction without introducing legacy `recent` or explicit `deep` modes.
+### Layer 1 (implement first)
+- `allowsImplicitSelectionLearningPersistence(context: IncognitoContext, mode: import('../core/search-modes.js').SearchMode): boolean` in `src/platform/incognito-context.js`
+  Purpose: Decide whether an implicit selection-learning write may persist for the active mode: allow hidden favorites and non-incognito public modes, but reject public modes from incognito contexts.
+  Functional Examples: function design comment/docstring added near stub; input coverage includes public `recent`, `closed`, and `deep` modes, hidden `favorites`, normal context, extension-incognito context, tab-incognito context, and combined incognito context.
+  Template: design comment/skeleton added near stub
   Depends on: none
-- `searchModeStatusText(state: SearchModeState | null): string` in `src/core/search-modes.js`
-  Purpose: Produce mode-specific status text for idle/loading/ready/error history and recently closed caches, including ready entry counts.
+- `favoriteTargetFromActiveTab(tab: object): import('./src/core/favorites.js').FavoriteSaveTarget | null` in `background.js`
+  Purpose: Produce a favorite save target for any URL-bearing active tab, including incognito tabs, and return null only when Chrome supplies no usable URL.
+  Functional Examples: function design comment/docstring updated near function; input coverage includes normal tab with title, normal tab without title, missing URL, and incognito URL-bearing tab.
+  Template: design comment/template updated near function
   Depends on: none
-- `ScryPanelApp.activeSearchModeState(): SearchModeState | null` in `src/panel/app.js`
-  Purpose: Return the cache state for the currently active `history` or `closed` popup-session corpus.
+- `favoriteTargetFromContextMenu(info: ChromeContextMenuFavoriteInfo, tab: object): import('./src/core/favorites.js').FavoriteSaveTarget | null` in `background.js`
+  Purpose: Produce a favorite save target for recognized URL-bearing context-menu items, including incognito tab-origin clicks, and return null for unknown menu items or missing URLs.
+  Functional Examples: function design comment/docstring updated near function; input coverage includes page, link, image, video, audio, frame, unknown menu item, missing URL, and incognito page-origin click.
+  Template: design comment/template updated near function
   Depends on: none
-- `ScryPanelApp.emptyQuerySortForMode(mode?: SearchMode): 'frecency' | 'recency'` in `src/panel/app.js`
-  Purpose: Select frecency ordering for default deep history and pure recency ordering for recently closed empty-query results.
-  Depends on: none
-- `ScryPanelApp.resultMessagesForMode(mode?: SearchMode): { empty: string, noMatches: string, error: string }` in `src/panel/app.js`
-  Purpose: Provide user-visible empty/no-match/error messages that distinguish history from recently closed mode.
-  Depends on: none
-- `ScryPanelApp.loadHistoryMode(state: SearchModeState): Promise<SearchModeState>` in `src/panel/app.js`
-  Purpose: Load deep Chrome history with `fetchHistory({ deep: true })`, build an index, and update the history cache state for this popup lifetime.
-  Depends on: none
-- `ScryPanelApp.loadClosedMode(state: SearchModeState): Promise<SearchModeState>` in `src/panel/app.js`
-  Purpose: Load Chrome recently closed sessions, flatten them into history-like entries, build an index, and update the closed cache state for this popup lifetime.
-  Depends on: none
-
-### Layer 1
-- `searchSearchSurfaceModel(cache: PopupSessionSearchCache | null, options?: { realResultCount?: number }): SearchSurfaceModel` in `src/core/search-modes.js`
-  Purpose: Build the clickable active corpus badge model for the two-mode history/closed cycle while preserving the current query.
-  Depends on: searchModeStatusText, nextSearchMode
-- `ScryPanelApp.ensureSearchModeReady(mode?: SearchMode): Promise<SearchModeState>` in `src/panel/app.js`
-  Purpose: Reuse a ready/in-flight per-mode cache or dispatch the appropriate loader for `history` or `closed`.
-  Depends on: activeSearchModeState, loadHistoryMode, loadClosedMode
 
 ### Layer 0 (implement last)
-- `searchSearchHeaderModel(cache: PopupSessionSearchCache | null, options?: { realResultCount?: number }): SearchHeaderModel` in `src/core/search-modes.js`
-  Purpose: Build the search header view model from the active two-mode surface, including badge label, switch hint, status, and accessibility text.
-  Depends on: searchSearchSurfaceModel
-- `ScryPanelApp.switchSearchMode(mode: SearchMode): Promise<SearchModeState>` in `src/panel/app.js`
-  Purpose: Change the active corpus to `history` or `closed` without changing the query, load/reuse that corpus, refresh results, and render the popup.
-  Depends on: ensureSearchModeReady, activeSearchModeState, emptyQuerySortForMode, resultMessagesForMode
-- `ScryPanelApp.cycleSearchMode(direction?: number): Promise<SearchModeState>` in `src/panel/app.js`
-  Purpose: Handle Tab, Shift+Tab, and badge clicks by cycling between the two corpora and delegating to mode switching.
-  Depends on: nextSearchMode, switchSearchMode
-- `ScryPanelApp.loadDefaultSearchMode(): Promise<SearchModeState>` in `src/panel/app.js`
-  Purpose: Load the default `history` corpus on popup startup using the same two-mode switching/cache path.
-  Depends on: switchSearchMode
+- `ScryPanelApp.openSelected({ newTab }: { newTab: boolean }): Promise<void>` in `src/panel/app.js`
+  Purpose: Open the selected row and record selection learning only for persistable real rows whose active mode/incognito context passes the narrowed implicit-learning policy.
+  Functional Examples: function design comment/docstring updated near function; input coverage includes normal public real row, incognito public real row, incognito hidden favorites real row, synthetic typed URL row, and no selected URL.
+  Template: design comment/template updated near function
+  Depends on: allowsImplicitSelectionLearningPersistence
+- `handleFavoriteCommand(command: string, options?: { chromeApi?: object, now?: number, windowApi?: object }): Promise<import('./src/core/favorites.js').FavoriteUrl | null>` in `background.js`
+  Purpose: Handle the explicit save-current-tab command by saving any URL-bearing active tab, including incognito tabs, and showing favorite-save feedback.
+  Functional Examples: function design comment/docstring updated near function; input coverage includes matching command, unknown command, missing active-tab URL, and incognito active-tab URL.
+  Template: design comment/template updated near function
+  Depends on: favoriteTargetFromActiveTab
+- `handleFavoriteContextMenuClick(info: ChromeContextMenuFavoriteInfo, tab: object, options?: { chromeApi?: object, now?: number, windowApi?: object }): Promise<import('./src/core/favorites.js').FavoriteUrl | null>` in `background.js`
+  Purpose: Handle explicit Scry favorite context-menu clicks by saving recognized URL-bearing targets, including incognito tab-origin URLs, and showing favorite-save feedback.
+  Functional Examples: function design comment/docstring updated near function; input coverage includes page target, link target, unknown menu item, and incognito page target.
+  Template: design comment/template updated near function
+  Depends on: favoriteTargetFromContextMenu
 
 ## Data Definitions Created/Modified
-- `src/core/search-modes.js`: replaced single `HistoryCorpusState` model with `SearchMode`, `SearchModeState`, `PopupSessionSearchCache`, `SearchSurfaceModel`, and `SearchHeaderModel` for exactly `history` and `closed`.
-- `src/panel/app.js`: changed `ScryPanelApp` state to own a two-mode popup-session search cache and added stubs/templates for mode loading, switching, active-state lookup, result ordering, and mode-specific messages.
-- `popup.html`: restored the popup badge/hint data shape for a clickable two-mode history/closed cycle.
-- `.htdp/DSL.json`: updated popup-session corpus vocabulary from a single history corpus to two popup-session search corpora.
+- `src/platform/incognito-context.js`: updated DataDefinition `IncognitoContext` interpretation/examples to distinguish extension-context incognito suppression for implicit public-mode selection learning from tab-incognito provenance for explicit favorite saves.
+- `src/platform/incognito-context.js`: added FunctionDesign and stub for `allowsImplicitSelectionLearningPersistence` to capture the narrowed mode-aware persistence policy.
+- `background.js`: updated FunctionDesign comments/templates for favorite target creation and background handlers so incognito favorite saves are explicit allowed saves.
+- `src/panel/app.js`: updated FunctionDesign comments/templates for `ScryPanelApp.openSelected` so public incognito popup learning is skipped while hidden favorites learning is allowed.
 
 ## Assertion Changes Flagged
-- `tests/search-modes.test.js`: existing assertions/imports describe `createHistoryCorpusState`, non-clickable history-only badge/header models, and must be rewritten for `SearchModeState`/`PopupSessionSearchCache` and the clickable two-mode cycle.
-- `tests/extension-contract.test.js:31`: assertion currently rejects `data-mode`; new popup badge uses mode/corpus data for the active two-mode cycle.
-- `tests/extension-contract.test.js:54`: assertion currently requires a hidden empty switch hint; new requirement needs a visible Tab/Shift+Tab history↔closed hint.
-- `tests/scry-panel.test.js:2107`: test name/assertions cover only `ensureHistoryCorpusReady`; needs replacement with two-mode cache readiness coverage.
-- `tests/scry-panel.test.js:2130`: test asserts disabled single-history badge and no switch hint; needs clickable two-mode badge/header expectations.
-- `tests/scry-panel.test.js:2165`: test asserts startup loads only the deep history corpus; should assert default history cache in the two-mode structure.
-- `tests/scry-panel.test.js:2188`: test asserts Tab/badge clicks are swallowed; should assert they switch `history`/`closed` without changing the query.
+None
 
 ## Assumptions / Interpretations
-- I interpreted `history` as the default active mode at popup startup because the requirement says cached deep history remains the default.
-- I interpreted the per-mode loading promise as a `loadingPromise` property on each `SearchModeState`, rather than separate app-level promise fields, to keep loading state colocated with each corpus.
-- I kept the existing hidden legacy deep-search DOM section untouched except for the badge/header data shape because the issue scope allowed `popup.html` but did not explicitly ask to remove the already-hidden fallback markup.
+- I introduced `allowsImplicitSelectionLearningPersistence` rather than broadening `allowsBrowsingDataPersistence`, because the requirement narrows the policy to implicit selection-learning and explicit favorite saves should stop using the broad helper.
+- I interpreted an incognito `tabIncognito` signal as suppressing implicit public-mode selection learning if such a context is ever supplied; `ScryPanelApp.openSelected` currently supplies only the extension-context signal, so this does not block explicit incognito favorite saves.
+- I interpreted hidden `favorites` mode as explicit local-favorites usage, so selection learning from favorites mode may persist even when the popup is incognito.
+- I interpreted allowed incognito favorite saves as using the same local favorites store as normal-window favorites, not a separate incognito-only store.
 
 ## Notes
-- `node --check src/core/search-modes.js` and `node --check src/panel/app.js` pass.
-- `npm test` currently fails as expected because the created stubs throw and several tests still assert the old single-history corpus contract.
+- Verification after stub/comment changes: `npm run check` passed and `npm test` passed.
+- Executable test assertions were not edited in this stubber pass; the implementer/test step should convert the new functional examples and update the current incognito-favorite no-op assertions.

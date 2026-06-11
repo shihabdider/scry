@@ -1,15 +1,19 @@
+import { parseFavoritesCommand } from '../core/favorites-command.js'
+import { buildFavoritesIndex } from '../core/favorites.js'
 import { parseQuery } from '../core/query.js'
-import { buildVisibleRows, rowEditableText, rowOpenUrl, rowSelectionLearningKey, selectedRowActionHints } from '../core/rows.js'
+import { buildVisibleRows, rowEditableText, rowOpenUrl, rowSelectionLearningKey, selectedFavoriteRowActionHints } from '../core/rows.js'
 import { escapeHtml } from '../core/format.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
-import { CLOSED_MODE, createPopupSessionSearchCache, HISTORY_MODE, nextSearchMode, searchSearchHeaderModel, searchSearchSurfaceModel } from '../core/search-modes.js'
+import { CLOSED_MODE, createPopupSessionSearchCache, createSearchModeState, FAVORITES_SEARCH_MODE, hiddenSearchModeExitTarget, HISTORY_MODE, isHiddenSearchMode, nextSearchMode, searchSearchHeaderModel, searchSearchSurfaceModel } from '../core/search-modes.js'
 import { fetchHistory } from '../platform/history-provider.js'
+import { loadStoredFavorites, removeStoredFavoriteByKey, restoreStoredFavoriteRemoval } from '../platform/favorites-store.js'
 import { fetchRecentlyClosed, flattenClosedSessions } from '../platform/sessions-provider.js'
 import { loadSelectionData, saveSelectionData } from '../platform/selection-store.js'
 import { openUrl } from '../platform/tabs.js'
 import { writeClipboardText } from '../platform/clipboard.js'
+import { allowsImplicitSelectionLearningPersistence, incognitoContextFromExtension } from '../platform/incognito-context.js'
 
 const SEARCH_LIMIT = 100
 const RESULTS_PER_PAGE = 6
@@ -40,7 +44,41 @@ const COPY_FEEDBACK_DURATION_MS = 1_200
  */
 
 /**
- * @typedef {'ignore'|'focusSearch'|'leavePanelFocus'|'copySelected'|'editSelectedUrl'|'moveNext'|'movePrevious'|'nextPage'|'previousPage'|'openSelected'} ResultNavigationCommand
+ * A ResultNavigationCommand is one of:
+ * - "ignore"
+ * - "focusSearch"
+ * - "leavePanelFocus"
+ * - "copySelected"
+ * - "editSelectedUrl"
+ * - "removeSelectedFavorite"
+ * - "undoFavoriteRemoval"
+ * - "moveNext"
+ * - "movePrevious"
+ * - "nextPage"
+ * - "previousPage"
+ * - "openSelected"
+ *
+ * Interpretation:
+ * Represents a list-selection keyboard action after raw key events are translated. Favorites adds
+ * x remove and one-level u undo while preserving existing public-mode copy/edit/navigation/open
+ * commands.
+ *
+ * @typedef {'ignore'|'focusSearch'|'leavePanelFocus'|'copySelected'|'editSelectedUrl'|'removeSelectedFavorite'|'undoFavoriteRemoval'|'moveNext'|'movePrevious'|'nextPage'|'previousPage'|'openSelected'} ResultNavigationCommand
+ */
+
+/**
+ * A FavoritesPanelState is an object:
+ * - previousPublicSearchMode: import('../core/search-modes.js').PublicSearchMode
+ * - favoriteRemovalUndo: import('../core/favorites.js').FavoriteRemovalUndo
+ *
+ * Interpretation:
+ * Represents popup-session state needed only by hidden favorites mode. previousPublicSearchMode is
+ * where Tab returns after entering favorites; favoriteRemovalUndo is the one-level removal undo
+ * available until it is consumed or replaced.
+ *
+ * @typedef {object} FavoritesPanelState
+ * @property {import('../core/search-modes.js').PublicSearchMode} previousPublicSearchMode Public mode to restore when leaving favorites.
+ * @property {import('../core/favorites.js').FavoriteRemovalUndo} favoriteRemovalUndo One-level popup-session removal undo.
  */
 
 /**
@@ -120,6 +158,41 @@ export function resultNavigationCommandForKey(event) {
   }
 }
 
+/**
+ * KeyboardEvent { inFavoritesMode: boolean, canRemoveFavorite: boolean, canUndoFavoriteRemoval: boolean } -> ResultNavigationCommand
+ *
+ * Produces the list-selection keyboard command for hidden favorites mode, including x remove and
+ * one-level u undo, while preserving ordinary result-navigation commands for all other keys.
+ *
+ * Functional Examples:
+ * - favoriteResultNavigationCommandForKey({ key: "x" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: false }) should produce "removeSelectedFavorite".
+ * - favoriteResultNavigationCommandForKey({ key: "u" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "undoFavoriteRemoval".
+ * - favoriteResultNavigationCommandForKey({ key: "u" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: false }) should produce "ignore".
+ * - favoriteResultNavigationCommandForKey({ key: "y" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "copySelected".
+ * - favoriteResultNavigationCommandForKey({ key: "x" }, { inFavoritesMode: false, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "ignore".
+ *
+ * Template:
+ * Combine the key itemization with favorites state:
+ * - if key is x and inFavoritesMode and canRemoveFavorite, produce removeSelectedFavorite
+ * - if key is u and inFavoritesMode and canUndoFavoriteRemoval, produce undoFavoriteRemoval
+ * - otherwise delegate to resultNavigationCommandForKey(event)
+ */
+export function favoriteResultNavigationCommandForKey(
+  event,
+  { inFavoritesMode = false, canRemoveFavorite = false, canUndoFavoriteRemoval = false } = {},
+) {
+  const key = typeof event?.key === 'string' ? event.key.toLowerCase() : ''
+
+  if (key === 'x' && inFavoritesMode && canRemoveFavorite) {
+    return 'removeSelectedFavorite'
+  }
+  if (key === 'u' && inFavoritesMode && canUndoFavoriteRemoval) {
+    return 'undoFavoriteRemoval'
+  }
+
+  return resultNavigationCommandForKey(event)
+}
+
 export class ScryPanelApp {
   constructor({ document, chromeApi = chrome, clock = () => Date.now(), windowApi = globalThis.window, navigatorApi = globalThis.navigator } = {}) {
     this.document = document
@@ -140,6 +213,8 @@ export class ScryPanelApp {
     this.focusRequestId = 0
     this.inputResultsUpdateRequest = null
     this.selectionData = undefined
+    this.previousPublicSearchMode = HISTORY_MODE
+    this.favoriteRemovalUndo = null
 
     this.input = document.querySelector('#search-input')
     this.status = document.querySelector('#status')
@@ -152,10 +227,21 @@ export class ScryPanelApp {
     this.nextPageButton = document.querySelector('#next-page-button')
   }
 
+  get modeCache() {
+    return this.searchCache?.modes ?? null
+  }
+
+  set modeCache(modes) {
+    this.searchCache ??= createPopupSessionSearchCache({ activeMode: HISTORY_MODE })
+    this.searchCache.modes = modes
+  }
+
   async start() {
     this.bindEvents()
     this.searchCache = createPopupSessionSearchCache({ activeMode: HISTORY_MODE })
     this.searchMode = this.searchCache.activeMode
+    this.previousPublicSearchMode = HISTORY_MODE
+    this.favoriteRemovalUndo = null
     this.index = null
     this.renderSearchSurface()
     this.focusSearch()
@@ -174,7 +260,7 @@ export class ScryPanelApp {
       if (event.key === 'Tab') {
         event.preventDefault()
         this.flushPendingInputResultsUpdate()
-        void this.cycleSearchMode(event.shiftKey ? -1 : 1)
+        void this.handleSearchInputTab({ shiftKey: event.shiftKey })
       } else if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
         event.preventDefault()
         this.flushPendingInputResultsUpdate()
@@ -185,8 +271,7 @@ export class ScryPanelApp {
         this.focusResults()
       } else if (event.key === 'Enter') {
         event.preventDefault()
-        this.flushPendingInputResultsUpdate()
-        void this.openSelected({ newTab: true })
+        void this.handleSearchInputEnter()
       } else if (event.key === 'Escape') {
         event.preventDefault()
         this.flushPendingInputResultsUpdate()
@@ -222,6 +307,64 @@ export class ScryPanelApp {
     this.document.addEventListener('keydown', (event) => {
       this.handlePanelKeydown(event)
     })
+  }
+
+
+  /**
+   * void -> Promise<void>
+   *
+   * Handles Enter in the search input by entering hidden favorites for a favorites command, or by
+   * preserving the existing behavior of opening the selected row in a new tab.
+   *
+   * Functional Examples:
+   * - With input.value ":f", handleSearchInputEnter() should call enterFavoritesMode() and should not open the selected URL.
+   * - With input.value " :favorite ", handleSearchInputEnter() should call enterFavoritesMode() and should not open the selected URL.
+   * - With input.value ":favorites", handleSearchInputEnter() should flush pending results and openSelected({ newTab: true }) rather than enter favorites.
+   * - With input.value "git issues", handleSearchInputEnter() should flush pending results and openSelected({ newTab: true }).
+   *
+   * Template:
+   * Compose command parsing and existing open behavior:
+   * - flushPendingInputResultsUpdate
+   * - parseFavoritesCommand(input.value)
+   * - if parse kind is enter-favorites, call enterFavoritesMode
+   * - otherwise call openSelected({ newTab: true })
+   */
+  async handleSearchInputEnter() {
+    this.flushPendingInputResultsUpdate()
+
+    const commandParse = parseFavoritesCommand(this.input.value)
+    if (commandParse.kind === 'enter-favorites') {
+      await this.enterFavoritesMode()
+      return
+    }
+
+    await this.openSelected({ newTab: true })
+  }
+
+  /**
+   * { shiftKey?: boolean } -> Promise<void>
+   *
+   * Handles Tab in the search input by exiting hidden favorites to the previous public mode, or by
+   * preserving public-mode cycling through history and recently closed URLs.
+   *
+   * Functional Examples:
+   * - In favorites mode with previousPublicSearchMode "closed", handleSearchInputTab({ shiftKey: false }) should switch to "closed".
+   * - In favorites mode with previousPublicSearchMode "history", handleSearchInputTab({ shiftKey: true }) should switch to "history"; Shift does not change hidden-mode exit target.
+   * - In history public mode, handleSearchInputTab({ shiftKey: false }) should switch to "closed".
+   * - In closed public mode, handleSearchInputTab({ shiftKey: false }) should switch to "history".
+   *
+   * Template:
+   * Follow SearchMode as a union:
+   * - when active mode is hidden favorites, call exitFavoritesModeToPreviousPublicMode
+   * - otherwise call cycleSearchMode with the requested direction
+   */
+  async handleSearchInputTab({ shiftKey = false } = {}) {
+    if (isHiddenSearchMode(this.searchMode)) {
+      await this.exitFavoritesModeToPreviousPublicMode()
+      return
+    }
+
+    await this.cycleSearchMode(shiftKey ? -1 : 1)
   }
 
   async loadHistory(_options = {}) {
@@ -271,22 +414,69 @@ export class ScryPanelApp {
     return readyState
   }
 
-  async ensureSearchModeReady(mode = this.searchMode) {
+  /**
+   * void -> Promise<import('../core/search-modes.js').SearchModeState>
+   *
+   * Enters or re-enters hidden favorites mode, remembers the current public mode when coming from
+   * one, clears the command input, loads stored favorites into a searchable index, and shows all
+   * favorites for an empty query.
+   */
+  async enterFavoritesMode() {
+    if (!isHiddenSearchMode(this.searchMode)) {
+      this.previousPublicSearchMode = hiddenSearchModeExitTarget(this.searchMode)
+    }
+    this.input.value = ''
+    this.selectedIndex = 0
+    this.pageIndex = 0
+
+    const state = await this.ensureFavoritesModeReady()
+    this.updateResults()
+    this.renderSearchSurface()
+
+    return state
+  }
+
+  /**
+   * void -> Promise<import('../core/search-modes.js').SearchModeState>
+   *
+   * Leaves hidden favorites mode by activating the remembered previous public search mode.
+   */
+  async exitFavoritesModeToPreviousPublicMode() {
+    const target = hiddenSearchModeExitTarget(this.previousPublicSearchMode)
+    return this.switchSearchMode(target)
+  }
+
+  ensureSearchCache() {
     if (!this.searchCache?.modes?.history || !this.searchCache?.modes?.closed) {
       this.searchCache = createPopupSessionSearchCache({ activeMode: HISTORY_MODE })
     }
 
-    const normalizedMode = mode === CLOSED_MODE ? CLOSED_MODE : HISTORY_MODE
-    this.searchCache.activeMode = normalizedMode
+    return this.searchCache
+  }
+
+  async ensureSearchModeReady(mode = this.searchMode) {
+    const cache = this.ensureSearchCache()
+    const normalizedMode = mode === FAVORITES_SEARCH_MODE
+      ? FAVORITES_SEARCH_MODE
+      : mode === CLOSED_MODE
+        ? CLOSED_MODE
+        : HISTORY_MODE
+
+    cache.activeMode = normalizedMode
     this.searchMode = normalizedMode
 
-    const state = this.searchCache.modes[normalizedMode]
+    if (!cache.modes[normalizedMode]) {
+      cache.modes[normalizedMode] = createSearchModeState(normalizedMode)
+    }
+
+    const state = cache.modes[normalizedMode]
     if (state.status === 'ready') {
       this.index = state.index
       return state
     }
     if (state.status === 'loading' && state.loadingPromise) return state.loadingPromise
 
+    if (normalizedMode === FAVORITES_SEARCH_MODE) return this.loadFavoritesMode(state)
     return normalizedMode === CLOSED_MODE
       ? this.loadClosedMode(state)
       : this.loadHistoryMode(state)
@@ -296,7 +486,11 @@ export class ScryPanelApp {
     return this.ensureSearchModeReady(HISTORY_MODE)
   }
 
-  async loadSearchModeState(state, loadRawEntries) {
+  async ensureFavoritesModeReady() {
+    return this.ensureSearchModeReady(FAVORITES_SEARCH_MODE)
+  }
+
+  async loadSearchModeState(state, loadIndex) {
     state.status = 'loading'
     state.error = null
     state.index = null
@@ -305,8 +499,7 @@ export class ScryPanelApp {
 
     const loadingPromise = (async () => {
       try {
-        const { rawEntries, loadedAt } = await loadRawEntries()
-        const index = buildHistoryIndex(rawEntries, { now: loadedAt })
+        const { index, loadedAt } = await loadIndex()
 
         state.status = 'ready'
         state.index = index
@@ -335,7 +528,9 @@ export class ScryPanelApp {
     return this.loadSearchModeState(state, async () => {
       const requestedAt = this.clock()
       const rawEntries = await fetchHistory({ chromeApi: this.chromeApi, now: requestedAt, deep: true })
-      return { rawEntries, loadedAt: this.clock() }
+      const loadedAt = this.clock()
+      const index = buildHistoryIndex(rawEntries, { now: loadedAt })
+      return { index, loadedAt }
     })
   }
 
@@ -344,7 +539,17 @@ export class ScryPanelApp {
       const recentlyClosed = await fetchRecentlyClosed({ chromeApi: this.chromeApi })
       const loadedAt = this.clock()
       const rawEntries = flattenClosedSessions(recentlyClosed, { now: loadedAt })
-      return { rawEntries, loadedAt }
+      const index = buildHistoryIndex(rawEntries, { now: loadedAt })
+      return { index, loadedAt }
+    })
+  }
+
+  async loadFavoritesMode(state) {
+    return this.loadSearchModeState(state, async () => {
+      const favorites = await loadStoredFavorites({ chromeApi: this.chromeApi })
+      const loadedAt = this.clock()
+      const index = buildFavoritesIndex(favorites, { now: loadedAt })
+      return { index, loadedAt }
     })
   }
 
@@ -357,13 +562,13 @@ export class ScryPanelApp {
     const cache = this.searchCache
     const activeMode = cache?.activeMode
 
-    if (activeMode !== HISTORY_MODE && activeMode !== CLOSED_MODE) return null
+    if (activeMode !== HISTORY_MODE && activeMode !== CLOSED_MODE && activeMode !== FAVORITES_SEARCH_MODE) return null
 
     return cache?.modes?.[activeMode] ?? null
   }
 
   emptyQuerySortForMode(mode = this.searchMode) {
-    return mode === CLOSED_MODE ? 'recency' : 'frecency'
+    return mode === CLOSED_MODE || mode === FAVORITES_SEARCH_MODE ? 'recency' : 'frecency'
   }
 
   resultMessagesForMode(mode = this.searchMode) {
@@ -378,8 +583,14 @@ export class ScryPanelApp {
         noMatches: 'No matches in recently closed URLs.',
         error: 'Recently closed URLs unavailable.',
       },
+      favorites: {
+        empty: 'No favorites saved yet.',
+        noMatches: 'No matches in favorites.',
+        error: 'Favorites unavailable.',
+      },
     }
 
+    if (mode === FAVORITES_SEARCH_MODE) return messagesByMode.favorites
     return mode === CLOSED_MODE ? messagesByMode.closed : messagesByMode.history
   }
 
@@ -504,6 +715,60 @@ export class ScryPanelApp {
     this.input.value = editableText
     this.focusSearch()
     this.updateResults()
+  }
+
+  async reloadFavoritesModeResults() {
+    const cache = this.ensureSearchCache()
+    cache.modes[FAVORITES_SEARCH_MODE] = createSearchModeState(FAVORITES_SEARCH_MODE)
+
+    const state = await this.ensureFavoritesModeReady()
+    if (state.status === 'ready' && state.index) {
+      this.updateResults()
+    } else {
+      this.results = []
+      this.updateVisibleRows()
+      this.renderResults()
+    }
+
+    this.renderSearchSurface()
+    return state
+  }
+
+  /**
+   * void -> Promise<void>
+   *
+   * Removes the selected favorite result from local storage, records one popup-session undo, and
+   * refreshes the hidden favorites result list immediately.
+   */
+  async removeSelectedFavorite() {
+    if (this.searchMode !== FAVORITES_SEARCH_MODE) return
+
+    const row = this.selectedVisibleRow()
+    if (row?.kind !== 'result') return
+
+    const key = row.result?.key
+    if (typeof key !== 'string' || !key) return
+
+    const result = await removeStoredFavoriteByKey(key, { chromeApi: this.chromeApi })
+    if (result.undo) this.favoriteRemovalUndo = result.undo
+
+    await this.reloadFavoritesModeResults()
+  }
+
+  /**
+   * void -> Promise<void>
+   *
+   * Restores the most recently removed favorite for this popup session, consumes the undo slot, and
+   * refreshes the hidden favorites result list immediately.
+   */
+  async undoLastFavoriteRemoval() {
+    if (this.searchMode !== FAVORITES_SEARCH_MODE) return
+    if (!this.favoriteRemovalUndo) return
+
+    const result = await restoreStoredFavoriteRemoval(this.favoriteRemovalUndo, { chromeApi: this.chromeApi })
+    this.favoriteRemovalUndo = result.undo
+
+    await this.reloadFavoritesModeResults()
   }
 
   scheduleInputResultsUpdate() {
@@ -663,7 +928,12 @@ export class ScryPanelApp {
     if (this.focusMode !== 'results') return
     if (event.target === this.input || this.document.activeElement === this.input) return
 
-    const command = resultNavigationCommandForKey(event)
+    const selectedRow = this.selectedVisibleRow()
+    const command = favoriteResultNavigationCommandForKey(event, {
+      inFavoritesMode: this.searchMode === FAVORITES_SEARCH_MODE,
+      canRemoveFavorite: selectedRow?.kind === 'result',
+      canUndoFavoriteRemoval: Boolean(this.favoriteRemovalUndo),
+    })
     if (command === 'ignore') return
 
     event.preventDefault()
@@ -680,6 +950,12 @@ export class ScryPanelApp {
         break
       case 'editSelectedUrl':
         this.changeSelectedRowToSearch()
+        break
+      case 'removeSelectedFavorite':
+        void this.removeSelectedFavorite()
+        break
+      case 'undoFavoriteRemoval':
+        void this.undoLastFavoriteRemoval()
         break
       case 'moveNext':
         this.moveSelection(1)
@@ -786,6 +1062,11 @@ export class ScryPanelApp {
     this.windowApi?.blur?.()
   }
 
+  activeSearchMode() {
+    if (this.searchMode === HISTORY_MODE || this.searchMode === CLOSED_MODE || this.searchMode === FAVORITES_SEARCH_MODE) return this.searchMode
+    return HISTORY_MODE
+  }
+
   async openSelected({ newTab }) {
     const row = this.selectedVisibleRow()
     const url = rowOpenUrl(row)
@@ -794,7 +1075,8 @@ export class ScryPanelApp {
     await openUrl(url, { chromeApi: this.chromeApi, newTab })
 
     const urlKey = rowSelectionLearningKey(row)
-    if (urlKey) {
+    const incognitoContext = incognitoContextFromExtension({ chromeApi: this.chromeApi })
+    if (urlKey && allowsImplicitSelectionLearningPersistence(incognitoContext, this.searchMode)) {
       this.selectionData = recordSelection(this.selectionData, {
         query: parseQuery(this.input.value),
         urlKey,
@@ -832,7 +1114,11 @@ export class ScryPanelApp {
       : ''
 
     const actionHintsHtml = (row, selected) => {
-      const hints = selectedRowActionHints(row, { selected })
+      const hints = selectedFavoriteRowActionHints(row, {
+        selected,
+        inFavoritesMode: this.searchMode === FAVORITES_SEARCH_MODE,
+        canUndoFavoriteRemoval: Boolean(this.favoriteRemovalUndo),
+      })
       if (hints.length === 0) return ''
 
       return hints.map((hint) => {
@@ -897,12 +1183,15 @@ export class ScryPanelApp {
     }
 
     const hasRealRows = visibleRows.some((row) => row?.kind === 'result')
+    const hasFavoriteRemovalUndo = this.searchMode === FAVORITES_SEARCH_MODE && Boolean(this.favoriteRemovalUndo)
 
     this.message.hidden = true
     this.resultsList.innerHTML = ''
 
     if (corpusState?.status === 'error') {
       this.showMessage(messages.error)
+    } else if (!hasRealRows && hasFavoriteRemovalUndo) {
+      this.showMessage('Removed favorite — u undo')
     } else if (!hasRealRows) {
       this.showMessage(query ? messages.noMatches : messages.empty)
     }
