@@ -48,7 +48,7 @@ npm test
 npm run package
 ```
 
-Upload `dist/scry-0.1.0.zip` as the extension package. The Chrome Web Store listing screenshot is `store-assets/screenshot-1280x800.png`; the unmodified source capture is kept at `store-assets/screenshot-source.png`.
+Upload `dist/scry-0.1.0.zip` as the extension package. The Chrome Web Store listing screenshot is `store-assets/screenshot-1280x800.png`.
 
 ## Privacy
 
