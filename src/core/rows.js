@@ -45,8 +45,8 @@ import { DEFAULT_SCRY_SETTINGS, shortcutLabel } from './settings.js'
  *
  * Examples:
  * - { selected: false, inFavoritesMode: true, canUndoFavoriteRemoval: true } represents an unselected row with no row-local hints.
- * - { selected: true, inFavoritesMode: true, canUndoFavoriteRemoval: false } represents a selected favorite that can be removed with x.
- * - { selected: true, inFavoritesMode: true, canUndoFavoriteRemoval: true } represents a selected favorite that can be removed and a prior removal that can be restored with u.
+ * - { selected: true, inFavoritesMode: true, canUndoFavoriteRemoval: false } represents a selected favorite that can be removed with Ctrl+X.
+ * - { selected: true, inFavoritesMode: true, canUndoFavoriteRemoval: true } represents a selected favorite that can be removed and a prior removal that can be restored with Ctrl+U.
  *
  * @typedef {object} FavoriteRowActionState
  * @property {boolean} selected Whether this row is the current selected row.
@@ -109,14 +109,14 @@ export function selectedRowActionHintsForSettings(row, { selected = false } = {}
 /**
  * VisibleRow FavoriteRowActionState -> RowActionHint[]
  *
- * Produces the selected-row action hints for favorites rows, adding x remove and
- * one-level u undo without changing ordinary public-mode row hints.
+ * Produces the selected-row action hints for favorites rows, adding configured remove and
+ * one-level undo shortcuts without changing ordinary public-mode row hints.
  *
  * Functional Examples:
  * - selectedFavoriteRowActionHints(resultRow, { selected: false, inFavoritesMode: true, canUndoFavoriteRemoval: true }) should produce [].
  * - selectedFavoriteRowActionHints(resultRow, { selected: true, inFavoritesMode: false, canUndoFavoriteRemoval: true }) should produce selectedRowActionHints(resultRow, { selected: true }).
- * - selectedFavoriteRowActionHints(resultRow, { selected: true, inFavoritesMode: true, canUndoFavoriteRemoval: false }) should include { action: "remove-favorite", key: "x", label: "remove" } after the ordinary copy/edit hints.
- * - selectedFavoriteRowActionHints(resultRow, { selected: true, inFavoritesMode: true, canUndoFavoriteRemoval: true }) should include both { action: "remove-favorite", key: "x", label: "remove" } and { action: "undo-remove-favorite", key: "u", label: "undo" }.
+ * - selectedFavoriteRowActionHints(resultRow, { selected: true, inFavoritesMode: true, canUndoFavoriteRemoval: false }) should include { action: "remove-favorite", key: "Ctrl+X", label: "remove" } after the ordinary copy/edit hints.
+ * - selectedFavoriteRowActionHints(resultRow, { selected: true, inFavoritesMode: true, canUndoFavoriteRemoval: true }) should include both { action: "remove-favorite", key: "Ctrl+X", label: "remove" } and { action: "undo-remove-favorite", key: "Ctrl+U", label: "undo" }.
  *
  * Template:
  * Combine VisibleRow and FavoriteRowActionState:

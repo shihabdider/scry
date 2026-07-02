@@ -60,7 +60,7 @@ const COPY_FEEDBACK_DURATION_MS = 1_200
  *
  * Interpretation:
  * Represents a row-selection keyboard action after raw key events are translated. Favorites adds
- * x remove and one-level u undo for focused result rows while Ctrl shortcuts preserve input focus.
+ * configured remove and one-level undo shortcuts for focused favorite rows while Ctrl shortcuts preserve input focus.
  *
  * @typedef {'ignore'|'leavePanelFocus'|'copySelected'|'editSelectedUrl'|'removeSelectedFavorite'|'undoFavoriteRemoval'|'moveNext'|'movePrevious'|'nextPage'|'previousPage'|'openSelected'} ResultNavigationCommand
  */
@@ -203,20 +203,20 @@ export function resultNavigationCommandForKey(event) {
 /**
  * KeyboardEvent { inFavoritesMode: boolean, canRemoveFavorite: boolean, canUndoFavoriteRemoval: boolean } -> ResultNavigationCommand
  *
- * Produces the keyboard command for hidden favorites rows, including x remove and one-level u undo,
- * while preserving ordinary row/navigation commands for all other keys.
+ * Produces the keyboard command for hidden favorites rows, including configured remove and one-level
+ * undo shortcuts, while preserving ordinary row/navigation commands for all other keys.
  *
  * Functional Examples:
- * - favoriteResultNavigationCommandForKey({ key: "x" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: false }) should produce "removeSelectedFavorite".
- * - favoriteResultNavigationCommandForKey({ key: "u" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "undoFavoriteRemoval".
- * - favoriteResultNavigationCommandForKey({ key: "u" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: false }) should produce "ignore".
+ * - favoriteResultNavigationCommandForKey({ key: "x", ctrlKey: true }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: false }) should produce "removeSelectedFavorite".
+ * - favoriteResultNavigationCommandForKey({ key: "u", ctrlKey: true }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "undoFavoriteRemoval".
+ * - favoriteResultNavigationCommandForKey({ key: "u", ctrlKey: true }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: false }) should produce "previousPage".
  * - favoriteResultNavigationCommandForKey({ key: "y", ctrlKey: true }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "copySelected".
- * - favoriteResultNavigationCommandForKey({ key: "x" }, { inFavoritesMode: false, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "ignore".
+ * - favoriteResultNavigationCommandForKey({ key: "x", ctrlKey: true }, { inFavoritesMode: false, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "ignore".
  *
  * Template:
  * Combine the key itemization with favorites state:
- * - if key is x and inFavoritesMode and canRemoveFavorite, produce removeSelectedFavorite
- * - if key is u and inFavoritesMode and canUndoFavoriteRemoval, produce undoFavoriteRemoval
+ * - if configured remove shortcut matches and inFavoritesMode and canRemoveFavorite, produce removeSelectedFavorite
+ * - if configured undo shortcut matches and inFavoritesMode and canUndoFavoriteRemoval, produce undoFavoriteRemoval
  * - otherwise delegate to resultNavigationCommandForKey(event)
  */
 export function favoriteResultNavigationCommandForSettings(

@@ -411,7 +411,7 @@ test('handleFilterModeShortcut can cycle public history backward to closed', asy
   assert.equal(app.searchMode, 'closed')
 })
 
-test('favorites search focus hides row-local x/u hints while keeping Ctrl row actions visible', async () => {
+test('favorites search focus hides row-local remove/undo hints while keeping Ctrl row actions visible', async () => {
   const storage = favoritesChrome([exampleFavorite])
   const app = panelApp(storage.chromeApi)
   await app.ensureFavoritesModeReady()
@@ -425,18 +425,18 @@ test('favorites search focus hides row-local x/u hints while keeping Ctrl row ac
 
   assert.match(searchHtml, /Ctrl\+Y copy/)
   assert.match(searchHtml, /Ctrl\+E edit URL/)
-  assert.doesNotMatch(searchHtml, /x remove/)
-  assert.doesNotMatch(searchHtml, /u undo/)
+  assert.doesNotMatch(searchHtml, /Ctrl\+X remove/)
+  assert.doesNotMatch(searchHtml, /Ctrl\+U undo/)
 
   app.focusMode = 'results'
   app.renderResults()
   const resultHtml = app.resultsList.children[0].children[0].innerHTML
 
-  assert.match(resultHtml, /x remove/)
-  assert.match(resultHtml, /u undo/)
+  assert.match(resultHtml, /Ctrl\+X remove/)
+  assert.match(resultHtml, /Ctrl\+U undo/)
 })
 
-test('typing x in the favorites search input is not intercepted as a remove command', async () => {
+test('Ctrl+X in the favorites search input is not intercepted as a remove command', async () => {
   const storage = favoritesChrome([exampleFavorite])
   const app = panelApp(storage.chromeApi)
   app.bindEvents()
@@ -445,7 +445,7 @@ test('typing x in the favorites search input is not intercepted as a remove comm
   app.selectedIndex = 0
   app.input.focus()
 
-  const event = dispatchKeydown(app.input, 'x')
+  const event = dispatchKeydown(app.input, 'x', { ctrlKey: true })
 
   assert.equal(event.defaultPrevented, false)
   assert.deepEqual(storage.writes, [])
@@ -482,7 +482,7 @@ test('removeSelectedFavorite removing the last favorite shows undo feedback in t
   assert.deepEqual(app.results, [])
   assert.equal(app.resultsList.childElementCount, 0)
   assert.equal(app.message.hidden, false)
-  assert.equal(app.message.textContent, 'Removed favorite — u undo')
+  assert.equal(app.message.textContent, 'Removed favorite — Ctrl+U undo')
 })
 
 test('favorites undo key restores the last removed favorite and clears removal feedback', async () => {
@@ -495,7 +495,7 @@ test('favorites undo key restores the last removed favorite and clears removal f
   app.focusResults()
   await app.removeSelectedFavorite()
 
-  const event = dispatchKeydown(app.resultsList, 'u')
+  const event = dispatchKeydown(app.resultsList, 'u', { ctrlKey: true })
   await settleAsyncPanelAction()
 
   assert.equal(event.defaultPrevented, true)

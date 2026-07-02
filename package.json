@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "test": "node --test",
-    "check": "node --check background.js && find src tests -name '*.js' -print0 | xargs -0 -n1 node --check"
+    "check": "node --check background.js && find src tests scripts -name '*.js' -print0 | xargs -0 -n1 node --check",
+    "package": "node scripts/package-extension.js"
   },
   "engines": {
     "node": ">=20"

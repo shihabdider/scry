@@ -8,7 +8,7 @@ git skilift issues 13
 
 To narrow by site, put a colon after the site query: `git:` filters results to matching website names/roots such as github.com, gitter.com, or gitopia.com. `git:scry` or `git: scry` composes the website filter with ordinary URL-fragment query terms, first limiting results to matching websites and then searching/ranking the remaining URLs for `scry`. `file:` filters local `file:///...` history URLs, and `file:precalculus` or `file: precalculus` composes the local file filter with ordinary URL-fragment query terms.
 
-Favorites are a command-entered local filter rather than part of the public `Ctrl+Q` history/closed filter cycle. Type `:f`, `:fa`, … `:favorite` and press `Enter` to search locally saved favorites; press `Ctrl+Q` from favorites to return to the previous public filter. `Tab`/`Shift+Tab` move the selected result, `Ctrl+U`/`Ctrl+D` page, `Ctrl+Y` yanks/copies the selected URL, and `Ctrl+E` edits it in the search field. These in-palette shortcuts can be changed from Scry's extension options page, and the popup key hints update from the saved settings. Save favorites with the **Save the current tab to Scry favorites** extension command (`Alt+Shift+F`) or the **Save … to Scry favorites** right-click menu for page, link, image, video, audio, and frame URLs. A successful background save briefly shows a green `✓` badge on the Scry extension icon. When a favorite result row has focus, `x` removes it and `u` restores the most recent removal for the current popup session.
+Favorites are a command-entered local filter rather than part of the public `Ctrl+Q` history/closed filter cycle. Type `:f`, `:fa`, … `:favorite` and press `Enter` to search locally saved favorites; press `Ctrl+Q` from favorites to return to the previous public filter. `Tab`/`Shift+Tab` move the selected result, `Ctrl+U`/`Ctrl+D` page, `Ctrl+Y` yanks/copies the selected URL, and `Ctrl+E` edits it in the search field. These in-palette shortcuts can be changed from Scry's extension options page, and the popup key hints update from the saved settings. Save favorites with the **Save the current tab to Scry favorites** extension command (`Alt+Shift+F`) or the **Save … to Scry favorites** right-click menu for page, link, image, video, audio, and frame URLs. A successful background save briefly shows a green `✓` badge on the Scry extension icon. When a favorite result row has focus, `Ctrl+X` removes it and `Ctrl+U` restores the most recent removal for the current popup session.
 
 The v1 product is intentionally narrow:
 
@@ -37,6 +37,18 @@ No build step is required; the extension loads the source ES modules directly.
 npm test
 npm run check
 ```
+
+## Chrome Web Store release
+
+Before uploading a new package, run the checks and build the store zip:
+
+```bash
+npm run check
+npm test
+npm run package
+```
+
+Upload `dist/scry-0.1.0.zip` as the extension package. The Chrome Web Store listing screenshot is `store-assets/screenshot-1280x800.png`; the unmodified source capture is kept at `store-assets/screenshot-source.png`.
 
 ## Privacy
 

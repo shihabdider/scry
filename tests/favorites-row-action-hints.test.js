@@ -34,7 +34,7 @@ test('selectedFavoriteRowActionHints adds remove after ordinary hints in favorit
     [
       { action: 'copy', key: 'Ctrl+Y', label: 'copy' },
       { action: 'edit-url', key: 'Ctrl+E', label: 'edit URL' },
-      { action: 'remove-favorite', key: 'x', label: 'remove' },
+      { action: 'remove-favorite', key: 'Ctrl+X', label: 'remove' },
     ],
   )
 })
@@ -45,8 +45,8 @@ test('selectedFavoriteRowActionHints adds both remove and undo hints in favorite
     [
       { action: 'copy', key: 'Ctrl+Y', label: 'copy' },
       { action: 'edit-url', key: 'Ctrl+E', label: 'edit URL' },
-      { action: 'remove-favorite', key: 'x', label: 'remove' },
-      { action: 'undo-remove-favorite', key: 'u', label: 'undo' },
+      { action: 'remove-favorite', key: 'Ctrl+X', label: 'remove' },
+      { action: 'undo-remove-favorite', key: 'Ctrl+U', label: 'undo' },
     ],
   )
 })

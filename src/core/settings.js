@@ -50,8 +50,8 @@ export const DEFAULT_SCRY_SHORTCUTS = Object.freeze({
   previousPage: 'Ctrl+U',
   openSelected: 'Enter',
   leavePanelFocus: 'Escape',
-  removeSelectedFavorite: 'x',
-  undoFavoriteRemoval: 'u',
+  removeSelectedFavorite: 'Ctrl+X',
+  undoFavoriteRemoval: 'Ctrl+U',
 })
 
 export const DEFAULT_SCRY_SETTINGS = Object.freeze({

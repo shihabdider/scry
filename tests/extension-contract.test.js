@@ -72,6 +72,15 @@ test('manifest references generated extension icon assets at Chrome sizes', asyn
   }
 })
 
+test('Chrome Web Store listing screenshot is upload-sized and flattened', async () => {
+  const png = await readFile('store-assets/screenshot-1280x800.png')
+  const dimensions = pngInfo(png)
+
+  assert.equal(dimensions.width, 1280)
+  assert.equal(dimensions.height, 800)
+  assert.equal(dimensions.colorType, 2, 'listing screenshots should be RGB without alpha')
+})
+
 test('popup exposes a clickable history/closed corpus badge without a visible legacy deep-search fallback', async () => {
   const html = await readFile('popup.html', 'utf8')
   const modeIndicator = tagWithId(html, 'mode-indicator')
