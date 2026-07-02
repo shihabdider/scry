@@ -22,6 +22,33 @@ test('manifest exposes a Chrome popup command palette for history and closed-ses
   assert.equal('options_page' in manifest, false)
 })
 
+test('manifest references generated extension icon assets at Chrome sizes', async () => {
+  const manifest = JSON.parse(await readFile('manifest.json', 'utf8'))
+  const expectedIconPaths = {
+    16: 'icons/scry-16.png',
+    32: 'icons/scry-32.png',
+    48: 'icons/scry-48.png',
+    128: 'icons/scry-128.png',
+  }
+
+  for (const [label, iconMap] of [
+    ['manifest.icons', manifest.icons],
+    ['manifest.action.default_icon', manifest.action.default_icon],
+  ]) {
+    assert.deepEqual(iconMap, expectedIconPaths, `${label} should use the generated Scry icon assets`)
+
+    for (const [size, path] of Object.entries(iconMap)) {
+      const png = await readFile(path)
+      const dimensions = pngInfo(png)
+      const expectedSize = Number(size)
+
+      assert.equal(dimensions.width, expectedSize, `${path} width`)
+      assert.equal(dimensions.height, expectedSize, `${path} height`)
+      assert.equal(dimensions.colorType, 6, `${path} should be RGBA`)
+    }
+  }
+})
+
 test('popup exposes a clickable history/closed corpus badge without a visible legacy deep-search fallback', async () => {
   const html = await readFile('popup.html', 'utf8')
   const modeIndicator = tagWithId(html, 'mode-indicator')
@@ -108,6 +135,18 @@ test('source does not include external network calls', async () => {
     assert.equal(/XMLHttpRequest/.test(source), false, `${file} should not use XMLHttpRequest`)
   }
 })
+
+function pngInfo(buffer) {
+  const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+
+  assert.equal(buffer.subarray(0, 8).equals(pngSignature), true, 'expected PNG signature')
+  assert.equal(buffer.subarray(12, 16).toString('ascii'), 'IHDR', 'expected PNG IHDR chunk')
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+    colorType: buffer.readUInt8(25),
+  }
+}
 
 function tagWithId(source, id) {
   const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

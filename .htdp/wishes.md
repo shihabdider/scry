@@ -1,54 +1,61 @@
+## Architecture
+- style: existing
+- scope: none
+- reference: none
+
+## Core/Shell Model
+- Model: not selected; no app state changes
+- Event: not selected
+- Effect: not selected
+- View: not selected
+- Runtime: existing Chrome MV3 manifest/action surfaces
+- Interface adapters: Chrome reads manifest icon maps for extension and toolbar/action UI
+- Effect adapters: none
+- Exceptions: None
+
 ## Wish List
 
-### Layer 1 (implement first)
-- `allowsImplicitSelectionLearningPersistence(context: IncognitoContext, mode: import('../core/search-modes.js').SearchMode): boolean` in `src/platform/incognito-context.js`
-  Purpose: Decide whether an implicit selection-learning write may persist for the active mode: allow hidden favorites and non-incognito public modes, but reject public modes from incognito contexts.
-  Functional Examples: function design comment/docstring added near stub; input coverage includes public `recent`, `closed`, and `deep` modes, hidden `favorites`, normal context, extension-incognito context, tab-incognito context, and combined incognito context.
-  Template: design comment/skeleton added near stub
+### Layer 2 (implement first)
+- `ExtensionIconAssetSet(sourcePng: PNG): icons/*.png` in `icons/`
+  Purpose: Materialize Scry icon PNG assets from the provided 512x512 source at Chrome manifest sizes.
+  Cases:
+  - present 512x512 RGBA source PNG -> create valid `icons/scry-16.png`, `icons/scry-32.png`, `icons/scry-48.png`, and `icons/scry-128.png` with matching pixel dimensions.
+  - missing or unreadable source PNG -> stop rather than committing broken manifest icon references.
+  - generated sizes -> preserve the source image content without cropping or changing aspect ratio.
   Depends on: none
-- `favoriteTargetFromActiveTab(tab: object): import('./src/core/favorites.js').FavoriteSaveTarget | null` in `background.js`
-  Purpose: Produce a favorite save target for any URL-bearing active tab, including incognito tabs, and return null only when Chrome supplies no usable URL.
-  Functional Examples: function design comment/docstring updated near function; input coverage includes normal tab with title, normal tab without title, missing URL, and incognito URL-bearing tab.
-  Template: design comment/template updated near function
-  Depends on: none
-- `favoriteTargetFromContextMenu(info: ChromeContextMenuFavoriteInfo, tab: object): import('./src/core/favorites.js').FavoriteSaveTarget | null` in `background.js`
-  Purpose: Produce a favorite save target for recognized URL-bearing context-menu items, including incognito tab-origin clicks, and return null for unknown menu items or missing URLs.
-  Functional Examples: function design comment/docstring updated near function; input coverage includes page, link, image, video, audio, frame, unknown menu item, missing URL, and incognito page-origin click.
-  Template: design comment/template updated near function
-  Depends on: none
+
+### Layer 1
+- `manifest.icons` and `manifest.action.default_icon` in `manifest.json`
+  Purpose: Reference the generated Scry icon assets as both the extension icon set and the Chrome action/toolbar icon set.
+  Cases:
+  - top-level `icons` -> includes keys `16`, `32`, `48`, and `128` mapped to the generated files.
+  - `action.default_icon` -> includes the same generated icon files while preserving `default_title` and `default_popup`.
+  - existing manifest permissions, commands, background service worker, and local-only boundary -> unchanged.
+  Depends on: ExtensionIconAssetSet
 
 ### Layer 0 (implement last)
-- `ScryPanelApp.openSelected({ newTab }: { newTab: boolean }): Promise<void>` in `src/panel/app.js`
-  Purpose: Open the selected row and record selection learning only for persistable real rows whose active mode/incognito context passes the narrowed implicit-learning policy.
-  Functional Examples: function design comment/docstring updated near function; input coverage includes normal public real row, incognito public real row, incognito hidden favorites real row, synthetic typed URL row, and no selected URL.
-  Template: design comment/template updated near function
-  Depends on: allowsImplicitSelectionLearningPersistence
-- `handleFavoriteCommand(command: string, options?: { chromeApi?: object, now?: number, windowApi?: object }): Promise<import('./src/core/favorites.js').FavoriteUrl | null>` in `background.js`
-  Purpose: Handle the explicit save-current-tab command by saving any URL-bearing active tab, including incognito tabs, and showing favorite-save feedback.
-  Functional Examples: function design comment/docstring updated near function; input coverage includes matching command, unknown command, missing active-tab URL, and incognito active-tab URL.
-  Template: design comment/template updated near function
-  Depends on: favoriteTargetFromActiveTab
-- `handleFavoriteContextMenuClick(info: ChromeContextMenuFavoriteInfo, tab: object, options?: { chromeApi?: object, now?: number, windowApi?: object }): Promise<import('./src/core/favorites.js').FavoriteUrl | null>` in `background.js`
-  Purpose: Handle explicit Scry favorite context-menu clicks by saving recognized URL-bearing targets, including incognito tab-origin URLs, and showing favorite-save feedback.
-  Functional Examples: function design comment/docstring updated near function; input coverage includes page target, link target, unknown menu item, and incognito page target.
-  Template: design comment/template updated near function
-  Depends on: favoriteTargetFromContextMenu
+- `extension icon contract assertions` in `tests/extension-contract.test.js`
+  Purpose: Guard that the manifest icon maps point at existing PNG files with the expected dimensions.
+  Cases:
+  - every manifest `icons` path exists and has PNG dimensions matching its numeric key -> test passes.
+  - every `action.default_icon` path exists and has PNG dimensions matching its numeric key -> test passes.
+  - missing file, non-PNG file, or mismatched dimensions -> test fails before manual Chrome loading.
+  Depends on: manifest.icons and manifest.action.default_icon
 
 ## Data Definitions Created/Modified
-- `src/platform/incognito-context.js`: updated DataDefinition `IncognitoContext` interpretation/examples to distinguish extension-context incognito suppression for implicit public-mode selection learning from tab-incognito provenance for explicit favorite saves.
-- `src/platform/incognito-context.js`: added FunctionDesign and stub for `allowsImplicitSelectionLearningPersistence` to capture the narrowed mode-aware persistence policy.
-- `background.js`: updated FunctionDesign comments/templates for favorite target creation and background handlers so incognito favorite saves are explicit allowed saves.
-- `src/panel/app.js`: updated FunctionDesign comments/templates for `ScryPanelApp.openSelected` so public incognito popup learning is skipped while hidden favorites learning is allowed.
+- Planned `icons/` asset data: `ExtensionIconAssetSet` with `16`, `32`, `48`, and `128` PNG variants generated from `/var/folders/03/1mx3lhxn07580wmwrmjky0xh0000gn/T/pi-clipboard-e24bcc21-bfc6-4169-8d27-7542aefe0658.png`.
+- Planned `manifest.json` data: top-level `icons` and `action.default_icon` maps from Chrome icon size keys to the generated asset paths.
 
 ## Assertion Changes Flagged
-None
+- None
 
 ## Assumptions / Interpretations
-- I introduced `allowsImplicitSelectionLearningPersistence` rather than broadening `allowsBrowsingDataPersistence`, because the requirement narrows the policy to implicit selection-learning and explicit favorite saves should stop using the broad helper.
-- I interpreted an incognito `tabIncognito` signal as suppressing implicit public-mode selection learning if such a context is ever supplied; `ScryPanelApp.openSelected` currently supplies only the extension-context signal, so this does not block explicit incognito favorite saves.
-- I interpreted hidden `favorites` mode as explicit local-favorites usage, so selection learning from favorites mode may persist even when the popup is incognito.
-- I interpreted allowed incognito favorite saves as using the same local favorites store as normal-window favorites, not a separate incognito-only store.
+- Use `16`, `32`, `48`, and `128` as the minimal shared size set for top-level extension icons and the action icon.
+- Reuse the same generated PNG files for `icons` and `action.default_icon` so Chrome uses the provided image consistently.
+- No host permissions, content scripts, options page, network behavior, or app state changes are needed.
 
 ## Notes
-- Verification after stub/comment changes: `npm run check` passed and `npm test` passed.
-- Executable test assertions were not edited in this stubber pass; the implementer/test step should convert the new functional examples and update the current incognito-favorite no-op assertions.
+- Source image was checked with `file` and is a 512x512 PNG.
+- Stubber verification: `npm test` and `npm run check` passed after writing this wish list.
+- After implementation, load the unpacked extension in Chrome and confirm the extension/action icon uses the provided image.
+- Commit and push only after implementation and verification; avoid including unrelated untracked files unless intentionally part of the change.

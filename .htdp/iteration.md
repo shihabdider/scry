@@ -1,68 +1,63 @@
 # Iteration
 
-anchor: 0e9005df3f91c397e0c42cdebef23363dd5a8235
-started: 2026-06-08T02:57:42Z
+anchor: 59992f07f8b0b43ca65170a9159e0c1a1e112791
+started: 2026-07-02T04:05:00Z
 stubber-mode: data-definition-driven
 workflow-mode: autonomous
-language: JavaScript
+language: JavaScript/JSON/assets
 transparent: true
+architecture-style: existing
+architecture-scope: none
 worktree-mode: false
 worktree-name: none
 integration-target: none
 
 ## Source Artifacts
-
 - PRD: none
+- Architecture: none
 
 ## Problem
 
-Correct Scry's incognito behavior: public search modes must not persist incognito/public-mode usage history from an incognito popup, but explicit favorites saves must still work for incognito URLs.
+Make the provided 512x512 PNG the icon for the Scry Chrome MV3 extension.
 
-Functional checkpoint: With Scry enabled in incognito, the popup continues to search/open in public modes without writing selection-learning data from the incognito popup. Pressing `Alt+Shift+F` on an incognito tab or using a Scry favorite context-menu item in incognito still saves that URL to local favorites, because favorites are explicit user saves. Normal-window behavior remains unchanged.
+Functional checkpoint: Loading the unpacked extension uses the provided image for both the extension icon set and the Chrome action/toolbar icon.
 
 ## Data Definition Plan
 
-Reuse the `IncognitoContext` data definition for Chrome's extension-context signal. Narrow the persistence policy so it applies only to implicit public-mode selection-learning writes, not to explicit favorite saves. Remove the tab-incognito rejection from background favorite target creation and update tests to treat incognito favorite saves as allowed. In `ScryPanelApp.openSelected`, allow selection learning in non-public/hidden favorites mode, but skip it in public modes when `chrome.extension.inIncognitoContext` is true.
+Add a local `icons/` asset set generated from the provided PNG at Chrome manifest sizes (`16`, `32`, `48`, `128`). Reference that asset set from both top-level `manifest.icons` and `manifest.action.default_icon`. Add a manifest contract test that the referenced PNGs exist and match their declared dimensions.
+
+## Core/Shell Plan
+
+Not selected; no app state or runtime architecture changes.
 
 ## Ledger
-
 ### Knowns
-
-- Chrome public history APIs do not store incognito visits as browser history.
-- Scry public modes (`recent`, `closed`, `deep`) should not add their own persistent selection-learning record from an incognito popup.
-- Favorites are explicit user-saved URLs and should be allowed from incognito tabs.
-- Prior implementation overcorrected by rejecting incognito favorite saves.
+- The source file is a 512x512 RGBA PNG.
+- Chrome MV3 extension/action icons are declared through manifest icon maps.
+- The extension should remain local-only.
 
 ### Constraints
-
-- Keep Scry local-only: no external network calls, host permissions, content scripts, or options pages.
-- Preserve normal-window behavior.
-- Preserve incognito popup search/open behavior.
+- Keep Scry a local-only Chrome MV3 popup command palette.
+- Avoid external network calls, host permissions, content scripts, and options pages.
 - Run `npm test` and `npm run check` after implementation.
+- Commit and push the completed change.
 
 ### Unknowns That Matter
-
-- [resolved] User wants incognito favorites saves allowed while public-mode implicit history/learning writes are suppressed.
+- None.
 
 ### Out of Scope
-
-- Purging existing stored data.
-- Changing Chrome's own incognito history/session behavior.
-- Adding separate favorite visibility or storage partitioning.
+- Changing popup behavior or application state.
+- Adding new extension surfaces or permissions.
 
 ### Assumptions
-
-- Favorites mode is hidden/non-public and represents explicit saved URLs, so its own usage may continue to use normal ranking behavior.
-- `chrome.extension.inIncognitoContext` remains the appropriate popup-context signal for suppressing public-mode selection learning.
+- Reusing the same generated PNG files for top-level extension icons and action icons satisfies “the icon for this extension.”
+- The standard Chrome icon size set `16`, `32`, `48`, and `128` is sufficient.
 
 ### Decisions
-
-- 2026-06-08T02:57:42Z — Correct previous interpretation: only public-mode implicit history/learning should be suppressed; explicit incognito favorite saves should work.
+- 2026-07-02T04:05:00Z — Use existing architecture and manifest/icon assets only.
+- 2026-07-02T04:12:00Z — Generate local `icons/scry-*.png` files from the provided source and reference them in both manifest icon maps.
 
 ### Look Back
-
-- Phase 1 narrowed the incognito persistence policy to implicit selection-learning by search mode, and corrected favorite target design comments to allow incognito URL-bearing tabs/context menus.
-- Phase 2 implemented `allowsImplicitSelectionLearningPersistence`, removed the background incognito favorite-save rejection, and updated `ScryPanelApp.openSelected` so incognito public modes skip selection learning while incognito favorites mode can still learn from explicit favorites usage.
-- Cleanup removed the stale broad `allowsBrowsingDataPersistence` helper to avoid conflicting with explicit incognito favorite saves.
-- Phase 3 abstracted shared background favorite target creation and save-with-feedback tails.
-- Verification passed with `npm test` (408 tests), `npm run check`, and HtDP `final_preverify`.
+- Generated Chrome-sized icon PNGs from the supplied image.
+- Updated `manifest.json` with top-level `icons` and `action.default_icon` mappings.
+- Added extension contract coverage to verify manifest icon paths and PNG dimensions.
