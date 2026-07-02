@@ -1,3 +1,5 @@
+import { DEFAULT_SCRY_SETTINGS, shortcutLabel } from './settings.js'
+
 /**
  * @typedef {object} CorpusResultRow
  * @property {'result'} kind
@@ -88,12 +90,18 @@ export function buildVisibleRows({ corpusResults = [], typedUrlCandidate = null,
   return rows
 }
 
-export function selectedRowActionHints(row, { selected = false } = {}) {
+export function selectedRowActionHints(row, options = {}) {
+  return selectedRowActionHintsForSettings(row, options, DEFAULT_SCRY_SETTINGS)
+}
+
+export function selectedRowActionHintsForSettings(row, { selected = false } = {}, settings = DEFAULT_SCRY_SETTINGS) {
   if (!selected) return []
 
   const hints = []
-  if (rowOpenUrl(row)) hints.push({ action: 'copy', key: 'Ctrl+Y', label: 'copy' })
-  if (rowEditableText(row)) hints.push({ action: 'edit-url', key: 'Ctrl+E', label: 'edit URL' })
+  const copyKey = shortcutLabel(settings, 'copySelected')
+  const editKey = shortcutLabel(settings, 'editSelectedUrl')
+  if (rowOpenUrl(row) && copyKey) hints.push({ action: 'copy', key: copyKey, label: 'copy' })
+  if (rowEditableText(row) && editKey) hints.push({ action: 'edit-url', key: editKey, label: 'edit URL' })
 
   return hints
 }
@@ -117,19 +125,29 @@ export function selectedRowActionHints(row, { selected = false } = {}) {
  * - if row is a real result, add remove-favorite
  * - if canUndoFavoriteRemoval, add undo-remove-favorite
  */
-export function selectedFavoriteRowActionHints(row, { selected = false, inFavoritesMode = false, canUndoFavoriteRemoval = false } = {}) {
-  const hints = selectedRowActionHints(row, { selected })
+export function selectedFavoriteRowActionHintsForSettings(
+  row,
+  { selected = false, inFavoritesMode = false, canUndoFavoriteRemoval = false } = {},
+  settings = DEFAULT_SCRY_SETTINGS,
+) {
+  const hints = selectedRowActionHintsForSettings(row, { selected }, settings)
   if (!selected || !inFavoritesMode) return hints
 
   const favoritesHints = [...hints]
-  if (row?.kind === 'result') {
-    favoritesHints.push({ action: 'remove-favorite', key: 'x', label: 'remove' })
+  const removeKey = shortcutLabel(settings, 'removeSelectedFavorite')
+  const undoKey = shortcutLabel(settings, 'undoFavoriteRemoval')
+  if (row?.kind === 'result' && removeKey) {
+    favoritesHints.push({ action: 'remove-favorite', key: removeKey, label: 'remove' })
   }
-  if (canUndoFavoriteRemoval) {
-    favoritesHints.push({ action: 'undo-remove-favorite', key: 'u', label: 'undo' })
+  if (canUndoFavoriteRemoval && undoKey) {
+    favoritesHints.push({ action: 'undo-remove-favorite', key: undoKey, label: 'undo' })
   }
 
   return favoritesHints
+}
+
+export function selectedFavoriteRowActionHints(row, options = {}) {
+  return selectedFavoriteRowActionHintsForSettings(row, options, DEFAULT_SCRY_SETTINGS)
 }
 
 export function rowOpenUrl(row) {

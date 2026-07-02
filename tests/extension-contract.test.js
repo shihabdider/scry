@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-test('manifest exposes a Chrome popup command palette for history and closed-session recall', async () => {
+test('manifest exposes a Chrome popup command palette and local settings options page', async () => {
   const manifest = JSON.parse(await readFile('manifest.json', 'utf8'))
 
   assert.equal(manifest.manifest_version, 3)
@@ -19,7 +19,30 @@ test('manifest exposes a Chrome popup command palette for history and closed-ses
   assert.equal('side_panel' in manifest, false)
   assert.equal('host_permissions' in manifest, false)
   assert.equal('content_scripts' in manifest, false)
-  assert.equal('options_page' in manifest, false)
+  assert.equal(manifest.options_page, 'options.html')
+})
+
+test('options page exposes a local shortcut settings form', async () => {
+  const html = await readFile('options.html', 'utf8')
+
+  assert.match(html, /<form\b[^>]*\bid="shortcut-settings-form"/i)
+  assert.match(html, /<script\b[^>]*\btype="module"[^>]*\bsrc="src\/options\/main\.js"/i)
+  assert.match(html, /chrome:\/\/extensions\/shortcuts/i)
+  for (const name of [
+    'switchMode',
+    'moveNext',
+    'movePrevious',
+    'copySelected',
+    'editSelectedUrl',
+    'nextPage',
+    'previousPage',
+    'openSelected',
+    'leavePanelFocus',
+    'removeSelectedFavorite',
+    'undoFavoriteRemoval',
+  ]) {
+    assert.match(html, new RegExp(`\\bname="${name}"`, 'i'))
+  }
 })
 
 test('manifest references generated extension icon assets at Chrome sizes', async () => {

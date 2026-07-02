@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scry Settings</title>
+    <link rel="stylesheet" href="src/options/styles.css" />
+  </head>
+  <body>
+    <main class="settings" aria-labelledby="settings-title">
+      <header class="settings-header">
+        <h1 id="settings-title">Scry Settings</h1>
+        <p>Scry settings stay in local Chrome extension storage.</p>
+      </header>
+
+      <form id="shortcut-settings-form" class="shortcut-settings-form">
+        <fieldset>
+          <legend>Command palette shortcuts</legend>
+          <p class="shortcut-help">Type shortcut labels such as <kbd>Ctrl+Q</kbd>, <kbd>Alt+J</kbd>, <kbd>Shift+Tab</kbd>, or <kbd>x</kbd>. Plain-letter shortcuts apply to focused results; the search input keeps normal typing. Chrome manages global extension shortcuts separately at <code>chrome://extensions/shortcuts</code>.</p>
+          <label>Switch history / recently closed <input name="switchMode" autocomplete="off" value="Ctrl+Q" /></label>
+          <label>Move to next result <input name="moveNext" autocomplete="off" value="Tab" /></label>
+          <label>Move to previous result <input name="movePrevious" autocomplete="off" value="Shift+Tab" /></label>
+          <label>Copy selected URL <input name="copySelected" autocomplete="off" value="Ctrl+Y" /></label>
+          <label>Edit selected URL <input name="editSelectedUrl" autocomplete="off" value="Ctrl+E" /></label>
+          <label>Next result page <input name="nextPage" autocomplete="off" value="Ctrl+D" /></label>
+          <label>Previous result page <input name="previousPage" autocomplete="off" value="Ctrl+U" /></label>
+          <label>Open selected result <input name="openSelected" autocomplete="off" value="Enter" /></label>
+          <label>Close palette <input name="leavePanelFocus" autocomplete="off" value="Escape" /></label>
+          <label>Remove selected favorite <input name="removeSelectedFavorite" autocomplete="off" value="x" /></label>
+          <label>Undo favorite removal <input name="undoFavoriteRemoval" autocomplete="off" value="u" /></label>
+        </fieldset>
+
+        <div class="settings-actions">
+          <button type="submit">Save shortcuts</button>
+          <button id="reset-shortcuts-button" type="button">Reset defaults</button>
+        </div>
+        <p id="settings-status" class="settings-status" role="status" aria-live="polite"></p>
+      </form>
+    </main>
+    <script type="module" src="src/options/main.js"></script>
+  </body>
+</html>

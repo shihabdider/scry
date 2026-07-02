@@ -1,16 +1,18 @@
 import { parseFavoritesCommand } from '../core/favorites-command.js'
 import { buildFavoritesIndex } from '../core/favorites.js'
 import { parseQuery } from '../core/query.js'
-import { buildVisibleRows, rowEditableText, rowOpenUrl, rowSelectionLearningKey, selectedFavoriteRowActionHints } from '../core/rows.js'
+import { buildVisibleRows, rowEditableText, rowOpenUrl, rowSelectionLearningKey, selectedFavoriteRowActionHintsForSettings } from '../core/rows.js'
 import { escapeHtml } from '../core/format.js'
 import { recordSelection } from '../core/selection-learning.js'
 import { createTypedUrlCandidate } from '../core/url.js'
 import { buildHistoryIndex, searchHistory } from '../core/search.js'
-import { CLOSED_MODE, createPopupSessionSearchCache, createSearchModeState, FAVORITES_SEARCH_MODE, hiddenSearchModeExitTarget, HISTORY_MODE, isHiddenSearchMode, nextSearchMode, searchSearchHeaderModel, searchSearchSurfaceModel } from '../core/search-modes.js'
+import { CLOSED_MODE, createPopupSessionSearchCache, createSearchModeState, FAVORITES_SEARCH_MODE, hiddenSearchModeExitTarget, HISTORY_MODE, isHiddenSearchMode, nextSearchMode, searchSearchHeaderModelForSettings, searchSearchSurfaceModelForSettings } from '../core/search-modes.js'
+import { DEFAULT_SCRY_SETTINGS, DEFAULT_SCRY_SHORTCUTS, keyboardEventMatchesShortcut, normalizeScrySettings, shortcutLabel } from '../core/settings.js'
 import { fetchHistory } from '../platform/history-provider.js'
 import { loadStoredFavorites, removeStoredFavoriteByKey, restoreStoredFavoriteRemoval } from '../platform/favorites-store.js'
 import { fetchRecentlyClosed, flattenClosedSessions } from '../platform/sessions-provider.js'
 import { loadSelectionData, saveSelectionData } from '../platform/selection-store.js'
+import { loadScrySettings, watchScrySettings } from '../platform/settings-store.js'
 import { openUrl } from '../platform/tabs.js'
 import { writeClipboardText } from '../platform/clipboard.js'
 import { allowsImplicitSelectionLearningPersistence, incognitoContextFromExtension } from '../platform/incognito-context.js'
@@ -130,9 +132,47 @@ function isCtrlShortcut(event, key, expectedKey) {
   return key === expectedKey && Boolean(event?.ctrlKey) && !event?.metaKey && !event?.altKey
 }
 
+function isPlainTextInputKey(event) {
+  if (event?.ctrlKey || event?.metaKey || event?.altKey) return false
+  return typeof event?.key === 'string' && event.key.length === 1
+}
+
 function isFilterModeSwitchShortcut(event) {
-  const key = typeof event?.key === 'string' ? event.key.toLowerCase() : ''
-  return isCtrlShortcut(event, key, 'q')
+  return isFilterModeSwitchShortcutForSettings(event, DEFAULT_SCRY_SETTINGS)
+}
+
+export function isFilterModeSwitchShortcutForSettings(event, settings = DEFAULT_SCRY_SETTINGS) {
+  const normalizedSettings = normalizeScrySettings(settings)
+  return keyboardEventMatchesShortcut(event, normalizedSettings.shortcuts.switchMode)
+}
+
+const RESULT_COMMAND_SHORTCUTS = Object.freeze([
+  ['leavePanelFocus', 'leavePanelFocus'],
+  ['openSelected', 'openSelected'],
+  ['copySelected', 'copySelected'],
+  ['editSelectedUrl', 'editSelectedUrl'],
+  ['nextPage', 'nextPage'],
+  ['previousPage', 'previousPage'],
+  ['movePrevious', 'movePrevious'],
+  ['moveNext', 'moveNext'],
+])
+
+const RESULT_COMMAND_TO_SHORTCUT = Object.freeze(Object.fromEntries(RESULT_COMMAND_SHORTCUTS))
+
+export function resultNavigationCommandForSettings(event, settings = DEFAULT_SCRY_SETTINGS) {
+  const normalizedSettings = normalizeScrySettings(settings)
+
+  for (const [command, shortcutId] of RESULT_COMMAND_SHORTCUTS) {
+    if (keyboardEventMatchesShortcut(event, normalizedSettings.shortcuts[shortcutId])) return command
+  }
+
+  const defaultCommand = resultNavigationCommandForKey(event)
+  const shortcutId = RESULT_COMMAND_TO_SHORTCUT[defaultCommand]
+  if (!shortcutId) return 'ignore'
+
+  return normalizedSettings.shortcuts[shortcutId] === DEFAULT_SCRY_SHORTCUTS[shortcutId]
+    ? defaultCommand
+    : 'ignore'
 }
 
 export function resultNavigationCommandForKey(event) {
@@ -179,22 +219,33 @@ export function resultNavigationCommandForKey(event) {
  * - if key is u and inFavoritesMode and canUndoFavoriteRemoval, produce undoFavoriteRemoval
  * - otherwise delegate to resultNavigationCommandForKey(event)
  */
-export function favoriteResultNavigationCommandForKey(
+export function favoriteResultNavigationCommandForSettings(
   event,
   { inFavoritesMode = false, canRemoveFavorite = false, canUndoFavoriteRemoval = false } = {},
+  settings = DEFAULT_SCRY_SETTINGS,
 ) {
-  const key = typeof event?.key === 'string' ? event.key.toLowerCase() : ''
+  const normalizedSettings = normalizeScrySettings(settings)
 
-  const isPlainKey = !event?.ctrlKey && !event?.metaKey && !event?.altKey
-
-  if (isPlainKey && key === 'x' && inFavoritesMode && canRemoveFavorite) {
+  if (
+    inFavoritesMode
+    && canRemoveFavorite
+    && keyboardEventMatchesShortcut(event, normalizedSettings.shortcuts.removeSelectedFavorite)
+  ) {
     return 'removeSelectedFavorite'
   }
-  if (isPlainKey && key === 'u' && inFavoritesMode && canUndoFavoriteRemoval) {
+  if (
+    inFavoritesMode
+    && canUndoFavoriteRemoval
+    && keyboardEventMatchesShortcut(event, normalizedSettings.shortcuts.undoFavoriteRemoval)
+  ) {
     return 'undoFavoriteRemoval'
   }
 
-  return resultNavigationCommandForKey(event)
+  return resultNavigationCommandForSettings(event, normalizedSettings)
+}
+
+export function favoriteResultNavigationCommandForKey(event, context = {}) {
+  return favoriteResultNavigationCommandForSettings(event, context, DEFAULT_SCRY_SETTINGS)
 }
 
 export class ScryPanelApp {
@@ -219,6 +270,7 @@ export class ScryPanelApp {
     this.selectionData = undefined
     this.previousPublicSearchMode = HISTORY_MODE
     this.favoriteRemovalUndo = null
+    this.settings = DEFAULT_SCRY_SETTINGS
 
     this.input = document.querySelector('#search-input')
     this.status = document.querySelector('#status')
@@ -240,8 +292,34 @@ export class ScryPanelApp {
     this.searchCache.modes = modes
   }
 
+  async loadSettings() {
+    try {
+      this.applySettings(await loadScrySettings({ chromeApi: this.chromeApi }))
+    } catch {
+      this.applySettings(DEFAULT_SCRY_SETTINGS)
+    }
+
+    return this.settings
+  }
+
+  bindSettingsStorageChanges() {
+    if (this.unwatchSettings) return
+
+    this.unwatchSettings = watchScrySettings((settings) => {
+      this.applySettings(settings)
+    }, { chromeApi: this.chromeApi })
+  }
+
+  applySettings(settings) {
+    this.settings = normalizeScrySettings(settings)
+    this.renderSearchSurface()
+    if (this.resultsList) this.renderResults()
+  }
+
   async start() {
+    await this.loadSettings()
     this.bindEvents()
+    this.bindSettingsStorageChanges()
     this.searchCache = createPopupSessionSearchCache({ activeMode: HISTORY_MODE })
     this.searchMode = this.searchCache.activeMode
     this.previousPublicSearchMode = HISTORY_MODE
@@ -304,20 +382,22 @@ export class ScryPanelApp {
   }
 
   handleSearchInputKeydown(event) {
-    if (isFilterModeSwitchShortcut(event)) {
+    if (isPlainTextInputKey(event)) return
+
+    if (isFilterModeSwitchShortcutForSettings(event, this.settings)) {
       event.preventDefault()
       this.flushPendingInputResultsUpdate()
       void this.handleFilterModeShortcut()
       return
     }
 
-    if (event.key === 'Enter') {
+    if (keyboardEventMatchesShortcut(event, shortcutLabel(this.settings, 'openSelected'))) {
       event.preventDefault()
       void this.handleSearchInputEnter()
       return
     }
 
-    const command = resultNavigationCommandForKey(event)
+    const command = resultNavigationCommandForSettings(event, this.settings)
     if (command === 'ignore') return
 
     event.preventDefault()
@@ -647,8 +727,8 @@ export class ScryPanelApp {
     if (this.deepSearchButton) this.deepSearchButton.hidden = true
 
     const cache = this.searchCache ?? createPopupSessionSearchCache({ activeMode: HISTORY_MODE })
-    const headerModel = searchSearchHeaderModel(cache, { realResultCount: this.visibleResultCount() })
-    const surfaceModel = searchSearchSurfaceModel(cache, { realResultCount: this.visibleResultCount() })
+    const headerModel = searchSearchHeaderModelForSettings(cache, this.settings, { realResultCount: this.visibleResultCount() })
+    const surfaceModel = searchSearchSurfaceModelForSettings(cache, this.settings, { realResultCount: this.visibleResultCount() })
 
     const before = this.document.querySelector('#search-header-before')
     if (before) before.textContent = headerModel.beforeMode
@@ -977,13 +1057,13 @@ export class ScryPanelApp {
     if (event.defaultPrevented) return
     if (event.target === this.input || this.document.activeElement === this.input) return
 
-    if (isFilterModeSwitchShortcut(event)) {
+    if (isFilterModeSwitchShortcutForSettings(event, this.settings)) {
       event.preventDefault()
       void this.handleFilterModeShortcut()
       return
     }
 
-    const command = favoriteResultNavigationCommandForKey(event, this.selectedNavigationContext())
+    const command = favoriteResultNavigationCommandForSettings(event, this.selectedNavigationContext(), this.settings)
     if (command === 'ignore') return
 
     event.preventDefault()
@@ -1129,11 +1209,11 @@ export class ScryPanelApp {
       : ''
 
     const actionHintsHtml = (row, selected) => {
-      const hints = selectedFavoriteRowActionHints(row, {
+      const hints = selectedFavoriteRowActionHintsForSettings(row, {
         selected,
         inFavoritesMode: this.searchMode === FAVORITES_SEARCH_MODE && this.focusMode === 'results',
         canUndoFavoriteRemoval: Boolean(this.favoriteRemovalUndo),
-      })
+      }, this.settings)
       if (hints.length === 0) return ''
 
       return hints.map((hint) => {
@@ -1206,7 +1286,7 @@ export class ScryPanelApp {
     if (corpusState?.status === 'error') {
       this.showMessage(messages.error)
     } else if (!hasRealRows && hasFavoriteRemovalUndo) {
-      this.showMessage('Removed favorite — u undo')
+      this.showMessage(`Removed favorite — ${shortcutLabel(this.settings, 'undoFavoriteRemoval')} undo`)
     } else if (!hasRealRows) {
       this.showMessage(query ? messages.noMatches : messages.empty)
     }
@@ -1275,8 +1355,14 @@ export class ScryPanelApp {
 
     this.pagination.hidden = resultCount === 0 || pageCount <= 1
     this.pageStatus.textContent = resultCount ? `Page ${pageIndex + 1} of ${pageCount}` : 'No results'
-    if (this.previousPageButton) this.previousPageButton.disabled = pageIndex === 0
-    if (this.nextPageButton) this.nextPageButton.disabled = pageIndex >= pageCount - 1
+    if (this.previousPageButton) {
+      this.previousPageButton.textContent = `${shortcutLabel(this.settings, 'previousPage')} previous`
+      this.previousPageButton.disabled = pageIndex === 0
+    }
+    if (this.nextPageButton) {
+      this.nextPageButton.textContent = `${shortcutLabel(this.settings, 'nextPage')} next`
+      this.nextPageButton.disabled = pageIndex >= pageCount - 1
+    }
   }
 
   showMessage(text) {

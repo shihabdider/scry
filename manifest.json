@@ -3,6 +3,7 @@
   "name": "Scry",
   "version": "0.1.0",
   "description": "History-first URL recall for Chrome.",
+  "options_page": "options.html",
   "permissions": ["contextMenus", "history", "sessions", "storage", "tabs"],
   "icons": {
     "16": "icons/scry-16.png",

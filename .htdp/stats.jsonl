@@ -117,3 +117,5 @@
 {"ts":"2026-07-02T04:11:35.326Z","agent":"implementer","wish":"ExtensionIconAssetSet","layer":2,"status":"pass","turns":20,"input":98915,"output":6920,"cacheRead":257024,"cost":0.8307,"duration":179.7}
 {"ts":"2026-07-02T04:13:23.481Z","agent":"implementer","wish":"extension icon contract assertions","layer":0,"status":"pass","turns":6,"input":43347,"output":1611,"cacheRead":27648,"cost":0.2789,"duration":41.8}
 {"ts":"2026-07-02T04:14:54.433Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":11,"input":47425,"output":2542,"cacheRead":101376,"cost":0.3641,"duration":73.6}
+{"ts":"2026-07-02T15:33:49.715Z","agent":"stubber","wish":null,"layer":null,"status":"pass","turns":38,"input":133881,"output":25939,"cacheRead":2489856,"cost":2.6925,"duration":539}
+{"ts":"2026-07-02T15:48:25.614Z","agent":"abstractor","wish":null,"layer":null,"status":"pass","turns":28,"input":174737,"output":8351,"cacheRead":1090560,"cost":1.6695,"duration":218.9}

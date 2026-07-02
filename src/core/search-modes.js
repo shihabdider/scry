@@ -1,3 +1,5 @@
+import { DEFAULT_SCRY_SETTINGS, shortcutLabel } from './settings.js'
+
 export const HISTORY_MODE = 'history'
 export const CLOSED_MODE = 'closed'
 export const SEARCH_MODES = Object.freeze([HISTORY_MODE, CLOSED_MODE])
@@ -154,6 +156,31 @@ export function hiddenSearchModeExitTarget(previousMode) {
   return isPublicSearchMode(previousMode) ? previousMode : DEFAULT_SEARCH_MODE
 }
 
+const STATUS_TEXT_FOR_MODE = Object.freeze({
+  [HISTORY_MODE]: (entryCount, urlWord) => ({
+    idle: 'History not loaded',
+    loading: 'Loading history…',
+    ready: `${entryCount} history ${urlWord}`,
+    error: 'History unavailable',
+  }),
+  [CLOSED_MODE]: (entryCount, urlWord) => ({
+    idle: 'Recently closed URLs not loaded',
+    loading: 'Loading recently closed URLs…',
+    ready: `${entryCount} recently closed ${urlWord}`,
+    error: 'Recently closed URLs unavailable',
+  }),
+  [FAVORITES_SEARCH_MODE]: (entryCount, urlWord) => ({
+    idle: 'Favorites not loaded',
+    loading: 'Loading favorites…',
+    ready: `${entryCount} favorite ${urlWord}`,
+    error: 'Favorites unavailable',
+  }),
+})
+
+function statusTextForMode(mode) {
+  return STATUS_TEXT_FOR_MODE[normalizeSearchMode(mode)] ?? STATUS_TEXT_FOR_MODE[HISTORY_MODE]
+}
+
 function indexedStatusText(state, statusTextForCount) {
   const status = state?.status ?? 'idle'
   const entryCount = Array.isArray(state?.index?.entries) ? state.index.entries.length : 0
@@ -164,34 +191,7 @@ function indexedStatusText(state, statusTextForCount) {
 }
 
 export function searchModeStatusText(state) {
-  const mode = state?.mode === CLOSED_MODE
-    ? CLOSED_MODE
-    : state?.mode === FAVORITES_SEARCH_MODE
-      ? FAVORITES_SEARCH_MODE
-      : HISTORY_MODE
-
-  const textByMode = {
-    history: (entryCount, urlWord) => ({
-      idle: 'History not loaded',
-      loading: 'Loading history…',
-      ready: `${entryCount} history ${urlWord}`,
-      error: 'History unavailable',
-    }),
-    closed: (entryCount, urlWord) => ({
-      idle: 'Recently closed URLs not loaded',
-      loading: 'Loading recently closed URLs…',
-      ready: `${entryCount} recently closed ${urlWord}`,
-      error: 'Recently closed URLs unavailable',
-    }),
-    favorites: (entryCount, urlWord) => ({
-      idle: 'Favorites not loaded',
-      loading: 'Loading favorites…',
-      ready: `${entryCount} favorite ${urlWord}`,
-      error: 'Favorites unavailable',
-    }),
-  }
-
-  return indexedStatusText(state, textByMode[mode])
+  return indexedStatusText(state, statusTextForMode(state?.mode))
 }
 
 function activeSearchModeStateOrDefault(cache) {
@@ -227,66 +227,56 @@ function searchHeaderModelFromIndicator(indicator, afterMode) {
   }
 }
 
-export function favoritesModeIndicatorModel(state) {
+export function favoritesModeIndicatorModel(state, settings = DEFAULT_SCRY_SETTINGS) {
+  const switchLabel = shortcutLabel(settings, 'switchMode') || 'Ctrl+Q'
   return modeIndicatorModelFromStatusText(FAVORITES_SEARCH_MODE, state, {
     clickable: false,
-    modeSwitchHint: 'Ctrl+Q to return',
-    statusTextForCount: (entryCount, urlWord) => ({
-      idle: 'Favorites not loaded',
-      loading: 'Loading favorites…',
-      ready: `${entryCount} favorite ${urlWord}`,
-      error: 'Favorites unavailable',
-    }),
+    modeSwitchHint: `${switchLabel} to return`,
+    statusTextForCount: statusTextForMode(FAVORITES_SEARCH_MODE),
   })
 }
 
-export function favoritesSearchHeaderModel(state) {
-  return searchHeaderModelFromIndicator(favoritesModeIndicatorModel(state), 'favorites')
+export function favoritesSearchHeaderModel(state, settings = DEFAULT_SCRY_SETTINGS) {
+  return searchHeaderModelFromIndicator(favoritesModeIndicatorModel(state, settings), 'favorites')
 }
 
-export function modeIndicatorModel(mode, state) {
+export function modeIndicatorModel(mode, state, settings = DEFAULT_SCRY_SETTINGS) {
   const activeMode = isPublicSearchMode(mode) ? mode : DEFAULT_SEARCH_MODE
-  const statusTextForCount = {
-    history: (entryCount, urlWord) => ({
-      idle: 'History not loaded',
-      loading: 'Loading history…',
-      ready: `${entryCount} history ${urlWord}`,
-      error: 'History unavailable',
-    }),
-    closed: (entryCount, urlWord) => ({
-      idle: 'Recently closed URLs not loaded',
-      loading: 'Loading recently closed URLs…',
-      ready: `${entryCount} recently closed ${urlWord}`,
-      error: 'Recently closed URLs unavailable',
-    }),
-  }[activeMode]
 
   return modeIndicatorModelFromStatusText(activeMode, state, {
     clickable: true,
-    modeSwitchHint: 'Ctrl+Q',
-    statusTextForCount,
+    modeSwitchHint: shortcutLabel(settings, 'switchMode') || 'Ctrl+Q',
+    statusTextForCount: statusTextForMode(activeMode),
   })
 }
 
-export function searchHeaderModel(mode, state, { realResultCount = 0 } = {}) {
+export function searchHeaderModel(mode, state, { realResultCount = 0, settings = DEFAULT_SCRY_SETTINGS } = {}) {
   void realResultCount
-  return searchHeaderModelFromIndicator(modeIndicatorModel(mode, state), '')
+  return searchHeaderModelFromIndicator(modeIndicatorModel(mode, state, settings), '')
 }
 
-export function searchSearchSurfaceModel(cache, { realResultCount = 0 } = {}) {
-  void realResultCount
-  const state = activeSearchModeStateOrDefault(cache)
-  if (state.mode === FAVORITES_SEARCH_MODE) return favoritesModeIndicatorModel(state)
-
-  return modeIndicatorModel(state.mode, state)
+export function searchSearchSurfaceModel(cache, options = {}) {
+  return searchSearchSurfaceModelForSettings(cache, DEFAULT_SCRY_SETTINGS, options)
 }
 
-export function searchSearchHeaderModel(cache, { realResultCount = 0 } = {}) {
+export function searchSearchSurfaceModelForSettings(cache, settings = DEFAULT_SCRY_SETTINGS, { realResultCount = 0 } = {}) {
   void realResultCount
   const state = activeSearchModeStateOrDefault(cache)
-  if (state.mode === FAVORITES_SEARCH_MODE) return favoritesSearchHeaderModel(state)
+  if (state.mode === FAVORITES_SEARCH_MODE) return favoritesModeIndicatorModel(state, settings)
 
-  return searchHeaderModel(state.mode, state)
+  return modeIndicatorModel(state.mode, state, settings)
+}
+
+export function searchSearchHeaderModel(cache, options = {}) {
+  return searchSearchHeaderModelForSettings(cache, DEFAULT_SCRY_SETTINGS, options)
+}
+
+export function searchSearchHeaderModelForSettings(cache, settings = DEFAULT_SCRY_SETTINGS, { realResultCount = 0 } = {}) {
+  void realResultCount
+  const state = activeSearchModeStateOrDefault(cache)
+  if (state.mode === FAVORITES_SEARCH_MODE) return favoritesSearchHeaderModel(state, settings)
+
+  return searchHeaderModel(state.mode, state, { settings })
 }
 
 export function nextSearchMode(currentMode, direction = 1) {

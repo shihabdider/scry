@@ -2,27 +2,41 @@
 
 phase: complete
 layer: complete
-updated: 2026-07-02T04:17:00Z
+updated: 2026-07-02T16:11:00Z
 
 ## Wishes
 
 | wish | file | layer | status | time |
 |------|------|-------|--------|------|
-| ExtensionIconAssetSet | icons/ | 2 | pass | 179.7s |
-| manifest.icons and manifest.action.default_icon | manifest.json | 1 | pass | verified |
-| extension icon contract assertions | tests/extension-contract.test.js | 0 | pass | 41.8s |
+| normalizeShortcutChord | src/core/settings.js | 5 | pass | manual |
+| keyboardEventMatchesShortcut | src/core/settings.js | 4 | pass | manual |
+| normalizeScrySettings | src/core/settings.js | 4 | pass | manual |
+| shortcutLabel | src/core/settings.js | 4 | pass | manual |
+| loadScrySettings | src/platform/settings-store.js | 3 | pass | manual |
+| saveScrySettings | src/platform/settings-store.js | 3 | pass | manual |
+| resetScrySettings | src/platform/settings-store.js | 3 | pass | manual |
+| watchScrySettings | src/platform/settings-store.js | 3 | pass | manual |
+| scrySettingsStorageWrite | src/platform/settings-store.js | 3 | pass | manual |
+| resultNavigationCommandForSettings | src/panel/app.js | 3 | pass | manual |
+| favoriteResultNavigationCommandForSettings | src/panel/app.js | 3 | pass | manual |
+| isFilterModeSwitchShortcutForSettings | src/panel/app.js | 3 | pass | manual |
+| selectedRowActionHintsForSettings | src/core/rows.js | 3 | pass | manual |
+| selectedFavoriteRowActionHintsForSettings | src/core/rows.js | 3 | pass | manual |
+| searchSearchSurfaceModelForSettings | src/core/search-modes.js | 3 | pass | manual |
+| searchSearchHeaderModelForSettings | src/core/search-modes.js | 3 | pass | manual |
+| shortcutSettingsViewModel | src/options/app.js | 3 | pass | manual |
+| scrySettingsFromShortcutForm | src/options/app.js | 3 | pass | manual |
+| ScryOptionsApp.start | src/options/app.js | 2 | pass | manual |
+| ScryPanelApp.loadSettings | src/panel/app.js | 1 | pass | manual |
+| ScryPanelApp.bindSettingsStorageChanges | src/panel/app.js | 1 | pass | manual |
+| ScryPanelApp.applySettings | src/panel/app.js | 1 | pass | manual |
+| settings propagation assertions | tests/ | 0 | pass | manual |
 
 ## Log
 
-- 00:08:21 stubber complete, 2 parsed wishes plus manifest icon map update, 3 layers
-- 00:08:21 stubber_post verification: pass
-- 00:11:35 ExtensionIconAssetSet: pass (generated 16, 32, 48, and 128 PNG assets)
-- 00:11:37 implementer_post verification for ExtensionIconAssetSet: pass
-- 00:11:40 layer 2 verification: pass
-- 00:12:00 manifest icon maps updated in `manifest.json`
-- 00:13:23 extension icon contract assertions: pass
-- 00:13:25 implementer_post verification for extension icon contract assertions: pass
-- 00:13:28 layer 0 verification: pass
-- 00:14:51 abstractor pass; no abstraction needed
-- 00:14:54 abstractor_post verification: pass (`npm run test`, `npm run check`)
-- 00:17:00 final_preverify verification: pass (`npm run test`, `npm run check`)
+- 15:33:49 stubber complete, 23 wishes, 6 layers.
+- 16:02:00 implemented settings data, storage, options page, settings-aware popup handlers, and key-hint propagation.
+- 16:05:00 added guard so plain custom row shortcuts are not intercepted while typing in the search input.
+- 16:07:00 verification pass: `npm run check`, `npm test` (430 tests).
+- 16:10:00 abstractor extracted shared status text helpers in `src/core/search-modes.js`; abstractor verification passed (`npm run test`, `npm run check`).
+- 16:12:00 final_preverify passed (`npm run test`, `npm run check`).
