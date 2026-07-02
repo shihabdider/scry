@@ -690,14 +690,14 @@ test('renderResults adds selected real-row action hints to the meta line only on
 
   assert.doesNotMatch(results.children[0].className, /\bselected\b/)
   assert.equal(firstButton.getAttribute('aria-current'), 'false')
-  assert.doesNotMatch(firstHtml, /\by copy\b/)
-  assert.doesNotMatch(firstHtml, /\bc edit URL\b/)
+  assert.doesNotMatch(firstHtml, /Ctrl\+Y copy/)
+  assert.doesNotMatch(firstHtml, /Ctrl\+E edit URL/)
   assert.match(results.children[1].className, /\bselected\b/)
   assert.equal(selectedButton.getAttribute('aria-current'), 'true')
-  assert.match(selectedHtml, /class="result-meta"[\s\S]*3 visits · now[\s\S]*y copy[\s\S]*c edit URL/)
+  assert.match(selectedHtml, /class="result-meta"[\s\S]*3 visits · now[\s\S]*Ctrl\+Y copy[\s\S]*Ctrl\+E edit URL/)
 })
 
-test('renderResults suppresses selected styling, aria-current, and selected-row hints in input mode', () => {
+test('renderResults keeps selected styling, aria-current, and selected-row hints while the search input is focused', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
@@ -713,13 +713,13 @@ test('renderResults suppresses selected styling, aria-current, and selected-row 
   const results = document.querySelector('#results')
   assert.equal(app.selectedIndex, 1)
   assert.doesNotMatch(results.children[0].className, /\bselected\b/)
-  assert.doesNotMatch(results.children[1].className, /\bselected\b/)
+  assert.match(results.children[1].className, /\bselected\b/)
   assert.equal(results.children[0].children[0].getAttribute('aria-current'), 'false')
-  assert.equal(results.children[1].children[0].getAttribute('aria-current'), 'false')
-  assert.doesNotMatch(results.children[0].children[0].innerHTML, /\by copy\b/)
-  assert.doesNotMatch(results.children[0].children[0].innerHTML, /\bc edit URL\b/)
-  assert.doesNotMatch(results.children[1].children[0].innerHTML, /\by copy\b/)
-  assert.doesNotMatch(results.children[1].children[0].innerHTML, /\bc edit URL\b/)
+  assert.equal(results.children[1].children[0].getAttribute('aria-current'), 'true')
+  assert.doesNotMatch(results.children[0].children[0].innerHTML, /Ctrl\+Y copy/)
+  assert.doesNotMatch(results.children[0].children[0].innerHTML, /Ctrl\+E edit URL/)
+  assert.match(results.children[1].children[0].innerHTML, /Ctrl\+Y copy/)
+  assert.match(results.children[1].children[0].innerHTML, /Ctrl\+E edit URL/)
 })
 
 test('ensureSelectedVisible leaves the always-visible typed URL row on the current page', () => {
@@ -1636,42 +1636,7 @@ test('changeSelectedRowToSearch is a no-op when no visible row is selected', () 
   assert.equal(input.selectionEnd, 3)
 })
 
-test('result navigation i returns to search input, resets top selection, and clears selected row rendering', () => {
-  const document = createScryDocument()
-  const chromeApi = createPanelChrome([])
-  const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
-  const input = document.querySelector('#search-input')
-  input.value = 'github issue'
-  input.setSelectionRange(0, 0)
-  app.results = Array.from({ length: 8 }, (_, index) => searchResult(`input-return-${index + 1}`))
-  app.visibleRows = buildVisibleRows({ corpusResults: app.results })
-  app.selectedIndex = 7
-  app.pageIndex = 1
-  app.focusMode = 'results'
-  app.renderResults()
-  const selectedButton = document.activeElement
-  assert.match(app.resultsList.children[1].className, /\bselected\b/)
-  app.bindEvents()
-
-  const event = dispatchKeydown(selectedButton, 'i')
-
-  assert.equal(event.defaultPrevented, true)
-  assert.equal(app.focusMode, 'search')
-  assert.equal(app.selectedIndex, 0)
-  assert.equal(app.pageIndex, 0)
-  assert.equal(document.activeElement, input)
-  assert.equal(input.value, 'github issue')
-  assert.equal(input.selectionStart, input.value.length)
-  assert.equal(input.selectionEnd, input.value.length)
-  for (const item of app.resultsList.children) {
-    assert.doesNotMatch(item.className, /\bselected\b/)
-    assert.equal(item.children[0].getAttribute('aria-current'), 'false')
-    assert.doesNotMatch(item.children[0].innerHTML, /\by copy\b/)
-    assert.doesNotMatch(item.children[0].innerHTML, /\bc edit URL\b/)
-  }
-})
-
-test('result navigation slash returns to search input without changing the query or triggering row actions', () => {
+test('plain i and slash on a focused result row are ignored now that search stays modeless', () => {
   const document = createScryDocument()
   const writes = []
   const chromeApi = createPanelChrome([])
@@ -1682,37 +1647,28 @@ test('result navigation slash returns to search input without changing the query
     windowApi: { blur() {} },
     navigatorApi: createClipboardNavigator(writes),
   })
-  const input = document.querySelector('#search-input')
   app.results = [searchResult('first'), searchResult('second')]
   app.visibleRows = buildVisibleRows({ corpusResults: app.results })
   app.selectedIndex = 1
   app.focusMode = 'results'
-  input.value = 'github issue'
-  input.setSelectionRange(0, 0)
   app.renderResults()
   const selectedButton = document.activeElement
   app.bindEvents()
 
-  const event = dispatchKeydown(selectedButton, '/')
+  const iEvent = dispatchKeydown(selectedButton, 'i')
+  const slashEvent = dispatchKeydown(selectedButton, '/')
 
-  assert.equal(event.defaultPrevented, true)
-  assert.equal(app.focusMode, 'search')
-  assert.equal(app.selectedIndex, 0)
-  assert.equal(app.pageIndex, 0)
-  assert.equal(document.activeElement, input)
-  assert.equal(input.value, 'github issue')
-  assert.equal(input.selectionStart, input.value.length)
-  assert.equal(input.selectionEnd, input.value.length)
-  for (const item of app.resultsList.children) {
-    assert.doesNotMatch(item.className, /\bselected\b/)
-    assert.equal(item.children[0].getAttribute('aria-current'), 'false')
-  }
+  assert.equal(iEvent.defaultPrevented, false)
+  assert.equal(slashEvent.defaultPrevented, false)
+  assert.equal(app.focusMode, 'results')
+  assert.equal(app.selectedIndex, 1)
+  assert.equal(document.activeElement, selectedButton)
   assert.deepEqual(chromeApi.tabs.opened, [])
   assert.deepEqual(chromeApi.tabs.updated, [])
   assert.deepEqual(writes, [])
 })
 
-test('result navigation y copies the selected row URL without changing search focus state', async () => {
+test('Ctrl+Y copies the selected row URL without changing focus state', async () => {
   const document = createScryDocument()
   const writes = []
   const scheduledTimers = []
@@ -1735,15 +1691,15 @@ test('result navigation y copies the selected row URL without changing search fo
   app.results = [firstResult, secondResult]
   app.visibleRows = buildVisibleRows({ corpusResults: app.results })
   app.selectedIndex = 1
-  app.focusMode = 'results'
+  app.focusMode = 'search'
   app.renderResults = () => {
     app.updateVisibleRows()
   }
-  const selectedButton = appendFocusableRow(app.resultsList, { resultIndex: 1 })
-  document.activeElement = selectedButton
+  const input = document.querySelector('#search-input')
   app.bindEvents()
+  input.focus()
 
-  const event = dispatchKeydown(selectedButton, 'y')
+  const event = dispatchKeydown(input, 'y', { ctrlKey: true })
   await settle()
 
   assert.equal(event.defaultPrevented, true)
@@ -1754,10 +1710,11 @@ test('result navigation y copies the selected row URL without changing search fo
   })
   assert.equal(app.visibleRows[1].copied, true)
   assert.equal(scheduledTimers.length, 1)
-  assert.equal(app.focusMode, 'results')
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
 })
 
-test('result navigation c changes a selected real row into the focused search text', () => {
+test('Ctrl+E changes a selected real row into the focused search text', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
@@ -1772,17 +1729,16 @@ test('result navigation c changes a selected real row into the focused search te
   app.results = [firstResult, docsResult]
   app.visibleRows = buildVisibleRows({ corpusResults: app.results })
   app.selectedIndex = 1
-  app.focusMode = 'results'
+  app.focusMode = 'search'
   input.value = 'docs install'
-  const selectedButton = appendFocusableRow(app.resultsList, { resultIndex: 1 })
-  document.activeElement = selectedButton
+  input.focus()
   let refreshCalls = 0
   app.updateResults = () => {
     refreshCalls++
   }
   app.bindEvents()
 
-  const event = dispatchKeydown(selectedButton, 'c')
+  const event = dispatchKeydown(input, 'e', { ctrlKey: true })
 
   assert.equal(event.defaultPrevented, true)
   assert.equal(input.value, 'example.com/docs?tab=readme')
@@ -2015,7 +1971,7 @@ test('typing slash in search input is not intercepted as a mode shortcut', () =>
   assert.equal(document.activeElement, input)
 })
 
-test('ArrowDown from the search input enters result navigation before arrow-key navigation continues', async () => {
+test('Tab and Shift+Tab from the search input move selection while keeping search focused', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
@@ -2023,45 +1979,43 @@ test('ArrowDown from the search input enters result navigation before arrow-key 
   await app.start()
   const input = document.querySelector('#search-input')
   assert.equal(document.activeElement, input)
-
-  const event = dispatchKeydown(input, 'ArrowDown')
-
-  assert.equal(event.defaultPrevented, true)
-  assert.equal(app.focusMode, 'results')
   assert.equal(app.selectedIndex, 0)
-  assert.equal(document.activeElement?.dataset.resultIndex, '0')
 
-  const downAgain = dispatchKeydown(document.activeElement, 'ArrowDown')
+  const tab = dispatchKeydown(input, 'Tab')
 
-  assert.equal(downAgain.defaultPrevented, true)
+  assert.equal(tab.defaultPrevented, true)
+  assert.equal(app.focusMode, 'search')
   assert.equal(app.selectedIndex, 1)
-  assert.equal(document.activeElement?.dataset.resultIndex, '1')
+  assert.equal(document.activeElement, input)
+  assert.equal(app.resultsList.children[1].children[0].getAttribute('aria-current'), 'true')
 
-  const upAgain = dispatchKeydown(document.activeElement, 'ArrowUp')
+  const shiftTab = dispatchKeydown(input, 'Tab', { shiftKey: true })
 
-  assert.equal(upAgain.defaultPrevented, true)
+  assert.equal(shiftTab.defaultPrevented, true)
+  assert.equal(app.focusMode, 'search')
   assert.equal(app.selectedIndex, 0)
-  assert.equal(document.activeElement?.dataset.resultIndex, '0')
+  assert.equal(document.activeElement, input)
+  assert.equal(app.resultsList.children[0].children[0].getAttribute('aria-current'), 'true')
 })
 
-test('Ctrl+N from the search input enters result navigation without advancing past the first visible row', async () => {
+test('Ctrl+N from the search input moves to the next row without leaving search focus', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
 
   await app.start()
   const input = document.querySelector('#search-input')
-  app.selectedIndex = 2
+  app.selectedIndex = 1
 
   const event = dispatchKeydown(input, 'n', { ctrlKey: true })
 
   assert.equal(event.defaultPrevented, true)
-  assert.equal(app.focusMode, 'results')
-  assert.equal(app.selectedIndex, 0)
-  assert.equal(document.activeElement?.dataset.resultIndex, '0')
+  assert.equal(app.focusMode, 'search')
+  assert.equal(app.selectedIndex, 2)
+  assert.equal(document.activeElement, input)
 })
 
-test('ArrowUp and Ctrl+P from the search input enter result navigation at the first visible row', async () => {
+test('ArrowUp and Ctrl+P from the search input move to the previous row without leaving search focus', async () => {
   const arrowDocument = createScryDocument()
   const arrowChromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
   const arrowApp = new ScryPanelApp({ document: arrowDocument, chromeApi: arrowChromeApi, clock: () => now, windowApi: { blur() {} } })
@@ -2073,9 +2027,9 @@ test('ArrowUp and Ctrl+P from the search input enter result navigation at the fi
   const arrowEvent = dispatchKeydown(arrowInput, 'ArrowUp')
 
   assert.equal(arrowEvent.defaultPrevented, true)
-  assert.equal(arrowApp.focusMode, 'results')
-  assert.equal(arrowApp.selectedIndex, 0)
-  assert.equal(arrowDocument.activeElement?.dataset.resultIndex, '0')
+  assert.equal(arrowApp.focusMode, 'search')
+  assert.equal(arrowApp.selectedIndex, 1)
+  assert.equal(arrowDocument.activeElement, arrowInput)
 
   const ctrlDocument = createScryDocument()
   const ctrlChromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
@@ -2088,12 +2042,12 @@ test('ArrowUp and Ctrl+P from the search input enter result navigation at the fi
   const ctrlEvent = dispatchKeydown(ctrlInput, 'p', { ctrlKey: true })
 
   assert.equal(ctrlEvent.defaultPrevented, true)
-  assert.equal(ctrlApp.focusMode, 'results')
-  assert.equal(ctrlApp.selectedIndex, 0)
-  assert.equal(ctrlDocument.activeElement?.dataset.resultIndex, '0')
+  assert.equal(ctrlApp.focusMode, 'search')
+  assert.equal(ctrlApp.selectedIndex, 1)
+  assert.equal(ctrlDocument.activeElement, ctrlInput)
 })
 
-test('ArrowDown from the search input enters result navigation and focuses the list when no rows are visible', async () => {
+test('ArrowDown from the search input is a no-op with no visible rows and keeps search focused', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
@@ -2105,11 +2059,11 @@ test('ArrowDown from the search input enters result navigation and focuses the l
   const event = dispatchKeydown(input, 'ArrowDown')
 
   assert.equal(event.defaultPrevented, true)
-  assert.equal(app.focusMode, 'results')
-  assert.equal(document.activeElement, app.resultsList)
+  assert.equal(app.focusMode, 'search')
+  assert.equal(document.activeElement, input)
 })
 
-test('result navigation shortcuts are ignored when the search input is focused', () => {
+test('plain result-navigation letters are ignored when the search input is focused', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
@@ -2129,7 +2083,7 @@ test('result navigation shortcuts are ignored when the search input is focused',
   assert.equal(document.activeElement, input)
 })
 
-test('result navigation shortcuts are ignored outside result navigation mode', () => {
+test('plain result-navigation letters are ignored on focused rows', () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
@@ -2175,7 +2129,7 @@ test('unmodified Enter in the search input opens the selected result in a new ac
   assert.equal(windowApi.closeCalls, 1)
 })
 
-test('Escape moves from search entry to result navigation, then result Escape closes without row actions', async () => {
+test('Escape from search entry closes without row actions', async () => {
   const document = createScryDocument()
   const writes = []
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2)])
@@ -2202,13 +2156,6 @@ test('Escape moves from search entry to result navigation, then result Escape cl
   const searchEscape = dispatchKeydown(input, 'Escape')
 
   assert.equal(searchEscape.defaultPrevented, true)
-  assert.equal(app.focusMode, 'results')
-  assert.equal(input.value, 'scry')
-  assert.equal(document.activeElement?.dataset.resultIndex, '0')
-
-  const resultEscape = dispatchKeydown(document.activeElement, 'Escape')
-
-  assert.equal(resultEscape.defaultPrevented, true)
   assert.equal(app.focusMode, 'blurred')
   assert.equal(document.activeElement, null)
   assert.equal(windowApi.blurCalls, 0)
@@ -2242,7 +2189,7 @@ test('Escape from result navigation falls back to window blur when close is unav
   assert.equal(windowApi.blurCalls, 1)
 })
 
-test('double Escape leaves the panel even when there are no visible result rows', async () => {
+test('Escape leaves the panel even when there are no visible result rows', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([])
   const windowApi = {
@@ -2259,19 +2206,12 @@ test('double Escape leaves the panel even when there are no visible result rows'
   const searchEscape = dispatchKeydown(input, 'Escape')
 
   assert.equal(searchEscape.defaultPrevented, true)
-  assert.equal(app.focusMode, 'results')
-  assert.equal(document.activeElement, app.resultsList)
-  assert.equal(app.visibleRows.length, 0)
-
-  const resultEscape = dispatchKeydown(app.resultsList, 'Escape')
-
-  assert.equal(resultEscape.defaultPrevented, true)
   assert.equal(app.focusMode, 'blurred')
   assert.equal(document.activeElement, null)
   assert.equal(windowApi.closeCalls, 1)
 })
 
-test('results are paged and h/l move between pages in result navigation mode', async () => {
+test('results are paged and Ctrl+D/Ctrl+U move between pages from the search input', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome(Array.from({ length: 12 }, (_, index) => historyEntry(index + 1)))
   const app = new ScryPanelApp({ document, chromeApi, clock: () => now, windowApi: { blur() {} } })
@@ -2286,19 +2226,22 @@ test('results are paged and h/l move between pages in result navigation mode', a
   assert.equal(pageStatus.textContent, 'Page 1 of 2')
   const firstPageFirstIndex = results.children[0].children[0].dataset.resultIndex
 
-  dispatchKeydown(input, 'Escape')
-  dispatchKeydown(document.activeElement, 'l')
+  const nextPage = dispatchKeydown(input, 'd', { ctrlKey: true })
 
+  assert.equal(nextPage.defaultPrevented, true)
   assert.equal(pageStatus.textContent, 'Page 2 of 2')
   assert.notEqual(results.children[0].children[0].dataset.resultIndex, firstPageFirstIndex)
+  assert.equal(document.activeElement, input)
 
-  dispatchKeydown(document.activeElement, 'h')
+  const previousPage = dispatchKeydown(input, 'u', { ctrlKey: true })
 
+  assert.equal(previousPage.defaultPrevented, true)
   assert.equal(pageStatus.textContent, 'Page 1 of 2')
   assert.equal(results.children[0].children[0].dataset.resultIndex, firstPageFirstIndex)
+  assert.equal(document.activeElement, input)
 })
 
-test('j/k navigate results and unmodified Enter opens the selected result in a new active tab then closes the command palette', async () => {
+test('Tab and Shift+Tab navigate results and Enter opens the selected result in a new active tab then closes the command palette', async () => {
   const document = createScryDocument()
   const chromeApi = createPanelChrome([historyEntry(1), historyEntry(2), historyEntry(3)])
   const windowApi = {
@@ -2312,17 +2255,15 @@ test('j/k navigate results and unmodified Enter opens the selected result in a n
   await app.start()
   const input = document.querySelector('#search-input')
 
-  dispatchKeydown(input, 'Escape')
-  assert.equal(document.activeElement?.dataset.resultIndex, '0')
+  dispatchKeydown(input, 'Tab')
+  assert.equal(app.selectedIndex, 1)
+  assert.equal(document.activeElement, input)
 
-  dispatchKeydown(document.activeElement, 'j')
-  assert.equal(document.activeElement?.dataset.resultIndex, '1')
-
-  dispatchKeydown(document.activeElement, 'k')
-  assert.equal(document.activeElement?.dataset.resultIndex, '0')
+  dispatchKeydown(input, 'Tab', { shiftKey: true })
+  assert.equal(app.selectedIndex, 0)
   const selectedUrl = app.selectedVisibleRow().result.url
 
-  dispatchKeydown(document.activeElement, 'Enter')
+  dispatchKeydown(input, 'Enter')
   await settle()
 
   assert.deepEqual(chromeApi.tabs.opened, [
@@ -2418,7 +2359,7 @@ test('renderSearchSurface renders a clickable two-mode corpus badge and switch h
     mode: 'history',
     status: 'ready',
     clickable: true,
-    modeSwitchHint: 'Tab / Shift+Tab',
+    modeSwitchHint: 'Ctrl+Q',
     statusText: '2 history URLs',
   })
   assert.equal(modeIndicator.textContent, 'history')
@@ -2429,7 +2370,7 @@ test('renderSearchSurface renders a clickable two-mode corpus badge and switch h
   assert.equal(modeIndicator.getAttribute('aria-label'), 'history; 2 history URLs')
   assert.equal(after.textContent, '')
   assert.equal(hint.hidden, false)
-  assert.equal(hint.textContent, 'Tab / Shift+Tab')
+  assert.equal(hint.textContent, 'Ctrl+Q')
   assert.equal(count.textContent, '2 history URLs')
   assert.equal(document.querySelector('#search-input').getAttribute('aria-label'), 'Search history')
 })
@@ -2459,7 +2400,7 @@ test('start loads selection data and the deep history corpus by default', async 
   assert.equal(modeIndicator.dataset.clickable, 'true')
 })
 
-test('Tab, Shift+Tab, and corpus badge clicks switch between history and closed without changing the query', async () => {
+test('Ctrl+Q and corpus badge clicks switch between history and closed without changing the query', async () => {
   const document = createScryDocument()
   const { modeIndicator } = appendSearchHeader(document)
   const historyCalls = []
@@ -2485,21 +2426,22 @@ test('Tab, Shift+Tab, and corpus badge clicks switch between history and closed 
   await app.start()
   const input = document.querySelector('#search-input')
   input.value = 'scry issue'
-  const tab = dispatchKeydown(input, 'Tab')
+  const ctrlQ = dispatchKeydown(input, 'q', { ctrlKey: true })
   await settle()
-  const shiftTab = dispatchKeydown(input, 'Tab', { shiftKey: true })
-  await settle()
+  const modeAfterCtrlQ = app.searchMode
+  const corpusAfterCtrlQ = modeIndicator.dataset.corpus
   const click = modeIndicator.dispatchEvent({ type: 'click', bubbles: true })
   await settle()
 
-  assert.equal(tab.defaultPrevented, true)
-  assert.equal(shiftTab.defaultPrevented, true)
+  assert.equal(ctrlQ.defaultPrevented, true)
+  assert.equal(modeAfterCtrlQ, 'closed')
+  assert.equal(corpusAfterCtrlQ, 'closed')
   assert.equal(click, false)
   assert.equal(input.value, 'scry issue')
-  assert.equal(app.searchMode, 'closed')
+  assert.equal(app.searchMode, 'history')
   assert.equal(app.searchCache.modes.history.status, 'ready')
   assert.equal(app.searchCache.modes.closed.status, 'ready')
-  assert.equal(modeIndicator.dataset.corpus, 'closed')
+  assert.equal(modeIndicator.dataset.corpus, 'history')
   assert.deepEqual(historyCalls, [
     { text: '', startTime: 0, maxResults: 100_000 },
   ])

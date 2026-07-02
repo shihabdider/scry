@@ -346,8 +346,8 @@ test('selectedRowActionHints returns copy and edit URL hints for selected editab
   }
 
   assert.deepEqual(selectedRowActionHints(row, { selected: true }), [
-    { action: 'copy', key: 'y', label: 'copy' },
-    { action: 'edit-url', key: 'c', label: 'edit URL' },
+    { action: 'copy', key: 'Ctrl+Y', label: 'copy' },
+    { action: 'edit-url', key: 'Ctrl+E', label: 'edit URL' },
   ])
 })
 
@@ -363,16 +363,16 @@ test('selectedRowActionHints returns copy only for selected synthetic typed URL 
     },
   }
 
-  assert.deepEqual(selectedRowActionHints(row, { selected: true }), [{ action: 'copy', key: 'y', label: 'copy' }])
+  assert.deepEqual(selectedRowActionHints(row, { selected: true }), [{ action: 'copy', key: 'Ctrl+Y', label: 'copy' }])
 })
 
 test('selectedRowActionHints derives copy and edit hints independently from row capabilities', () => {
   assert.deepEqual(selectedRowActionHints({ kind: 'result', result: { url: 'https://example.com/docs' } }, { selected: true }), [
-    { action: 'copy', key: 'y', label: 'copy' },
+    { action: 'copy', key: 'Ctrl+Y', label: 'copy' },
   ])
 
   assert.deepEqual(selectedRowActionHints({ kind: 'result', result: { displayUrl: 'example.com/docs' } }, { selected: true }), [
-    { action: 'edit-url', key: 'c', label: 'edit URL' },
+    { action: 'edit-url', key: 'Ctrl+E', label: 'edit URL' },
   ])
 })
 

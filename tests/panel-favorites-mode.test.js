@@ -350,7 +350,7 @@ test('handleSearchInputEnter preserves ordinary selected-row open behavior', asy
   assert.deepEqual(openArgs, { newTab: true })
 })
 
-test('handleSearchInputTab exits favorites to the previous public mode without Shift', async () => {
+test('handleFilterModeShortcut exits favorites to the previous public mode', async () => {
   const app = panelApp(favoritesChrome([]).chromeApi)
   app.searchMode = 'favorites'
   app.previousPublicSearchMode = 'closed'
@@ -360,29 +360,13 @@ test('handleSearchInputTab exits favorites to the previous public mode without S
     app.searchMode = mode
   }
 
-  await app.handleSearchInputTab({ shiftKey: false })
+  await app.handleFilterModeShortcut()
 
   assert.equal(switchedTo, 'closed')
   assert.equal(app.searchMode, 'closed')
 })
 
-test('handleSearchInputTab exits favorites to the previous public mode with Shift ignored', async () => {
-  const app = panelApp(favoritesChrome([]).chromeApi)
-  app.searchMode = 'favorites'
-  app.previousPublicSearchMode = 'history'
-  let switchedTo = null
-  app.switchSearchMode = async (mode) => {
-    switchedTo = mode
-    app.searchMode = mode
-  }
-
-  await app.handleSearchInputTab({ shiftKey: true })
-
-  assert.equal(switchedTo, 'history')
-  assert.equal(app.searchMode, 'history')
-})
-
-test('handleSearchInputTab cycles public history forward to closed', async () => {
+test('handleFilterModeShortcut cycles public history forward to closed', async () => {
   const app = panelApp(favoritesChrome([]).chromeApi)
   app.searchMode = 'history'
   let switchedTo = null
@@ -391,13 +375,13 @@ test('handleSearchInputTab cycles public history forward to closed', async () =>
     app.searchMode = mode
   }
 
-  await app.handleSearchInputTab({ shiftKey: false })
+  await app.handleFilterModeShortcut()
 
   assert.equal(switchedTo, 'closed')
   assert.equal(app.searchMode, 'closed')
 })
 
-test('handleSearchInputTab cycles public closed forward to history', async () => {
+test('handleFilterModeShortcut cycles public closed forward to history', async () => {
   const app = panelApp(favoritesChrome([]).chromeApi)
   app.searchMode = 'closed'
   let switchedTo = null
@@ -406,13 +390,13 @@ test('handleSearchInputTab cycles public closed forward to history', async () =>
     app.searchMode = mode
   }
 
-  await app.handleSearchInputTab({ shiftKey: false })
+  await app.handleFilterModeShortcut()
 
   assert.equal(switchedTo, 'history')
   assert.equal(app.searchMode, 'history')
 })
 
-test('handleSearchInputTab cycles public history backward to closed', async () => {
+test('handleFilterModeShortcut can cycle public history backward to closed', async () => {
   const app = panelApp(favoritesChrome([]).chromeApi)
   app.searchMode = 'history'
   let switchedTo = null
@@ -421,10 +405,52 @@ test('handleSearchInputTab cycles public history backward to closed', async () =
     app.searchMode = mode
   }
 
-  await app.handleSearchInputTab({ shiftKey: true })
+  await app.handleFilterModeShortcut({ direction: -1 })
 
   assert.equal(switchedTo, 'closed')
   assert.equal(app.searchMode, 'closed')
+})
+
+test('favorites search focus hides row-local x/u hints while keeping Ctrl row actions visible', async () => {
+  const storage = favoritesChrome([exampleFavorite])
+  const app = panelApp(storage.chromeApi)
+  await app.ensureFavoritesModeReady()
+  app.updateResults()
+  app.selectedIndex = 0
+  app.favoriteRemovalUndo = { favorite: olderFavorite, index: 1 }
+  app.focusMode = 'search'
+
+  app.renderResults()
+  const searchHtml = app.resultsList.children[0].children[0].innerHTML
+
+  assert.match(searchHtml, /Ctrl\+Y copy/)
+  assert.match(searchHtml, /Ctrl\+E edit URL/)
+  assert.doesNotMatch(searchHtml, /x remove/)
+  assert.doesNotMatch(searchHtml, /u undo/)
+
+  app.focusMode = 'results'
+  app.renderResults()
+  const resultHtml = app.resultsList.children[0].children[0].innerHTML
+
+  assert.match(resultHtml, /x remove/)
+  assert.match(resultHtml, /u undo/)
+})
+
+test('typing x in the favorites search input is not intercepted as a remove command', async () => {
+  const storage = favoritesChrome([exampleFavorite])
+  const app = panelApp(storage.chromeApi)
+  app.bindEvents()
+  await app.ensureFavoritesModeReady()
+  app.updateResults()
+  app.selectedIndex = 0
+  app.input.focus()
+
+  const event = dispatchKeydown(app.input, 'x')
+
+  assert.equal(event.defaultPrevented, false)
+  assert.deepEqual(storage.writes, [])
+  assert.equal(app.favoriteRemovalUndo, null)
+  assert.equal(app.searchMode, 'favorites')
 })
 
 test('removeSelectedFavorite removes a selected favorite, remembers one undo, and refreshes results', async () => {

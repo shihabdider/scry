@@ -63,7 +63,7 @@ test('popup exposes a clickable history/closed corpus badge without a visible le
   assert.match(modeIndicator, /\bdata-clickable="true"/i)
   assert.doesNotMatch(modeIndicator, /\sdisabled(?:\s|=|>)/i)
   assert.match(modeIndicator, /\baria-disabled="false"/i)
-  assert.match(modeIndicator, /\baria-label="history; History not loaded; switch to recently closed with Tab"/i)
+  assert.match(modeIndicator, /\baria-label="history; History not loaded; switch to recently closed with Ctrl\+Q"/i)
   assert.match(html, />history<\/button>/i)
 
   assert.match(deepSearchButton, /^<button\b/i)
@@ -81,7 +81,7 @@ test('popup uses a compact search header row instead of the legacy standalone la
   assert.match(searchHeader, /id="search-header-before"[\s\S]*>\s*Search\s*</i)
   assert.match(searchHeader, /id="mode-indicator"[\s\S]*>\s*history\s*<\/button>/i)
   assert.match(searchHeader, /id="search-header-after"[\s\S]*>\s*<\/span>/i)
-  assert.match(searchHeader, /id="mode-switch-hint"[\s\S]*>\s*Tab \/ Shift\+Tab switches history ↔ closed\s*<\/span>/i)
+  assert.match(searchHeader, /id="mode-switch-hint"[\s\S]*>\s*Ctrl\+Q switches history ↔ closed\s*<\/span>/i)
   assert.match(searchHeader, /id="result-count"[\s\S]*\brole="status"[\s\S]*>\s*History not loaded\s*</i)
   assert.match(searchInput, /\baria-label="Search history"/i)
   assert.match(brandStatus, /\bhidden\b/i)
@@ -101,11 +101,11 @@ test('popup omits the footer key-hint line and promotes space-separated search f
     assert.doesNotMatch(footerText, /⌘K|\bEsc\b|j\/k|h\/l|\bEnter\b/i)
   }
 
-  assert.match(previousPageButton, />\s*h\s+previous\s*<\/button>/i)
-  assert.match(nextPageButton, />\s*l\s+next\s*<\/button>/i)
+  assert.match(previousPageButton, />\s*Ctrl\+U\s+previous\s*<\/button>/i)
+  assert.match(nextPageButton, />\s*Ctrl\+D\s+next\s*<\/button>/i)
   assert.match(placeholder, /\bgit skilift issues 13\b/i)
   assert.doesNotMatch(placeholder, /\*/)
-  assert.match(placeholder, /(?:\bi\b|\/).*search|search.*(?:\bi\b|\/)/i)
+  assert.doesNotMatch(placeholder, /(?:\bi\b|\/).*search|search.*(?:\bi\b|\/)/i)
 })
 
 test('README product examples use space-separated URL fragments without starred syntax', async () => {

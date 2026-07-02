@@ -32,8 +32,8 @@ test('selectedFavoriteRowActionHints adds remove after ordinary hints in favorit
   assert.deepEqual(
     selectedFavoriteRowActionHints(resultRow, { selected: true, inFavoritesMode: true, canUndoFavoriteRemoval: false }),
     [
-      { action: 'copy', key: 'y', label: 'copy' },
-      { action: 'edit-url', key: 'c', label: 'edit URL' },
+      { action: 'copy', key: 'Ctrl+Y', label: 'copy' },
+      { action: 'edit-url', key: 'Ctrl+E', label: 'edit URL' },
       { action: 'remove-favorite', key: 'x', label: 'remove' },
     ],
   )
@@ -43,8 +43,8 @@ test('selectedFavoriteRowActionHints adds both remove and undo hints in favorite
   assert.deepEqual(
     selectedFavoriteRowActionHints(resultRow, { selected: true, inFavoritesMode: true, canUndoFavoriteRemoval: true }),
     [
-      { action: 'copy', key: 'y', label: 'copy' },
-      { action: 'edit-url', key: 'c', label: 'edit URL' },
+      { action: 'copy', key: 'Ctrl+Y', label: 'copy' },
+      { action: 'edit-url', key: 'Ctrl+E', label: 'edit URL' },
       { action: 'remove-favorite', key: 'x', label: 'remove' },
       { action: 'undo-remove-favorite', key: 'u', label: 'undo' },
     ],

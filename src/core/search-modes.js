@@ -13,7 +13,7 @@ export const ALL_SEARCH_MODES = Object.freeze([...SEARCH_MODES, ...HIDDEN_SEARCH
  * - "closed"
  *
  * Interpretation:
- * Represents a search corpus reachable by public Tab / Shift+Tab cycling. `history` is the single
+ * Represents a search corpus reachable by public Ctrl-Q cycling. `history` is the single
  * browser-history surface backed by a deep in-memory Chrome history cache; `closed` searches local
  * recently closed tab/window sessions. The removed legacy `recent` and explicit `deep` modes are
  * normalized back to `history`.
@@ -31,7 +31,7 @@ export const ALL_SEARCH_MODES = Object.freeze([...SEARCH_MODES, ...HIDDEN_SEARCH
  *
  * Interpretation:
  * Represents a local-only search mode that is not reachable through public mode cycling. The
- * favorites mode is entered by the submitted command :f through :favorite and exits with Tab to
+ * favorites mode is entered by the submitted command :f through :favorite and exits with Ctrl-Q to
  * the previous PublicSearchMode.
  *
  * Examples:
@@ -230,7 +230,7 @@ function searchHeaderModelFromIndicator(indicator, afterMode) {
 export function favoritesModeIndicatorModel(state) {
   return modeIndicatorModelFromStatusText(FAVORITES_SEARCH_MODE, state, {
     clickable: false,
-    modeSwitchHint: 'Tab to return',
+    modeSwitchHint: 'Ctrl+Q to return',
     statusTextForCount: (entryCount, urlWord) => ({
       idle: 'Favorites not loaded',
       loading: 'Loading favorites…',
@@ -263,7 +263,7 @@ export function modeIndicatorModel(mode, state) {
 
   return modeIndicatorModelFromStatusText(activeMode, state, {
     clickable: true,
-    modeSwitchHint: 'Tab / Shift+Tab',
+    modeSwitchHint: 'Ctrl+Q',
     statusTextForCount,
   })
 }

@@ -33,10 +33,10 @@ test('favoriteResultNavigationCommandForKey ignores u in favorites mode when no 
   )
 })
 
-test('favoriteResultNavigationCommandForKey preserves existing y copy fallback', () => {
+test('favoriteResultNavigationCommandForKey preserves Ctrl+Y copy fallback', () => {
   assert.equal(
     favoriteResultNavigationCommandForKey(
-      { key: 'y' },
+      { key: 'y', ctrlKey: true },
       { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: true },
     ),
     'copySelected',

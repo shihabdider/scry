@@ -24,29 +24,27 @@ const COPY_FEEDBACK_DURATION_MS = 1_200
 /**
  * @typedef {'search'|'results'|'blurred'} FocusMode
  *
- * Search mode means text-entry/input mode: selectedIndex may still name the
- * internal action target, but no row is visually selected. Results mode means
- * normal/result-navigation mode: selectedIndex is both the action target and
- * the visually highlighted row. Blurred mode means the panel has yielded focus.
+ * Search state means the input owns keyboard focus while selectedIndex still names and highlights
+ * the current row. Results state means a result/list element owns focus for accessibility fallback.
+ * Blurred state means the panel has yielded focus.
  */
 
 /**
  * @typedef {object} ResultRenderSelection
  * @property {FocusMode} focusMode Current focus lifecycle mode.
  * @property {number} selectedIndex Internal selected row/action target.
- * @property {number|null} visualSelectedIndex Visible highlighted row index, or null when input/blurred mode suppresses visual selection.
+ * @property {number|null} visualSelectedIndex Visible highlighted row index, or null after the panel has blurred.
  */
 
 /**
  * @typedef {object} EnterResultsModeSelection
- * @property {'results'} focusMode Normal/result-navigation mode after leaving text entry.
- * @property {number} selectedIndex First visible row index selected for normal-mode commands.
+ * @property {'results'} focusMode Result/list focus state after leaving text entry.
+ * @property {number} selectedIndex First visible row index selected for focused-row commands.
  */
 
 /**
  * A ResultNavigationCommand is one of:
  * - "ignore"
- * - "focusSearch"
  * - "leavePanelFocus"
  * - "copySelected"
  * - "editSelectedUrl"
@@ -59,11 +57,10 @@ const COPY_FEEDBACK_DURATION_MS = 1_200
  * - "openSelected"
  *
  * Interpretation:
- * Represents a list-selection keyboard action after raw key events are translated. Favorites adds
- * x remove and one-level u undo while preserving existing public-mode copy/edit/navigation/open
- * commands.
+ * Represents a row-selection keyboard action after raw key events are translated. Favorites adds
+ * x remove and one-level u undo for focused result rows while Ctrl shortcuts preserve input focus.
  *
- * @typedef {'ignore'|'focusSearch'|'leavePanelFocus'|'copySelected'|'editSelectedUrl'|'removeSelectedFavorite'|'undoFavoriteRemoval'|'moveNext'|'movePrevious'|'nextPage'|'previousPage'|'openSelected'} ResultNavigationCommand
+ * @typedef {'ignore'|'leavePanelFocus'|'copySelected'|'editSelectedUrl'|'removeSelectedFavorite'|'undoFavoriteRemoval'|'moveNext'|'movePrevious'|'nextPage'|'previousPage'|'openSelected'} ResultNavigationCommand
  */
 
 /**
@@ -73,7 +70,7 @@ const COPY_FEEDBACK_DURATION_MS = 1_200
  *
  * Interpretation:
  * Represents popup-session state needed only by hidden favorites mode. previousPublicSearchMode is
- * where Tab returns after entering favorites; favoriteRemovalUndo is the one-level removal undo
+ * where Ctrl-Q returns after entering favorites; favoriteRemovalUndo is the one-level removal undo
  * available until it is consumed or replaced.
  *
  * @typedef {object} FavoritesPanelState
@@ -99,7 +96,7 @@ export function deriveResultRenderSelection(selection) {
   return {
     focusMode: selection.focusMode,
     selectedIndex: selection.selectedIndex,
-    visualSelectedIndex: selection.focusMode === 'results' ? selection.selectedIndex : null,
+    visualSelectedIndex: selection.focusMode === 'blurred' ? null : selection.selectedIndex,
   }
 }
 
@@ -125,32 +122,37 @@ export function enterResultsModeSelection(state) {
   }
 }
 
+function isPlainTabShortcut(event, key) {
+  return key === 'tab' && !event?.ctrlKey && !event?.metaKey && !event?.altKey
+}
+
+function isCtrlShortcut(event, key, expectedKey) {
+  return key === expectedKey && Boolean(event?.ctrlKey) && !event?.metaKey && !event?.altKey
+}
+
+function isFilterModeSwitchShortcut(event) {
+  const key = typeof event?.key === 'string' ? event.key.toLowerCase() : ''
+  return isCtrlShortcut(event, key, 'q')
+}
+
 export function resultNavigationCommandForKey(event) {
   const key = typeof event?.key === 'string' ? event.key.toLowerCase() : ''
 
-  if (event?.ctrlKey && key === 'n') return 'moveNext'
-  if (event?.ctrlKey && key === 'p') return 'movePrevious'
+  if (isPlainTabShortcut(event, key)) return event?.shiftKey ? 'movePrevious' : 'moveNext'
+  if (isCtrlShortcut(event, key, 'y')) return 'copySelected'
+  if (isCtrlShortcut(event, key, 'e')) return 'editSelectedUrl'
+  if (isCtrlShortcut(event, key, 'd')) return 'nextPage'
+  if (isCtrlShortcut(event, key, 'u')) return 'previousPage'
+  if (isCtrlShortcut(event, key, 'n')) return 'moveNext'
+  if (isCtrlShortcut(event, key, 'p')) return 'movePrevious'
 
   switch (key) {
-    case 'i':
-    case '/':
-      return 'focusSearch'
     case 'escape':
       return 'leavePanelFocus'
-    case 'y':
-      return 'copySelected'
-    case 'c':
-      return 'editSelectedUrl'
-    case 'j':
     case 'arrowdown':
       return 'moveNext'
-    case 'k':
     case 'arrowup':
       return 'movePrevious'
-    case 'l':
-      return 'nextPage'
-    case 'h':
-      return 'previousPage'
     case 'enter':
       return 'openSelected'
     default:
@@ -161,14 +163,14 @@ export function resultNavigationCommandForKey(event) {
 /**
  * KeyboardEvent { inFavoritesMode: boolean, canRemoveFavorite: boolean, canUndoFavoriteRemoval: boolean } -> ResultNavigationCommand
  *
- * Produces the list-selection keyboard command for hidden favorites mode, including x remove and
- * one-level u undo, while preserving ordinary result-navigation commands for all other keys.
+ * Produces the keyboard command for hidden favorites rows, including x remove and one-level u undo,
+ * while preserving ordinary row/navigation commands for all other keys.
  *
  * Functional Examples:
  * - favoriteResultNavigationCommandForKey({ key: "x" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: false }) should produce "removeSelectedFavorite".
  * - favoriteResultNavigationCommandForKey({ key: "u" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "undoFavoriteRemoval".
  * - favoriteResultNavigationCommandForKey({ key: "u" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: false }) should produce "ignore".
- * - favoriteResultNavigationCommandForKey({ key: "y" }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "copySelected".
+ * - favoriteResultNavigationCommandForKey({ key: "y", ctrlKey: true }, { inFavoritesMode: true, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "copySelected".
  * - favoriteResultNavigationCommandForKey({ key: "x" }, { inFavoritesMode: false, canRemoveFavorite: true, canUndoFavoriteRemoval: true }) should produce "ignore".
  *
  * Template:
@@ -183,10 +185,12 @@ export function favoriteResultNavigationCommandForKey(
 ) {
   const key = typeof event?.key === 'string' ? event.key.toLowerCase() : ''
 
-  if (key === 'x' && inFavoritesMode && canRemoveFavorite) {
+  const isPlainKey = !event?.ctrlKey && !event?.metaKey && !event?.altKey
+
+  if (isPlainKey && key === 'x' && inFavoritesMode && canRemoveFavorite) {
     return 'removeSelectedFavorite'
   }
-  if (key === 'u' && inFavoritesMode && canUndoFavoriteRemoval) {
+  if (isPlainKey && key === 'u' && inFavoritesMode && canUndoFavoriteRemoval) {
     return 'undoFavoriteRemoval'
   }
 
@@ -257,26 +261,7 @@ export class ScryPanelApp {
     })
 
     this.input.addEventListener('keydown', (event) => {
-      if (event.key === 'Tab') {
-        event.preventDefault()
-        this.flushPendingInputResultsUpdate()
-        void this.handleSearchInputTab({ shiftKey: event.shiftKey })
-      } else if (event.key === 'ArrowDown' || (event.ctrlKey && event.key.toLowerCase() === 'n')) {
-        event.preventDefault()
-        this.flushPendingInputResultsUpdate()
-        this.focusResults()
-      } else if (event.key === 'ArrowUp' || (event.ctrlKey && event.key.toLowerCase() === 'p')) {
-        event.preventDefault()
-        this.flushPendingInputResultsUpdate()
-        this.focusResults()
-      } else if (event.key === 'Enter') {
-        event.preventDefault()
-        void this.handleSearchInputEnter()
-      } else if (event.key === 'Escape') {
-        event.preventDefault()
-        this.flushPendingInputResultsUpdate()
-        this.focusResults()
-      }
+      this.handleSearchInputKeydown(event)
     })
 
     this.resultsList.addEventListener('click', (event) => {
@@ -309,6 +294,71 @@ export class ScryPanelApp {
     })
   }
 
+  selectedNavigationContext() {
+    const selectedRow = this.selectedVisibleRow()
+    return {
+      inFavoritesMode: this.searchMode === FAVORITES_SEARCH_MODE,
+      canRemoveFavorite: selectedRow?.kind === 'result',
+      canUndoFavoriteRemoval: Boolean(this.favoriteRemovalUndo),
+    }
+  }
+
+  handleSearchInputKeydown(event) {
+    if (isFilterModeSwitchShortcut(event)) {
+      event.preventDefault()
+      this.flushPendingInputResultsUpdate()
+      void this.handleFilterModeShortcut()
+      return
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      void this.handleSearchInputEnter()
+      return
+    }
+
+    const command = resultNavigationCommandForKey(event)
+    if (command === 'ignore') return
+
+    event.preventDefault()
+    this.flushPendingInputResultsUpdate()
+    this.executeResultNavigationCommand(command)
+  }
+
+  executeResultNavigationCommand(command) {
+    switch (command) {
+      case 'leavePanelFocus':
+        this.leavePanelFocus()
+        break
+      case 'copySelected':
+        void this.copySelectedRow()
+        break
+      case 'editSelectedUrl':
+        this.changeSelectedRowToSearch()
+        break
+      case 'removeSelectedFavorite':
+        void this.removeSelectedFavorite()
+        break
+      case 'undoFavoriteRemoval':
+        void this.undoLastFavoriteRemoval()
+        break
+      case 'moveNext':
+        this.moveSelection(1)
+        break
+      case 'movePrevious':
+        this.moveSelection(-1)
+        break
+      case 'nextPage':
+        this.movePage(1)
+        break
+      case 'previousPage':
+        this.movePage(-1)
+        break
+      case 'openSelected':
+        void this.openSelected({ newTab: true })
+        break
+    }
+  }
 
   /**
    * void -> Promise<void>
@@ -342,29 +392,28 @@ export class ScryPanelApp {
   }
 
   /**
-   * { shiftKey?: boolean } -> Promise<void>
+   * { shiftKey?: boolean } -> void
    *
-   * Handles Tab in the search input by exiting hidden favorites to the previous public mode, or by
-   * preserving public-mode cycling through history and recently closed URLs.
-   *
-   * Functional Examples:
-   * - In favorites mode with previousPublicSearchMode "closed", handleSearchInputTab({ shiftKey: false }) should switch to "closed".
-   * - In favorites mode with previousPublicSearchMode "history", handleSearchInputTab({ shiftKey: true }) should switch to "history"; Shift does not change hidden-mode exit target.
-   * - In history public mode, handleSearchInputTab({ shiftKey: false }) should switch to "closed".
-   * - In closed public mode, handleSearchInputTab({ shiftKey: false }) should switch to "history".
-   *
-   * Template:
-   * Follow SearchMode as a union:
-   * - when active mode is hidden favorites, call exitFavoritesModeToPreviousPublicMode
-   * - otherwise call cycleSearchMode with the requested direction
+   * Handles Tab in the search input as row scrolling while preserving input focus. Tab moves to the
+   * next row; Shift-Tab moves to the previous row.
    */
-  async handleSearchInputTab({ shiftKey = false } = {}) {
+  handleSearchInputTab({ shiftKey = false } = {}) {
+    this.moveSelection(shiftKey ? -1 : 1)
+  }
+
+  /**
+   * { direction?: number } -> Promise<void>
+   *
+   * Handles Ctrl-Q by exiting hidden favorites to the previous public filter, or by cycling public
+   * filters through history and recently closed URLs.
+   */
+  async handleFilterModeShortcut({ direction = 1 } = {}) {
     if (isHiddenSearchMode(this.searchMode)) {
       await this.exitFavoritesModeToPreviousPublicMode()
       return
     }
 
-    await this.cycleSearchMode(shiftKey ? -1 : 1)
+    await this.cycleSearchMode(direction)
   }
 
   async loadHistory(_options = {}) {
@@ -925,54 +974,20 @@ export class ScryPanelApp {
   }
 
   handlePanelKeydown(event) {
-    if (this.focusMode !== 'results') return
+    if (event.defaultPrevented) return
     if (event.target === this.input || this.document.activeElement === this.input) return
 
-    const selectedRow = this.selectedVisibleRow()
-    const command = favoriteResultNavigationCommandForKey(event, {
-      inFavoritesMode: this.searchMode === FAVORITES_SEARCH_MODE,
-      canRemoveFavorite: selectedRow?.kind === 'result',
-      canUndoFavoriteRemoval: Boolean(this.favoriteRemovalUndo),
-    })
+    if (isFilterModeSwitchShortcut(event)) {
+      event.preventDefault()
+      void this.handleFilterModeShortcut()
+      return
+    }
+
+    const command = favoriteResultNavigationCommandForKey(event, this.selectedNavigationContext())
     if (command === 'ignore') return
 
     event.preventDefault()
-
-    switch (command) {
-      case 'focusSearch':
-        this.focusSearch()
-        break
-      case 'leavePanelFocus':
-        this.leavePanelFocus()
-        break
-      case 'copySelected':
-        void this.copySelectedRow()
-        break
-      case 'editSelectedUrl':
-        this.changeSelectedRowToSearch()
-        break
-      case 'removeSelectedFavorite':
-        void this.removeSelectedFavorite()
-        break
-      case 'undoFavoriteRemoval':
-        void this.undoLastFavoriteRemoval()
-        break
-      case 'moveNext':
-        this.moveSelection(1)
-        break
-      case 'movePrevious':
-        this.moveSelection(-1)
-        break
-      case 'nextPage':
-        this.movePage(1)
-        break
-      case 'previousPage':
-        this.movePage(-1)
-        break
-      case 'openSelected':
-        void this.openSelected({ newTab: true })
-        break
-    }
+    this.executeResultNavigationCommand(command)
   }
 
   focusSearch() {
@@ -1116,7 +1131,7 @@ export class ScryPanelApp {
     const actionHintsHtml = (row, selected) => {
       const hints = selectedFavoriteRowActionHints(row, {
         selected,
-        inFavoritesMode: this.searchMode === FAVORITES_SEARCH_MODE,
+        inFavoritesMode: this.searchMode === FAVORITES_SEARCH_MODE && this.focusMode === 'results',
         canUndoFavoriteRemoval: Boolean(this.favoriteRemovalUndo),
       })
       if (hints.length === 0) return ''

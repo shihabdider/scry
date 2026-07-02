@@ -16,11 +16,11 @@ test('deriveResultRenderSelection exposes selected row visually in result-naviga
   })
 })
 
-test('deriveResultRenderSelection suppresses visual selection in input mode while preserving action target', () => {
+test('deriveResultRenderSelection exposes selected row visually while the search input is focused', () => {
   assert.deepEqual(deriveResultRenderSelection({ focusMode: 'search', selectedIndex: 0 }), {
     focusMode: 'search',
     selectedIndex: 0,
-    visualSelectedIndex: null,
+    visualSelectedIndex: 0,
   })
 })
 
@@ -83,32 +83,34 @@ test('enterResultsModeSelection selects the first visible row when a typed URL r
   })
 })
 
-test('resultNavigationCommandForKey maps search-focus keys to focusSearch', () => {
-  assert.equal(resultNavigationCommandForKey({ key: 'i' }), 'focusSearch')
-  assert.equal(resultNavigationCommandForKey({ key: 'I' }), 'focusSearch')
-  assert.equal(resultNavigationCommandForKey({ key: '/' }), 'focusSearch')
-})
-
 test('resultNavigationCommandForKey maps Escape to leavePanelFocus', () => {
   assert.equal(resultNavigationCommandForKey({ key: 'Escape' }), 'leavePanelFocus')
 })
 
 test('resultNavigationCommandForKey keeps selected-row commands distinct', () => {
-  assert.equal(resultNavigationCommandForKey({ key: 'y' }), 'copySelected')
-  assert.equal(resultNavigationCommandForKey({ key: 'c' }), 'editSelectedUrl')
-  assert.equal(resultNavigationCommandForKey({ key: 'j' }), 'moveNext')
+  assert.equal(resultNavigationCommandForKey({ key: 'Tab' }), 'moveNext')
+  assert.equal(resultNavigationCommandForKey({ key: 'Tab', shiftKey: true }), 'movePrevious')
   assert.equal(resultNavigationCommandForKey({ key: 'ArrowDown' }), 'moveNext')
   assert.equal(resultNavigationCommandForKey({ key: 'n', ctrlKey: true }), 'moveNext')
-  assert.equal(resultNavigationCommandForKey({ key: 'k' }), 'movePrevious')
   assert.equal(resultNavigationCommandForKey({ key: 'ArrowUp' }), 'movePrevious')
   assert.equal(resultNavigationCommandForKey({ key: 'p', ctrlKey: true }), 'movePrevious')
-  assert.equal(resultNavigationCommandForKey({ key: 'l' }), 'nextPage')
-  assert.equal(resultNavigationCommandForKey({ key: 'h' }), 'previousPage')
+  assert.equal(resultNavigationCommandForKey({ key: 'y', ctrlKey: true }), 'copySelected')
+  assert.equal(resultNavigationCommandForKey({ key: 'e', ctrlKey: true }), 'editSelectedUrl')
+  assert.equal(resultNavigationCommandForKey({ key: 'd', ctrlKey: true }), 'nextPage')
+  assert.equal(resultNavigationCommandForKey({ key: 'u', ctrlKey: true }), 'previousPage')
   assert.equal(resultNavigationCommandForKey({ key: 'Enter' }), 'openSelected')
 })
 
 test('resultNavigationCommandForKey ignores normal typing, unknown keys, and missing keys', () => {
   assert.equal(resultNavigationCommandForKey({ key: 'a' }), 'ignore')
+  assert.equal(resultNavigationCommandForKey({ key: 'i' }), 'ignore')
+  assert.equal(resultNavigationCommandForKey({ key: '/' }), 'ignore')
+  assert.equal(resultNavigationCommandForKey({ key: 'j' }), 'ignore')
+  assert.equal(resultNavigationCommandForKey({ key: 'k' }), 'ignore')
+  assert.equal(resultNavigationCommandForKey({ key: 'h' }), 'ignore')
+  assert.equal(resultNavigationCommandForKey({ key: 'l' }), 'ignore')
+  assert.equal(resultNavigationCommandForKey({ key: 'y' }), 'ignore')
+  assert.equal(resultNavigationCommandForKey({ key: 'c' }), 'ignore')
   assert.equal(resultNavigationCommandForKey({ key: 'n' }), 'ignore')
   assert.equal(resultNavigationCommandForKey({ key: 'p' }), 'ignore')
   assert.equal(resultNavigationCommandForKey({ key: ' ' }), 'ignore')

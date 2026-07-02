@@ -15,21 +15,21 @@
         </div>
         <div id="search-header" class="search-header" aria-label="Search history; History not loaded">
           <span id="search-header-before" class="search-header-text">Search</span>
-          <button id="mode-indicator" class="mode-indicator" type="button" data-mode="history" data-corpus="history" data-status="idle" data-clickable="true" aria-disabled="false" aria-label="history; History not loaded; switch to recently closed with Tab">history</button>
+          <button id="mode-indicator" class="mode-indicator" type="button" data-mode="history" data-corpus="history" data-status="idle" data-clickable="true" aria-disabled="false" aria-label="history; History not loaded; switch to recently closed with Ctrl+Q">history</button>
           <span id="search-header-after" class="search-header-text"></span>
-          <span id="mode-switch-hint" class="mode-switch-hint" aria-hidden="true">Tab / Shift+Tab switches history ↔ closed</span>
+          <span id="mode-switch-hint" class="mode-switch-hint" aria-hidden="true">Ctrl+Q switches history ↔ closed</span>
           <span id="result-count" class="result-count" role="status" aria-live="polite" aria-label="History not loaded">History not loaded</span>
         </div>
-        <input id="search-input" class="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="git skilift issues 13 — i or / to search" aria-label="Search history" autofocus />
+        <input id="search-input" class="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="git skilift issues 13" aria-label="Search history" autofocus />
       </header>
 
       <section id="message" class="message" hidden></section>
       <ol id="results" class="results" aria-label="History results" tabindex="-1"></ol>
 
       <nav id="pagination" class="pagination" aria-label="Result pages" hidden>
-        <button id="previous-page-button" class="page-button" type="button">h previous</button>
+        <button id="previous-page-button" class="page-button" type="button">Ctrl+U previous</button>
         <span id="page-status" class="page-status">Page 1 of 1</span>
-        <button id="next-page-button" class="page-button" type="button">l next</button>
+        <button id="next-page-button" class="page-button" type="button">Ctrl+D next</button>
       </nav>
 
       <section class="deep-search" hidden aria-hidden="true">

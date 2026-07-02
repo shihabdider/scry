@@ -86,7 +86,7 @@ test('searchSearchSurfaceModel describes the active popup-session corpus badge',
     mode: CLOSED_MODE,
     status: 'ready',
     clickable: true,
-    modeSwitchHint: 'Tab / Shift+Tab',
+    modeSwitchHint: 'Ctrl+Q',
     statusText: '2 recently closed URLs',
   })
 })
@@ -97,7 +97,7 @@ test('searchSearchSurfaceModel defaults invalid cache input to an idle history b
     mode: HISTORY_MODE,
     status: 'idle',
     clickable: true,
-    modeSwitchHint: 'Tab / Shift+Tab',
+    modeSwitchHint: 'Ctrl+Q',
     statusText: 'History not loaded',
   })
   assert.deepEqual(searchSearchSurfaceModel({ activeMode: 'recent', modes: {} }), {
@@ -105,7 +105,7 @@ test('searchSearchSurfaceModel defaults invalid cache input to an idle history b
     mode: HISTORY_MODE,
     status: 'idle',
     clickable: true,
-    modeSwitchHint: 'Tab / Shift+Tab',
+    modeSwitchHint: 'Ctrl+Q',
     statusText: 'History not loaded',
   })
 })
@@ -124,7 +124,7 @@ test('searchSearchHeaderModel describes the active popup-session corpus header',
     modeBadgeLabel: HISTORY_MODE,
     mode: HISTORY_MODE,
     afterMode: '',
-    modeSwitchHint: 'Tab / Shift+Tab',
+    modeSwitchHint: 'Ctrl+Q',
     status: 'ready',
     statusText: '1 history URL',
   })
@@ -139,7 +139,7 @@ test('nextSearchMode cycles forward between only history and closed', () => {
   assert.equal(nextSearchMode(CLOSED_MODE, 1), HISTORY_MODE)
 })
 
-test('nextSearchMode supports Shift+Tab/backward cycling between only history and closed', () => {
+test('nextSearchMode supports backward cycling between only history and closed', () => {
   assert.equal(nextSearchMode(HISTORY_MODE, -1), CLOSED_MODE)
   assert.equal(nextSearchMode(CLOSED_MODE, -1), HISTORY_MODE)
 })

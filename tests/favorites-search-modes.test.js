@@ -42,7 +42,7 @@ test('favoritesModeIndicatorModel returns an idle favorites badge for null state
     mode: 'favorites',
     status: 'idle',
     clickable: false,
-    modeSwitchHint: 'Tab to return',
+    modeSwitchHint: 'Ctrl+Q to return',
     statusText: 'Favorites not loaded',
   })
 })
@@ -55,7 +55,7 @@ test('favoritesModeIndicatorModel reports loading favorites status text', () => 
       mode: 'favorites',
       status: 'loading',
       clickable: false,
-      modeSwitchHint: 'Tab to return',
+      modeSwitchHint: 'Ctrl+Q to return',
       statusText: 'Loading favorites…',
     },
   )
@@ -69,7 +69,7 @@ test('favoritesModeIndicatorModel reports ready favorites counts', () => {
       mode: 'favorites',
       status: 'ready',
       clickable: false,
-      modeSwitchHint: 'Tab to return',
+      modeSwitchHint: 'Ctrl+Q to return',
       statusText: '2 favorite URLs',
     },
   )
@@ -83,7 +83,7 @@ test('favoritesModeIndicatorModel reports favorites storage errors as unavailabl
       mode: 'favorites',
       status: 'error',
       clickable: false,
-      modeSwitchHint: 'Tab to return',
+      modeSwitchHint: 'Ctrl+Q to return',
       statusText: 'Favorites unavailable',
     },
   )
@@ -95,7 +95,7 @@ test('favoritesSearchHeaderModel builds an idle hidden favorites search header',
     modeBadgeLabel: 'favorites',
     mode: 'favorites',
     afterMode: 'favorites',
-    modeSwitchHint: 'Tab to return',
+    modeSwitchHint: 'Ctrl+Q to return',
     status: 'idle',
     statusText: 'Favorites not loaded',
   })
@@ -109,7 +109,7 @@ test('favoritesSearchHeaderModel reports ready singleton favorites status', () =
       modeBadgeLabel: 'favorites',
       mode: 'favorites',
       afterMode: 'favorites',
-      modeSwitchHint: 'Tab to return',
+      modeSwitchHint: 'Ctrl+Q to return',
       status: 'ready',
       statusText: '1 favorite URL',
     },

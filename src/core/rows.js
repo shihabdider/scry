@@ -21,7 +21,7 @@
 /**
  * @typedef {object} RowActionHint
  * @property {'copy'|'edit-url'|'remove-favorite'|'undo-remove-favorite'} action Action represented by the hint.
- * @property {string} key Keyboard key shown to the user, for example "y" or "c".
+ * @property {string} key Keyboard key shown to the user, for example "Ctrl+Y" or "Ctrl+E".
  * @property {string} label Human-readable action label, for example "copy" or "edit URL".
  */
 
@@ -37,7 +37,7 @@
  * - canUndoFavoriteRemoval: boolean
  *
  * Interpretation:
- * Represents the favorites-specific row-action context for list-selection mode. Remove is offered
+ * Represents the favorites-specific row-action context for a selected favorite row. Remove is offered
  * only for a selected stored favorite result in favorites mode; undo is offered when the current
  * popup session has one FavoriteRemovalUndo available.
  *
@@ -92,8 +92,8 @@ export function selectedRowActionHints(row, { selected = false } = {}) {
   if (!selected) return []
 
   const hints = []
-  if (rowOpenUrl(row)) hints.push({ action: 'copy', key: 'y', label: 'copy' })
-  if (rowEditableText(row)) hints.push({ action: 'edit-url', key: 'c', label: 'edit URL' })
+  if (rowOpenUrl(row)) hints.push({ action: 'copy', key: 'Ctrl+Y', label: 'copy' })
+  if (rowEditableText(row)) hints.push({ action: 'edit-url', key: 'Ctrl+E', label: 'edit URL' })
 
   return hints
 }
@@ -101,7 +101,7 @@ export function selectedRowActionHints(row, { selected = false } = {}) {
 /**
  * VisibleRow FavoriteRowActionState -> RowActionHint[]
  *
- * Produces the selected-row action hints for favorites list-selection mode, adding x remove and
+ * Produces the selected-row action hints for favorites rows, adding x remove and
  * one-level u undo without changing ordinary public-mode row hints.
  *
  * Functional Examples:
