@@ -254,15 +254,22 @@ export function searchParsedHistory(
 
 function isOrderedAbbreviation(token, value) {
   if (token.length < 2 || token.length > 4) return false
-  if (value.includes(token)) return false
+  if (!/^[a-z]+$/.test(token) || !/^[a-z]+$/.test(value)) return false
+  if (value.includes(token) || value[0] !== token[0]) return false
 
   let cursor = 0
+  let firstPosition = null
+  let lastPosition = null
   for (const char of token) {
-    const pos = value.indexOf(char, cursor)
-    if (pos === -1) return false
-    cursor = pos + 1
+    const position = value.indexOf(char, cursor)
+    if (position === -1) return false
+    if (firstPosition === null) firstPosition = position
+    lastPosition = position
+    cursor = position + 1
   }
-  return true
+
+  const matchedSpan = lastPosition - firstPosition + 1
+  return matchedSpan - token.length <= 2
 }
 
 function matchTier(token, value) {
@@ -278,7 +285,7 @@ function matchTier(token, value) {
 }
 
 function matchStrength(segment, tier) {
-  return FIELD_PRIORITY[segment.field] * 10 + tier
+  return tier * 10 + FIELD_PRIORITY[segment.field]
 }
 
 function compareMatch(a, b) {
@@ -311,8 +318,7 @@ function bestTokenMatch(entry, token) {
   return bestSegmentMatch(entry.segments, token)
 }
 
-function bestOrderedUrlMatches(entry, tokens) {
-  const urlSegments = entry.segments.filter((segment) => URL_FIELDS.has(segment.field))
+function orderedMatchesForSegments(segments, tokens) {
   let previousOrder = -1
   let previousMatchedOrder = null
   const ordered = []
@@ -320,7 +326,7 @@ function bestOrderedUrlMatches(entry, tokens) {
   let tierSum = 0
 
   for (const token of tokens) {
-    const best = bestSegmentMatch(urlSegments, token, { afterOrder: previousOrder })
+    const best = bestSegmentMatch(segments, token, { afterOrder: previousOrder })
 
     if (!best) continue
     if (previousMatchedOrder != null && best.segment.order === previousMatchedOrder + 1) adjacentPairs++
@@ -331,6 +337,37 @@ function bestOrderedUrlMatches(entry, tokens) {
   }
 
   return { ordered, adjacentPairs, tierSum }
+}
+
+function bestOrderedUrlMatches(entry, tokens) {
+  return orderedMatchesForSegments(
+    entry.segments.filter((segment) => URL_FIELDS.has(segment.field)),
+    tokens,
+  )
+}
+
+function compareCoherence(a, b) {
+  return compareTuple(
+    [a.ordered.length, a.adjacentPairs, a.tierSum, FIELD_PRIORITY[a.field]],
+    [b.ordered.length, b.adjacentPairs, b.tierSum, FIELD_PRIORITY[b.field]],
+  )
+}
+
+function bestSameFieldMatches(entry, tokens) {
+  let best = null
+
+  for (const field of Object.keys(FIELD_PRIORITY)) {
+    const coherence = {
+      field,
+      ...orderedMatchesForSegments(
+        entry.segments.filter((segment) => segment.field === field),
+        tokens,
+      ),
+    }
+    if (!best || compareCoherence(coherence, best) < 0) best = coherence
+  }
+
+  return best
 }
 
 function usageScore(entry, now) {
@@ -353,6 +390,7 @@ function rankTupleFor(entry, tokens, selections, now, selectionIntent = tokens) 
   if (coverage === 0) return null
 
   const orderedUrl = bestOrderedUrlMatches(entry, tokens)
+  const sameField = bestSameFieldMatches(entry, tokens)
   const strengths = matches.filter(Boolean).map((match) => match.strength)
   const tiers = matches.filter(Boolean).map((match) => match.tier)
   const exactSegmentCount = matches.filter((match) => match?.tier === TIER.exact && URL_FIELDS.has(match.field)).length
@@ -364,11 +402,16 @@ function rankTupleFor(entry, tokens, selections, now, selectionIntent = tokens) 
     tuple: [
       coverage === tokens.length ? 1 : 0,
       coverage,
+      Math.min(...tiers),
+      tiers.reduce((sum, value) => sum + value, 0),
+      sameField.ordered.length,
+      sameField.adjacentPairs,
+      sameField.tierSum,
       orderedUrl.ordered.length,
       orderedUrl.adjacentPairs,
+      orderedUrl.tierSum,
       Math.min(...strengths),
       strengths.reduce((sum, value) => sum + value, 0),
-      orderedUrl.tierSum,
       exactSegmentCount,
       urlChosenCount,
       queryOnlyPenalty,
@@ -378,6 +421,9 @@ function rankTupleFor(entry, tokens, selections, now, selectionIntent = tokens) 
     debug: {
       tokens,
       coverage,
+      sameFieldCoverage: sameField.ordered.length,
+      sameFieldAdjacentPairs: sameField.adjacentPairs,
+      sameField: sameField.field,
       orderedUrlCoverage: orderedUrl.ordered.length,
       adjacentPairs: orderedUrl.adjacentPairs,
       matches: matches.map((match) =>

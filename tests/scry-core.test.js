@@ -1412,6 +1412,87 @@ test('constrained abbreviation matching supports gh*issu without an alias table'
   )
 })
 
+test('ordered abbreviations reject interior, unlimited-gap, and mixed-identifier subsequences', () => {
+  assert.equal(__testing.matchTier('gh', 'github'), 2)
+  assert.equal(__testing.matchTier('atri', 'xattribute'), 0)
+  assert.equal(__testing.matchTier('gh', 'greetingsxxxxh'), 0)
+  assert.equal(__testing.matchTier('atri', 'a12t34r56i'), 0)
+})
+
+test('direct title evidence outranks weak ordered abbreviations in URL paths', () => {
+  const index = indexOf([
+    {
+      url: 'https://maps.example/attribute/hyperbola',
+      title: 'Unrelated map',
+      visitCount: 20,
+      lastVisitTime: now,
+    },
+    {
+      url: 'https://youtube.com/watch?v=video',
+      title: 'Atrioc Plays Age of Empires II with Hera',
+      visitCount: 1,
+      lastVisitTime: now - 30 * 24 * 60 * 60 * 1000,
+    },
+  ])
+
+  const results = searchHistory(index, 'atri hera', { now })
+
+  assert.equal(results[0].title, 'Atrioc Plays Age of Empires II with Hera')
+  assert.deepEqual(results[0].debug.matches.map((match) => match.tier), ['prefix', 'exact'])
+})
+
+test('best token evidence prefers direct title matches over URL abbreviations within one result', () => {
+  const index = indexOf([
+    {
+      url: 'https://example.com/attribute/hyperbola',
+      title: 'Atri Hera',
+      visitCount: 1,
+      lastVisitTime: now,
+    },
+  ])
+
+  const [result] = searchHistory(index, 'atri hera', { now })
+
+  assert.deepEqual(result.debug.matches.map((match) => match.field), ['title', 'title'])
+  assert.deepEqual(result.debug.matches.map((match) => match.tier), ['exact', 'exact'])
+})
+
+test('same-field token coherence outranks equally exact evidence scattered across URL and title', () => {
+  const index = indexOf([
+    {
+      url: 'https://example.com/atri',
+      title: 'Hera',
+      visitCount: 20,
+      lastVisitTime: now,
+    },
+    {
+      url: 'https://example.com/watch',
+      title: 'Atri Hera',
+      visitCount: 1,
+      lastVisitTime: now - 30 * 24 * 60 * 60 * 1000,
+    },
+  ])
+
+  const results = searchHistory(index, 'atri hera', { now })
+
+  assert.equal(results[0].title, 'Atri Hera')
+  assert.equal(results[0].debug.sameFieldCoverage, 2)
+  assert.equal(results[0].debug.sameField, 'title')
+})
+
+test('opaque mixed URL identifiers do not satisfy ordered abbreviation queries', () => {
+  const index = indexOf([
+    {
+      url: 'https://maps.example/a12t34r56i/h12e34r56a',
+      title: 'Unrelated map',
+      visitCount: 20,
+      lastVisitTime: now,
+    },
+  ])
+
+  assert.equal(searchHistory(index, 'atri hera', { now }).length, 0)
+})
+
 test('guarded substring matching can find remembered middle fragments without broad two-letter noise', () => {
   const index = indexOf([
     {

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "feedbackCadence": "agile",
+  "traceability": "opaque",
+  "constraints": [
+    "Keep Scry a local-only Chrome MV3 popup command palette.",
+    "Avoid external network calls, host permissions, content scripts, and options-page expansion unless an approved issue changes the product boundary.",
+    "Preserve existing public search APIs and brownfield core/platform/panel module boundaries unless architecture approval records a deviation.",
+    "Run npm test and npm run check after implementation changes."
+  ],
+  "checks": [
+    {
+      "name": "test",
+      "argv": ["npm", "test"],
+      "category": "engineering",
+      "blocking": true
+    },
+    {
+      "name": "syntax",
+      "argv": ["npm", "run", "check"],
+      "category": "engineering",
+      "blocking": true
+    }
+  ]
+}
