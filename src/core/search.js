@@ -301,7 +301,7 @@ function bestSegmentMatch(segments, token, { afterOrder = null } = {}) {
   for (const segment of segments) {
     if (afterOrder !== null && segment.order <= afterOrder) continue
     const tier = matchTier(token, segment.token)
-    if (!tier) continue
+    if (!tier || (tier === TIER.abbreviation && segment.field === 'query')) continue
     const candidate = {
       token,
       field: segment.field,

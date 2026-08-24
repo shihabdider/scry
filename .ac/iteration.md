@@ -33,14 +33,14 @@ Typing `atri hera` should surface visited Atrioc/Hera pages rather than unrelate
 
 ## Implementation result
 
-- Ordered abbreviations now require alphabetic query and candidate tokens, a candidate-start match, and no more than two omitted characters within the matched span.
+- Ordered abbreviations now require alphabetic query and candidate tokens, a candidate-start match, no more than two omitted characters within the matched span, and a non-query-string field.
 - Per-token evidence now compares match tier before field priority.
 - Aggregate ranking compares textual tier quality, same-field coherence, URL coherence, field evidence, then usage and selection learning.
 - Internal debug evidence now includes the strongest same-field match and coverage.
 
 ## Verification
 
-- `npm test`: 437 passing tests.
+- `npm test`: 438 passing tests.
 - `npm run check`: passing.
 - `autocode verify`: both configured blocking checks passing.
 - Synthetic 14,540-entry search benchmark: approximately 21 ms median for `atri hera` on the development machine.

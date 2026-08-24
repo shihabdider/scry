@@ -61,7 +61,7 @@ A candidate derives one best `MatchEvidence` per query token, then derives aggre
 
 ## Abbreviation constraints
 
-Ordered abbreviation matching remains available only for two-to-four-character alphabetic query tokens against alphabetic candidate segments. The match must begin with the candidate's first character, and its matched-character span may omit at most two characters. These rules preserve compact shortcuts such as `gh` to `github` while rejecting arbitrary subsequences deep inside long or mixed identifier tokens.
+Ordered abbreviation matching remains available only for two-to-four-character alphabetic query tokens against alphabetic host, path, or title segments; query-string segments are ineligible for abbreviation evidence. The match must begin with the candidate's first character, and its matched-character span may omit at most two characters. These rules preserve compact shortcuts such as `gh` to `github` while rejecting arbitrary subsequences deep inside long or mixed identifier tokens.
 
 ## Same-field coherence
 

@@ -1493,6 +1493,19 @@ test('opaque mixed URL identifiers do not satisfy ordered abbreviation queries',
   assert.equal(searchHistory(index, 'atri hera', { now }).length, 0)
 })
 
+test('query-string values do not satisfy ordered abbreviation queries', () => {
+  const index = indexOf([
+    {
+      url: 'https://example.com/search?first=attribute&second=hyperbola',
+      title: 'Unrelated query result',
+      visitCount: 20,
+      lastVisitTime: now,
+    },
+  ])
+
+  assert.equal(searchHistory(index, 'atri hera', { now }).length, 0)
+})
+
 test('guarded substring matching can find remembered middle fragments without broad two-letter noise', () => {
   const index = indexOf([
     {
