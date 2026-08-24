@@ -1,6 +1,6 @@
 {
   "name": "scry",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "History-first URL recall for Chrome.",
   "type": "module",
   "private": true,
